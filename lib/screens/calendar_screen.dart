@@ -14,36 +14,47 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  late Box diasBox;
+
+  late Box ciclosBox;
 
   @override
   void initState() {
     super.initState();
-    diasBox = HiveBoxes.diasMenstruacion;
+    ciclosBox = HiveBoxes.getCiclosBox();
   }
 
   List<DateTime> get diasMenstruacion {
-    final List<dynamic> saved = diasBox.get('dias', defaultValue: []);
-    return saved.map((d) => DateTime.parse(d.toString())).toList();
+    // Obtenemos las fechas guardadas en Hive
+    final List storedDates = ciclosBox.get('dias', defaultValue: []);
+    return storedDates.map((d) => DateTime.parse(d)).toList();
   }
 
-  void _guardarDia(DateTime dia) {
-    final List<DateTime> lista = diasMenstruacion;
-    if (!lista.any((d) =>
-    d.year == dia.year && d.month == dia.month && d.day == dia.day)) {
-      lista.add(dia);
-      diasBox.put('dias', lista.map((d) => d.toIso8601String()).toList());
+  void registrarDia(DateTime date) {
+    final List storedDates = ciclosBox.get('dias', defaultValue: []);
+    final dateStr = date.toIso8601String();
+
+    if (!storedDates.contains(dateStr)) {
+      storedDates.add(dateStr);
+      ciclosBox.put('dias', storedDates);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Día registrado como menstruación')),
+      );
+      setState(() {});
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ese día ya estaba registrado')),
+      );
     }
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Calendario menstrual"),
-        backgroundColor: const Color(0xFFA8D8EA),
+        title: const Text("Calendario menstrual",
+            style: TextStyle(fontWeight: FontWeight.w600)),
         centerTitle: true,
+        backgroundColor: const Color(0xFFA8D8EA),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -60,6 +71,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               calendarStyle: CalendarStyle(
                 todayDecoration: const BoxDecoration(
@@ -79,6 +94,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               },
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, focusedDay) {
+                  // Colorear días guardados
                   if (diasMenstruacion.any((d) =>
                   d.year == day.year &&
                       d.month == day.month &&
@@ -110,12 +126,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-                if (_selectedDay != null) {
-                  _guardarDia(_selectedDay!);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Día guardado localmente")),
-                  );
-                }
+                if (_selectedDay != null) registrarDia(_selectedDay!);
               },
               icon: const Icon(Icons.favorite),
               label: const Text("Registrar día de menstruación"),

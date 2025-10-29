@@ -1,33 +1,44 @@
-import 'package:aura/screens/stats_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
+import 'data/database/hive_boxes.dart';
+import 'utils/notifications.dart';
+import 'utils/color.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Hive y abrir caja local
-  final dir = await getApplicationDocumentsDirectory();
-  await Hive.initFlutter(dir.path);
-  await Hive.openBox('diasMenstruacion');
+  await Hive.initFlutter();
+  await NotificationService.init();
 
-  runApp(const AuraApp());
+  await Hive.openBox(HiveBoxes.diasMenstruacion);
+  await Hive.openBox(HiveBoxes.ciclos);
+  await Hive.openBox(HiveBoxes.configuracion);
+
+  final configBox = HiveBoxes.getConfigBox();
+  final bool onboardingVisto = configBox.get('onboardingVisto', defaultValue: false);
+
+  runApp(AuraApp(onboardingVisto: onboardingVisto));
 }
 
 class AuraApp extends StatelessWidget {
-  const AuraApp({super.key});
+  final bool onboardingVisto;
+  const AuraApp({super.key, required this.onboardingVisto});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Aura',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFA8D8EA)),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        scaffoldBackgroundColor: AppColors.background,
         useMaterial3: true,
       ),
-      home: const StatsScreen(),
+      home: onboardingVisto
+          ? const HomeScreen()
+          : const OnboardingScreen(),
     );
   }
 }

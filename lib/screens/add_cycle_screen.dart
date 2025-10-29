@@ -32,7 +32,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
   void _guardarRegistro() {
     if (_formKey.currentState!.validate()) {
-      final box = HiveBoxes.diasMenstruacion;
+      final box = HiveBoxes.getDiasBox(); // 👈 usa el método, no el string
 
       final registro = {
         "fecha": _selectedDate.toIso8601String(),
@@ -42,13 +42,12 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
         "notas": _notasController.text.trim(),
       };
 
-      // Guardar en Hive
-      final List<dynamic> registros = box.get('registros', defaultValue: []);
+      final List registros = box.get('registros', defaultValue: []);
       registros.add(registro);
       box.put('registros', registros);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registro guardado correctamente")),
+        const SnackBar(content: Text("Registro guardado correctamente ✅")),
       );
 
       Navigator.pop(context);

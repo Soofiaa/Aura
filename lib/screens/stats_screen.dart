@@ -17,7 +17,7 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
-    _box = HiveBoxes.diasMenstruacion;
+    _box = HiveBoxes.getDiasBox();
     registros = _box.get('registros', defaultValue: []);
   }
 
