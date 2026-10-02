@@ -36,6 +36,7 @@ dependencies:
   fl_chart: ^0.68.0
   flutter_local_notifications: ^17.1.2
   timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
   drift: ^2.20.0
   sqlite3_flutter_libs: ^0.5.24
   sqlite3: ^2.4.0
