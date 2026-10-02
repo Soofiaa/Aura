@@ -200,7 +200,8 @@ void main() {
   group('app_settings (fila unica)', () {
     test('valores por defecto antes de escribir nada', () async {
       expect(await repo.getOnboardingSeen(), isFalse);
-      expect(await repo.getNotificationsEnabled(), isTrue);
+      // Opt-in, no opt-out (fase 4): las notificaciones arrancan apagadas.
+      expect(await repo.getNotificationsEnabled(), isFalse);
     });
 
     test('setOnboardingSeen no pisa notificationsEnabled', () async {

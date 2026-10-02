@@ -59,8 +59,22 @@ class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(0))();
   BoolColumn get onboardingSeen =>
       boolean().withDefault(const Constant(false))();
+
+  /// Interruptor GENERAL de notificaciones (controla el permiso de
+  /// Android y si se programa cualquier aviso). No es especifico del
+  /// recordatorio de periodo; ver [periodReminderEnabled] para eso.
+  /// Default false: las notificaciones son opt-in, no opt-out.
   BoolColumn get notificationsEnabled =>
+      boolean().withDefault(const Constant(false))();
+
+  BoolColumn get periodReminderEnabled =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get fertileWindowRemindersEnabled =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get showDetailsEnabled =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get reminderHour => integer().withDefault(const Constant(9))();
+  IntColumn get reminderMinute => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -78,7 +92,38 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(appSettings, appSettings.periodReminderEnabled);
+            await m.addColumn(
+                appSettings, appSettings.fertileWindowRemindersEnabled);
+            await m.addColumn(appSettings, appSettings.showDetailsEnabled);
+            await m.addColumn(appSettings, appSettings.reminderHour);
+            await m.addColumn(appSettings, appSettings.reminderMinute);
+            // notifications_enabled pasa de default true a default false
+            // (opt-in): las filas que ya existian deben quedar en false,
+            // no heredar el default viejo.
+            await (update(appSettings)..where((t) => t.id.equals(0)))
+                .write(const AppSettingsCompanion(
+              notificationsEnabled: Value(false),
+            ));
+          }
+        },
+        // PRAGMA foreign_keys se activaba solo via el `setup` del
+        // NativeDatabase real; beforeOpen lo garantiza para CUALQUIER
+        // QueryExecutor (incluidos los de test que no lo pasen), sin
+        // depender de que cada lugar que crea una conexion se acuerde.
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA foreign_keys = ON');
+        },
+      );
 }
 
 LazyDatabase _openConnection() {

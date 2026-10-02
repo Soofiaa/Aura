@@ -645,13 +645,86 @@ class $AppSettingsTable extends AppSettings
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("notifications_enabled" IN (0, 1))',
     ),
-    defaultValue: const Constant(true),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _periodReminderEnabledMeta =
+      const VerificationMeta('periodReminderEnabled');
+  @override
+  late final GeneratedColumn<bool> periodReminderEnabled =
+      GeneratedColumn<bool>(
+        'period_reminder_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("period_reminder_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _fertileWindowRemindersEnabledMeta =
+      const VerificationMeta('fertileWindowRemindersEnabled');
+  @override
+  late final GeneratedColumn<bool> fertileWindowRemindersEnabled =
+      GeneratedColumn<bool>(
+        'fertile_window_reminders_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("fertile_window_reminders_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _showDetailsEnabledMeta =
+      const VerificationMeta('showDetailsEnabled');
+  @override
+  late final GeneratedColumn<bool> showDetailsEnabled = GeneratedColumn<bool>(
+    'show_details_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_details_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderHourMeta = const VerificationMeta(
+    'reminderHour',
+  );
+  @override
+  late final GeneratedColumn<int> reminderHour = GeneratedColumn<int>(
+    'reminder_hour',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(9),
+  );
+  static const VerificationMeta _reminderMinuteMeta = const VerificationMeta(
+    'reminderMinute',
+  );
+  @override
+  late final GeneratedColumn<int> reminderMinute = GeneratedColumn<int>(
+    'reminder_minute',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     onboardingSeen,
     notificationsEnabled,
+    periodReminderEnabled,
+    fertileWindowRemindersEnabled,
+    showDetailsEnabled,
+    reminderHour,
+    reminderMinute,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -686,6 +759,51 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('period_reminder_enabled')) {
+      context.handle(
+        _periodReminderEnabledMeta,
+        periodReminderEnabled.isAcceptableOrUnknown(
+          data['period_reminder_enabled']!,
+          _periodReminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fertile_window_reminders_enabled')) {
+      context.handle(
+        _fertileWindowRemindersEnabledMeta,
+        fertileWindowRemindersEnabled.isAcceptableOrUnknown(
+          data['fertile_window_reminders_enabled']!,
+          _fertileWindowRemindersEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('show_details_enabled')) {
+      context.handle(
+        _showDetailsEnabledMeta,
+        showDetailsEnabled.isAcceptableOrUnknown(
+          data['show_details_enabled']!,
+          _showDetailsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_hour')) {
+      context.handle(
+        _reminderHourMeta,
+        reminderHour.isAcceptableOrUnknown(
+          data['reminder_hour']!,
+          _reminderHourMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minute')) {
+      context.handle(
+        _reminderMinuteMeta,
+        reminderMinute.isAcceptableOrUnknown(
+          data['reminder_minute']!,
+          _reminderMinuteMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -707,6 +825,26 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}notifications_enabled'],
       )!,
+      periodReminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}period_reminder_enabled'],
+      )!,
+      fertileWindowRemindersEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}fertile_window_reminders_enabled'],
+      )!,
+      showDetailsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_details_enabled'],
+      )!,
+      reminderHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_hour'],
+      )!,
+      reminderMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minute'],
+      )!,
     );
   }
 
@@ -719,11 +857,26 @@ class $AppSettingsTable extends AppSettings
 class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
   final int id;
   final bool onboardingSeen;
+
+  /// Interruptor GENERAL de notificaciones (controla el permiso de
+  /// Android y si se programa cualquier aviso). No es especifico del
+  /// recordatorio de periodo; ver [periodReminderEnabled] para eso.
+  /// Default false: las notificaciones son opt-in, no opt-out.
   final bool notificationsEnabled;
+  final bool periodReminderEnabled;
+  final bool fertileWindowRemindersEnabled;
+  final bool showDetailsEnabled;
+  final int reminderHour;
+  final int reminderMinute;
   const AppSettingsRow({
     required this.id,
     required this.onboardingSeen,
     required this.notificationsEnabled,
+    required this.periodReminderEnabled,
+    required this.fertileWindowRemindersEnabled,
+    required this.showDetailsEnabled,
+    required this.reminderHour,
+    required this.reminderMinute,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -731,6 +884,13 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     map['id'] = Variable<int>(id);
     map['onboarding_seen'] = Variable<bool>(onboardingSeen);
     map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
+    map['period_reminder_enabled'] = Variable<bool>(periodReminderEnabled);
+    map['fertile_window_reminders_enabled'] = Variable<bool>(
+      fertileWindowRemindersEnabled,
+    );
+    map['show_details_enabled'] = Variable<bool>(showDetailsEnabled);
+    map['reminder_hour'] = Variable<int>(reminderHour);
+    map['reminder_minute'] = Variable<int>(reminderMinute);
     return map;
   }
 
@@ -739,6 +899,11 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       id: Value(id),
       onboardingSeen: Value(onboardingSeen),
       notificationsEnabled: Value(notificationsEnabled),
+      periodReminderEnabled: Value(periodReminderEnabled),
+      fertileWindowRemindersEnabled: Value(fertileWindowRemindersEnabled),
+      showDetailsEnabled: Value(showDetailsEnabled),
+      reminderHour: Value(reminderHour),
+      reminderMinute: Value(reminderMinute),
     );
   }
 
@@ -753,6 +918,15 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       notificationsEnabled: serializer.fromJson<bool>(
         json['notificationsEnabled'],
       ),
+      periodReminderEnabled: serializer.fromJson<bool>(
+        json['periodReminderEnabled'],
+      ),
+      fertileWindowRemindersEnabled: serializer.fromJson<bool>(
+        json['fertileWindowRemindersEnabled'],
+      ),
+      showDetailsEnabled: serializer.fromJson<bool>(json['showDetailsEnabled']),
+      reminderHour: serializer.fromJson<int>(json['reminderHour']),
+      reminderMinute: serializer.fromJson<int>(json['reminderMinute']),
     );
   }
   @override
@@ -762,6 +936,13 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       'id': serializer.toJson<int>(id),
       'onboardingSeen': serializer.toJson<bool>(onboardingSeen),
       'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
+      'periodReminderEnabled': serializer.toJson<bool>(periodReminderEnabled),
+      'fertileWindowRemindersEnabled': serializer.toJson<bool>(
+        fertileWindowRemindersEnabled,
+      ),
+      'showDetailsEnabled': serializer.toJson<bool>(showDetailsEnabled),
+      'reminderHour': serializer.toJson<int>(reminderHour),
+      'reminderMinute': serializer.toJson<int>(reminderMinute),
     };
   }
 
@@ -769,10 +950,21 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     int? id,
     bool? onboardingSeen,
     bool? notificationsEnabled,
+    bool? periodReminderEnabled,
+    bool? fertileWindowRemindersEnabled,
+    bool? showDetailsEnabled,
+    int? reminderHour,
+    int? reminderMinute,
   }) => AppSettingsRow(
     id: id ?? this.id,
     onboardingSeen: onboardingSeen ?? this.onboardingSeen,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    periodReminderEnabled: periodReminderEnabled ?? this.periodReminderEnabled,
+    fertileWindowRemindersEnabled:
+        fertileWindowRemindersEnabled ?? this.fertileWindowRemindersEnabled,
+    showDetailsEnabled: showDetailsEnabled ?? this.showDetailsEnabled,
+    reminderHour: reminderHour ?? this.reminderHour,
+    reminderMinute: reminderMinute ?? this.reminderMinute,
   );
   AppSettingsRow copyWithCompanion(AppSettingsCompanion data) {
     return AppSettingsRow(
@@ -783,6 +975,21 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       notificationsEnabled: data.notificationsEnabled.present
           ? data.notificationsEnabled.value
           : this.notificationsEnabled,
+      periodReminderEnabled: data.periodReminderEnabled.present
+          ? data.periodReminderEnabled.value
+          : this.periodReminderEnabled,
+      fertileWindowRemindersEnabled: data.fertileWindowRemindersEnabled.present
+          ? data.fertileWindowRemindersEnabled.value
+          : this.fertileWindowRemindersEnabled,
+      showDetailsEnabled: data.showDetailsEnabled.present
+          ? data.showDetailsEnabled.value
+          : this.showDetailsEnabled,
+      reminderHour: data.reminderHour.present
+          ? data.reminderHour.value
+          : this.reminderHour,
+      reminderMinute: data.reminderMinute.present
+          ? data.reminderMinute.value
+          : this.reminderMinute,
     );
   }
 
@@ -791,46 +998,96 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     return (StringBuffer('AppSettingsRow(')
           ..write('id: $id, ')
           ..write('onboardingSeen: $onboardingSeen, ')
-          ..write('notificationsEnabled: $notificationsEnabled')
+          ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('periodReminderEnabled: $periodReminderEnabled, ')
+          ..write(
+            'fertileWindowRemindersEnabled: $fertileWindowRemindersEnabled, ',
+          )
+          ..write('showDetailsEnabled: $showDetailsEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, onboardingSeen, notificationsEnabled);
+  int get hashCode => Object.hash(
+    id,
+    onboardingSeen,
+    notificationsEnabled,
+    periodReminderEnabled,
+    fertileWindowRemindersEnabled,
+    showDetailsEnabled,
+    reminderHour,
+    reminderMinute,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AppSettingsRow &&
           other.id == this.id &&
           other.onboardingSeen == this.onboardingSeen &&
-          other.notificationsEnabled == this.notificationsEnabled);
+          other.notificationsEnabled == this.notificationsEnabled &&
+          other.periodReminderEnabled == this.periodReminderEnabled &&
+          other.fertileWindowRemindersEnabled ==
+              this.fertileWindowRemindersEnabled &&
+          other.showDetailsEnabled == this.showDetailsEnabled &&
+          other.reminderHour == this.reminderHour &&
+          other.reminderMinute == this.reminderMinute);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
   final Value<int> id;
   final Value<bool> onboardingSeen;
   final Value<bool> notificationsEnabled;
+  final Value<bool> periodReminderEnabled;
+  final Value<bool> fertileWindowRemindersEnabled;
+  final Value<bool> showDetailsEnabled;
+  final Value<int> reminderHour;
+  final Value<int> reminderMinute;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.periodReminderEnabled = const Value.absent(),
+    this.fertileWindowRemindersEnabled = const Value.absent(),
+    this.showDetailsEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
+    this.periodReminderEnabled = const Value.absent(),
+    this.fertileWindowRemindersEnabled = const Value.absent(),
+    this.showDetailsEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
   });
   static Insertable<AppSettingsRow> custom({
     Expression<int>? id,
     Expression<bool>? onboardingSeen,
     Expression<bool>? notificationsEnabled,
+    Expression<bool>? periodReminderEnabled,
+    Expression<bool>? fertileWindowRemindersEnabled,
+    Expression<bool>? showDetailsEnabled,
+    Expression<int>? reminderHour,
+    Expression<int>? reminderMinute,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (onboardingSeen != null) 'onboarding_seen': onboardingSeen,
       if (notificationsEnabled != null)
         'notifications_enabled': notificationsEnabled,
+      if (periodReminderEnabled != null)
+        'period_reminder_enabled': periodReminderEnabled,
+      if (fertileWindowRemindersEnabled != null)
+        'fertile_window_reminders_enabled': fertileWindowRemindersEnabled,
+      if (showDetailsEnabled != null)
+        'show_details_enabled': showDetailsEnabled,
+      if (reminderHour != null) 'reminder_hour': reminderHour,
+      if (reminderMinute != null) 'reminder_minute': reminderMinute,
     });
   }
 
@@ -838,11 +1095,23 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     Value<int>? id,
     Value<bool>? onboardingSeen,
     Value<bool>? notificationsEnabled,
+    Value<bool>? periodReminderEnabled,
+    Value<bool>? fertileWindowRemindersEnabled,
+    Value<bool>? showDetailsEnabled,
+    Value<int>? reminderHour,
+    Value<int>? reminderMinute,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       onboardingSeen: onboardingSeen ?? this.onboardingSeen,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      periodReminderEnabled:
+          periodReminderEnabled ?? this.periodReminderEnabled,
+      fertileWindowRemindersEnabled:
+          fertileWindowRemindersEnabled ?? this.fertileWindowRemindersEnabled,
+      showDetailsEnabled: showDetailsEnabled ?? this.showDetailsEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderMinute: reminderMinute ?? this.reminderMinute,
     );
   }
 
@@ -858,6 +1127,25 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     if (notificationsEnabled.present) {
       map['notifications_enabled'] = Variable<bool>(notificationsEnabled.value);
     }
+    if (periodReminderEnabled.present) {
+      map['period_reminder_enabled'] = Variable<bool>(
+        periodReminderEnabled.value,
+      );
+    }
+    if (fertileWindowRemindersEnabled.present) {
+      map['fertile_window_reminders_enabled'] = Variable<bool>(
+        fertileWindowRemindersEnabled.value,
+      );
+    }
+    if (showDetailsEnabled.present) {
+      map['show_details_enabled'] = Variable<bool>(showDetailsEnabled.value);
+    }
+    if (reminderHour.present) {
+      map['reminder_hour'] = Variable<int>(reminderHour.value);
+    }
+    if (reminderMinute.present) {
+      map['reminder_minute'] = Variable<int>(reminderMinute.value);
+    }
     return map;
   }
 
@@ -866,7 +1154,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     return (StringBuffer('AppSettingsCompanion(')
           ..write('id: $id, ')
           ..write('onboardingSeen: $onboardingSeen, ')
-          ..write('notificationsEnabled: $notificationsEnabled')
+          ..write('notificationsEnabled: $notificationsEnabled, ')
+          ..write('periodReminderEnabled: $periodReminderEnabled, ')
+          ..write(
+            'fertileWindowRemindersEnabled: $fertileWindowRemindersEnabled, ',
+          )
+          ..write('showDetailsEnabled: $showDetailsEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute')
           ..write(')'))
         .toString();
   }
@@ -1254,12 +1549,22 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> id,
       Value<bool> onboardingSeen,
       Value<bool> notificationsEnabled,
+      Value<bool> periodReminderEnabled,
+      Value<bool> fertileWindowRemindersEnabled,
+      Value<bool> showDetailsEnabled,
+      Value<int> reminderHour,
+      Value<int> reminderMinute,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
       Value<int> id,
       Value<bool> onboardingSeen,
       Value<bool> notificationsEnabled,
+      Value<bool> periodReminderEnabled,
+      Value<bool> fertileWindowRemindersEnabled,
+      Value<bool> showDetailsEnabled,
+      Value<int> reminderHour,
+      Value<int> reminderMinute,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -1283,6 +1588,31 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get notificationsEnabled => $composableBuilder(
     column: $table.notificationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get periodReminderEnabled => $composableBuilder(
+    column: $table.periodReminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get fertileWindowRemindersEnabled => $composableBuilder(
+    column: $table.fertileWindowRemindersEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showDetailsEnabled => $composableBuilder(
+    column: $table.showDetailsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1310,6 +1640,31 @@ class $$AppSettingsTableOrderingComposer
     column: $table.notificationsEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get periodReminderEnabled => $composableBuilder(
+    column: $table.periodReminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get fertileWindowRemindersEnabled => $composableBuilder(
+    column: $table.fertileWindowRemindersEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showDetailsEnabled => $composableBuilder(
+    column: $table.showDetailsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -1331,6 +1686,31 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<bool> get notificationsEnabled => $composableBuilder(
     column: $table.notificationsEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get periodReminderEnabled => $composableBuilder(
+    column: $table.periodReminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get fertileWindowRemindersEnabled => $composableBuilder(
+    column: $table.fertileWindowRemindersEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get showDetailsEnabled => $composableBuilder(
+    column: $table.showDetailsEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
     builder: (column) => column,
   );
 }
@@ -1369,20 +1749,42 @@ class $$AppSettingsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<bool> onboardingSeen = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<bool> periodReminderEnabled = const Value.absent(),
+                Value<bool> fertileWindowRemindersEnabled =
+                    const Value.absent(),
+                Value<bool> showDetailsEnabled = const Value.absent(),
+                Value<int> reminderHour = const Value.absent(),
+                Value<int> reminderMinute = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 onboardingSeen: onboardingSeen,
                 notificationsEnabled: notificationsEnabled,
+                periodReminderEnabled: periodReminderEnabled,
+                fertileWindowRemindersEnabled: fertileWindowRemindersEnabled,
+                showDetailsEnabled: showDetailsEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<bool> onboardingSeen = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
+                Value<bool> periodReminderEnabled = const Value.absent(),
+                Value<bool> fertileWindowRemindersEnabled =
+                    const Value.absent(),
+                Value<bool> showDetailsEnabled = const Value.absent(),
+                Value<int> reminderHour = const Value.absent(),
+                Value<int> reminderMinute = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 onboardingSeen: onboardingSeen,
                 notificationsEnabled: notificationsEnabled,
+                periodReminderEnabled: periodReminderEnabled,
+                fertileWindowRemindersEnabled: fertileWindowRemindersEnabled,
+                showDetailsEnabled: showDetailsEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
