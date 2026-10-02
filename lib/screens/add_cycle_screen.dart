@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../data/database/hive_boxes.dart';
+import '../data/models/day_enums.dart';
+import '../data/repositories/cycle_repository.dart';
+import '../utils/day_key.dart';
 import '../widgets/symptom_selector.dart';
 
 class AddCycleScreen extends StatefulWidget {
@@ -14,38 +15,63 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   final _formKey = GlobalKey<FormState>();
 
   DateTime _selectedDate = DateTime.now();
-  String _flujo = 'Ligero';
-  String _estadoAnimo = 'Normal';
-  final TextEditingController _notasController = TextEditingController();
 
-  // Nuevo: lista de síntomas seleccionados
+  // Por defecto activado: la mayoria de los registros son de dias de
+  // sangrado. Si se apaga, flow queda null y is_period_day no se fuerza
+  // a true (ver CycleRepository.upsertDay).
+  bool _esDiaDeSangrado = true;
+  FlowIntensity _flujo = FlowIntensity.ligero;
+  Mood _estadoAnimo = Mood.normal;
+  final TextEditingController _notasController = TextEditingController();
   List<String> _selectedSymptoms = [];
 
-  final List<String> _opcionesFlujo = ['Ligero', 'Moderado', 'Abundante'];
-  final List<String> _opcionesAnimo = [
-    'Feliz',
-    'Triste',
-    'Irritable',
-    'Cansada',
-    'Normal'
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _cargarDia(_selectedDate);
+  }
 
-  void _guardarRegistro() {
+  /// Prellena el formulario con lo que ya existe para [date], o lo
+  /// resetea a los valores por defecto si no hay nada registrado.
+  Future<void> _cargarDia(DateTime date) async {
+    final dateKey = DayKey.fromDate(date);
+    final existing = await cycleRepository.getDay(dateKey);
+    final symptoms = await cycleRepository.getSymptomsForDay(dateKey);
+
+    if (!mounted) return;
+    setState(() {
+      if (existing != null) {
+        _esDiaDeSangrado = existing.isPeriodDay;
+        _flujo = existing.flow ?? FlowIntensity.ligero;
+        _estadoAnimo = existing.mood ?? Mood.normal;
+        _notasController.text = existing.notes ?? '';
+        _selectedSymptoms = symptoms.map((s) => s.label).toList();
+      } else {
+        _esDiaDeSangrado = true;
+        _flujo = FlowIntensity.ligero;
+        _estadoAnimo = Mood.normal;
+        _notasController.text = '';
+        _selectedSymptoms = [];
+      }
+    });
+  }
+
+  Future<void> _guardarRegistro() async {
     if (_formKey.currentState!.validate()) {
-      final box = HiveBoxes.getDiasBox(); // 👈 usa el método, no el string
+      final symptoms = _selectedSymptoms
+          .map((label) => Symptom.values.firstWhere((s) => s.label == label))
+          .toSet();
 
-      final registro = {
-        "fecha": _selectedDate.toIso8601String(),
-        "flujo": _flujo,
-        "estado_animo": _estadoAnimo,
-        "sintomas": _selectedSymptoms,
-        "notas": _notasController.text.trim(),
-      };
+      await cycleRepository.upsertDay(
+        date: DayKey.fromDate(_selectedDate),
+        isPeriodDaySwitch: _esDiaDeSangrado,
+        flow: _esDiaDeSangrado ? _flujo : null,
+        mood: _estadoAnimo,
+        notes: _notasController.text.trim(),
+        symptoms: symptoms,
+      );
 
-      final List registros = box.get('registros', defaultValue: []);
-      registros.add(registro);
-      box.put('registros', registros);
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Registro guardado correctamente ✅")),
       );
@@ -84,6 +110,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                   );
                   if (pickedDate != null) {
                     setState(() => _selectedDate = pickedDate);
+                    await _cargarDia(pickedDate);
                   }
                 },
                 child: Container(
@@ -108,23 +135,37 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
               ),
 
               const SizedBox(height: 25),
-              const Text(
-                "Flujo menstrual",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 5),
-              DropdownButtonFormField<String>(
-                value: _flujo,
-                items: _opcionesFlujo
-                    .map((f) => DropdownMenuItem(value: f, child: Text(f)))
-                    .toList(),
-                onChanged: (v) => setState(() => _flujo = v!),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  "Día de sangrado",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
+                value: _esDiaDeSangrado,
+                onChanged: (v) => setState(() => _esDiaDeSangrado = v),
               ),
+
+              if (_esDiaDeSangrado) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  "Flujo menstrual",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 5),
+                DropdownButtonFormField<FlowIntensity>(
+                  initialValue: _flujo,
+                  items: FlowIntensity.values
+                      .map((f) =>
+                          DropdownMenuItem(value: f, child: Text(f.label)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _flujo = v!),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 25),
               const Text(
@@ -132,10 +173,11 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 5),
-              DropdownButtonFormField<String>(
-                value: _estadoAnimo,
-                items: _opcionesAnimo
-                    .map((a) => DropdownMenuItem(value: a, child: Text(a)))
+              DropdownButtonFormField<Mood>(
+                initialValue: _estadoAnimo,
+                items: Mood.values
+                    .map((a) =>
+                        DropdownMenuItem(value: a, child: Text(a.label)))
                     .toList(),
                 onChanged: (v) => setState(() => _estadoAnimo = v!),
                 decoration: const InputDecoration(
@@ -145,7 +187,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                 ),
               ),
 
-              // 🔹 Nueva sección de selección de síntomas
+              // 🔹 Sección de selección de síntomas
               const SizedBox(height: 25),
               const Text(
                 "Síntomas",
