@@ -212,6 +212,42 @@ void main() {
       expect(p.currentPhase, CyclePhase.menstrual);
     });
 
+    test(
+        'periodConfirmedEnded anula la extension por el promedio: la fase '
+        'deja de ser menstrual aunque el heuristico sin confirmar seguiria '
+        'ahi', () {
+      // Promedio historico de menstruacion: 5 dias. Este periodo solo
+      // tuvo 3 dias observados, pero la usuaria confirmo explicitamente
+      // que ya termino (p.ej. respondio "No" en la pregunta de Inicio).
+      final cycles = [
+        _cycle('2026-01-01', 5, 28),
+        _cycle('2026-01-29', 5, 28),
+        CycleSummary(
+          startDate: '2026-02-26',
+          periodLengthDays: 3,
+          cycleLengthDays: null,
+          periodConfirmedEnded: true,
+        ),
+      ];
+
+      final result =
+          predictCycle(cycles: cycles, today: '2026-03-01'); // dia de ciclo 4
+      final p = result as ActivePrediction;
+      expect(p.currentPhase, CyclePhase.folicular);
+
+      // Control: el mismo dia 4, SIN la confirmacion, el heuristico
+      // max(3,5)=5 si seguiria mostrando fase menstrual.
+      final sinConfirmar = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 5, 28),
+          _cycle('2026-01-29', 5, 28),
+          _cycle('2026-02-26', 3, null),
+        ],
+        today: '2026-03-01',
+      ) as ActivePrediction;
+      expect(sinConfirmar.currentPhase, CyclePhase.menstrual);
+    });
+
     test('fase folicular entre el fin de la menstruacion y la ovulacion',
         () {
       final result = predictCycle(

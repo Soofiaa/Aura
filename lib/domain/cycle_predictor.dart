@@ -363,13 +363,19 @@ CyclePrediction? predictCycle({
   // observada del periodo mas reciente (que puede seguir activo y ya
   // superar el promedio historico) y el promedio historico, para no
   // "salir" de la fase menstrual mientras todavia hay sangrado
-  // registrado por encima de lo usual.
+  // registrado por encima de lo usual -- EXCEPTO si la usuaria ya
+  // confirmo explicitamente que el periodo termino (periodConfirmedEnded),
+  // en cuyo caso esa confirmacion directa gana por sobre el heuristico
+  // del promedio: la fase menstrual no se extiende mas alla de lo
+  // observado.
   final rawCycleDay = daysSinceStart + 1;
   final cycleDay = rawCycleDay < 1 ? 1 : rawCycleDay;
-  final menstrualEndDay = math.max(
-    mostRecent.periodLengthDays,
-    averagePeriodLengthDays.round(),
-  );
+  final menstrualEndDay = mostRecent.periodConfirmedEnded
+      ? mostRecent.periodLengthDays
+      : math.max(
+          mostRecent.periodLengthDays,
+          averagePeriodLengthDays.round(),
+        );
   final ovulationCycleDay =
       DayKey.diffInDays(mostRecent.startDate, estimatedOvulationDate) + 1;
   final ovulatoryStart = ovulationCycleDay - config.ovulationPhaseHalfWidthDays;
