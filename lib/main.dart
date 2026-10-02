@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'data/repositories/cycle_repository.dart';
 import 'utils/notifications.dart';
 import 'utils/colors.dart';
@@ -7,6 +8,11 @@ import 'screens/main_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // calendar_screen.dart y date_utils.dart formatean fechas en español
+  // ('es_ES' / 'es'); sin esto, DateFormat/TableCalendar tiran
+  // LocaleDataException la primera vez que se usan.
+  await initializeDateFormatting();
 
   await NotificationService.init();
 
