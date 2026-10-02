@@ -60,8 +60,30 @@ class $DailyLogsTable extends DailyLogs
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _periodDayExplicitMeta = const VerificationMeta(
+    'periodDayExplicit',
+  );
   @override
-  List<GeneratedColumn> get $columns => [date, isPeriodDay, flow, mood, notes];
+  late final GeneratedColumn<bool> periodDayExplicit = GeneratedColumn<bool>(
+    'period_day_explicit',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("period_day_explicit" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    date,
+    isPeriodDay,
+    flow,
+    mood,
+    notes,
+    periodDayExplicit,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -97,6 +119,15 @@ class $DailyLogsTable extends DailyLogs
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('period_day_explicit')) {
+      context.handle(
+        _periodDayExplicitMeta,
+        periodDayExplicit.isAcceptableOrUnknown(
+          data['period_day_explicit']!,
+          _periodDayExplicitMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -130,6 +161,10 @@ class $DailyLogsTable extends DailyLogs
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      periodDayExplicit: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}period_day_explicit'],
+      )!,
     );
   }
 
@@ -154,12 +189,21 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
   final FlowIntensity? flow;
   final Mood? mood;
   final String? notes;
+
+  /// true si el valor actual de is_period_day vino de una accion directa
+  /// y dedicada (la pregunta "Sigue tu periodo hoy?" o "Quitar marca" del
+  /// calendario), no del formulario general de sintomas. Sin esto no se
+  /// puede distinguir "explicitamente no sangro" de "no se declaro nada
+  /// sobre sangrado" cuando is_period_day=false (ver fase de registro
+  /// rapido de fin de periodo).
+  final bool periodDayExplicit;
   const DailyLogRow({
     required this.date,
     required this.isPeriodDay,
     this.flow,
     this.mood,
     this.notes,
+    required this.periodDayExplicit,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -179,6 +223,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    map['period_day_explicit'] = Variable<bool>(periodDayExplicit);
     return map;
   }
 
@@ -191,6 +236,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      periodDayExplicit: Value(periodDayExplicit),
     );
   }
 
@@ -209,6 +255,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
         serializer.fromJson<String?>(json['mood']),
       ),
       notes: serializer.fromJson<String?>(json['notes']),
+      periodDayExplicit: serializer.fromJson<bool>(json['periodDayExplicit']),
     );
   }
   @override
@@ -224,6 +271,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
         $DailyLogsTable.$convertermoodn.toJson(mood),
       ),
       'notes': serializer.toJson<String?>(notes),
+      'periodDayExplicit': serializer.toJson<bool>(periodDayExplicit),
     };
   }
 
@@ -233,12 +281,14 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
     Value<FlowIntensity?> flow = const Value.absent(),
     Value<Mood?> mood = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    bool? periodDayExplicit,
   }) => DailyLogRow(
     date: date ?? this.date,
     isPeriodDay: isPeriodDay ?? this.isPeriodDay,
     flow: flow.present ? flow.value : this.flow,
     mood: mood.present ? mood.value : this.mood,
     notes: notes.present ? notes.value : this.notes,
+    periodDayExplicit: periodDayExplicit ?? this.periodDayExplicit,
   );
   DailyLogRow copyWithCompanion(DailyLogsCompanion data) {
     return DailyLogRow(
@@ -249,6 +299,9 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       flow: data.flow.present ? data.flow.value : this.flow,
       mood: data.mood.present ? data.mood.value : this.mood,
       notes: data.notes.present ? data.notes.value : this.notes,
+      periodDayExplicit: data.periodDayExplicit.present
+          ? data.periodDayExplicit.value
+          : this.periodDayExplicit,
     );
   }
 
@@ -259,13 +312,15 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
           ..write('isPeriodDay: $isPeriodDay, ')
           ..write('flow: $flow, ')
           ..write('mood: $mood, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('periodDayExplicit: $periodDayExplicit')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(date, isPeriodDay, flow, mood, notes);
+  int get hashCode =>
+      Object.hash(date, isPeriodDay, flow, mood, notes, periodDayExplicit);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -274,7 +329,8 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
           other.isPeriodDay == this.isPeriodDay &&
           other.flow == this.flow &&
           other.mood == this.mood &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.periodDayExplicit == this.periodDayExplicit);
 }
 
 class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
@@ -283,6 +339,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
   final Value<FlowIntensity?> flow;
   final Value<Mood?> mood;
   final Value<String?> notes;
+  final Value<bool> periodDayExplicit;
   final Value<int> rowid;
   const DailyLogsCompanion({
     this.date = const Value.absent(),
@@ -290,6 +347,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     this.flow = const Value.absent(),
     this.mood = const Value.absent(),
     this.notes = const Value.absent(),
+    this.periodDayExplicit = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DailyLogsCompanion.insert({
@@ -298,6 +356,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     this.flow = const Value.absent(),
     this.mood = const Value.absent(),
     this.notes = const Value.absent(),
+    this.periodDayExplicit = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : date = Value(date);
   static Insertable<DailyLogRow> custom({
@@ -306,6 +365,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     Expression<String>? flow,
     Expression<String>? mood,
     Expression<String>? notes,
+    Expression<bool>? periodDayExplicit,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -314,6 +374,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
       if (flow != null) 'flow': flow,
       if (mood != null) 'mood': mood,
       if (notes != null) 'notes': notes,
+      if (periodDayExplicit != null) 'period_day_explicit': periodDayExplicit,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -324,6 +385,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     Value<FlowIntensity?>? flow,
     Value<Mood?>? mood,
     Value<String?>? notes,
+    Value<bool>? periodDayExplicit,
     Value<int>? rowid,
   }) {
     return DailyLogsCompanion(
@@ -332,6 +394,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
       flow: flow ?? this.flow,
       mood: mood ?? this.mood,
       notes: notes ?? this.notes,
+      periodDayExplicit: periodDayExplicit ?? this.periodDayExplicit,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -358,6 +421,9 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (periodDayExplicit.present) {
+      map['period_day_explicit'] = Variable<bool>(periodDayExplicit.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -372,6 +438,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
           ..write('flow: $flow, ')
           ..write('mood: $mood, ')
           ..write('notes: $notes, ')
+          ..write('periodDayExplicit: $periodDayExplicit, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1193,6 +1260,7 @@ typedef $$DailyLogsTableCreateCompanionBuilder =
       Value<FlowIntensity?> flow,
       Value<Mood?> mood,
       Value<String?> notes,
+      Value<bool> periodDayExplicit,
       Value<int> rowid,
     });
 typedef $$DailyLogsTableUpdateCompanionBuilder =
@@ -1202,6 +1270,7 @@ typedef $$DailyLogsTableUpdateCompanionBuilder =
       Value<FlowIntensity?> flow,
       Value<Mood?> mood,
       Value<String?> notes,
+      Value<bool> periodDayExplicit,
       Value<int> rowid,
     });
 
@@ -1240,6 +1309,11 @@ class $$DailyLogsTableFilterComposer
     column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get periodDayExplicit => $composableBuilder(
+    column: $table.periodDayExplicit,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$DailyLogsTableOrderingComposer
@@ -1275,6 +1349,11 @@ class $$DailyLogsTableOrderingComposer
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get periodDayExplicit => $composableBuilder(
+    column: $table.periodDayExplicit,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DailyLogsTableAnnotationComposer
@@ -1302,6 +1381,11 @@ class $$DailyLogsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get periodDayExplicit => $composableBuilder(
+    column: $table.periodDayExplicit,
+    builder: (column) => column,
+  );
 }
 
 class $$DailyLogsTableTableManager
@@ -1340,6 +1424,7 @@ class $$DailyLogsTableTableManager
                 Value<FlowIntensity?> flow = const Value.absent(),
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<bool> periodDayExplicit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyLogsCompanion(
                 date: date,
@@ -1347,6 +1432,7 @@ class $$DailyLogsTableTableManager
                 flow: flow,
                 mood: mood,
                 notes: notes,
+                periodDayExplicit: periodDayExplicit,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1356,6 +1442,7 @@ class $$DailyLogsTableTableManager
                 Value<FlowIntensity?> flow = const Value.absent(),
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<bool> periodDayExplicit = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyLogsCompanion.insert(
                 date: date,
@@ -1363,6 +1450,7 @@ class $$DailyLogsTableTableManager
                 flow: flow,
                 mood: mood,
                 notes: notes,
+                periodDayExplicit: periodDayExplicit,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

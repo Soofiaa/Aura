@@ -22,6 +22,15 @@ class DailyLogs extends Table {
   TextColumn get mood => textEnum<Mood>().nullable()();
   TextColumn get notes => text().nullable()();
 
+  /// true si el valor actual de is_period_day vino de una accion directa
+  /// y dedicada (la pregunta "Sigue tu periodo hoy?" o "Quitar marca" del
+  /// calendario), no del formulario general de sintomas. Sin esto no se
+  /// puede distinguir "explicitamente no sangro" de "no se declaro nada
+  /// sobre sangrado" cuando is_period_day=false (ver fase de registro
+  /// rapido de fin de periodo).
+  BoolColumn get periodDayExplicit =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {date};
 
@@ -92,7 +101,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +123,13 @@ class AppDatabase extends _$AppDatabase {
                 .write(const AppSettingsCompanion(
               notificationsEnabled: Value(false),
             ));
+          }
+          if (from < 3) {
+            // Default false para todas las filas existentes es correcto:
+            // antes de esta version no existia ningun camino de codigo
+            // que escribiera una negacion EXPLICITA de sangrado, asi que
+            // no hay dato historico que reinterpretar.
+            await m.addColumn(dailyLogs, dailyLogs.periodDayExplicit);
           }
         },
         // PRAGMA foreign_keys se activaba solo via el `setup` del
