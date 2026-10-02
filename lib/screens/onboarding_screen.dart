@@ -14,24 +14,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _pages = [
+  final List<Map<String, Object>> _pages = [
     {
       "titulo": "Bienvenida a Aura 🌸",
       "descripcion":
       "Tu espacio personal para entender, registrar y cuidar tu ciclo menstrual.",
-      "imagen": "assets/images/onboarding1.png"
+      "icono": Icons.favorite_rounded,
     },
     {
       "titulo": "Registra tu bienestar 💕",
       "descripcion":
       "Anota tus síntomas, emociones y observaciones día a día para conocerte mejor.",
-      "imagen": "assets/images/onboarding2.png"
+      "icono": Icons.edit_note_rounded,
     },
     {
       "titulo": "Conoce tus patrones 🌙",
       "descripcion":
       "Aura analiza tus ciclos y te ayuda a identificar tendencias en tu salud.",
-      "imagen": "assets/images/onboarding3.png"
+      "icono": Icons.insights_rounded,
     },
   ];
 
@@ -66,14 +66,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(
-                          page["imagen"]!,
-                          height: 250,
-                          fit: BoxFit.contain,
+                        Icon(
+                          page["icono"] as IconData,
+                          size: 140,
+                          color: const Color(0xFFA8D8EA),
                         ),
                         const SizedBox(height: 40),
                         Text(
-                          page["titulo"]!,
+                          page["titulo"] as String,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 24,
@@ -82,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          page["descripcion"]!,
+                          page["descripcion"] as String,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 16,
