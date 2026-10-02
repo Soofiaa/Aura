@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
@@ -267,14 +266,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: _notificaciones ? _elegirHora : null,
           ),
 
-          if (kDebugMode) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _probarNotificacion,
-              icon: const Icon(Icons.bug_report),
-              label: const Text("Probar notificación en 10 segundos"),
-            ),
-          ],
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _probarNotificacion,
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: const Text("Enviar notificación de prueba"),
+          ),
 
           const SizedBox(height: 40),
           const Divider(),

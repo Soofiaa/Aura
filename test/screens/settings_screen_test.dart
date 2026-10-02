@@ -110,12 +110,13 @@ void main() {
     await db.close();
   });
 
-  testWidgets('el boton de prueba de debug programa una notificacion de prueba',
+  testWidgets(
+      'el boton de notificacion de prueba esta siempre visible y programa una',
       (tester) async {
     await pumpScreen(tester);
 
-    final testButton = find.text('Probar notificación en 10 segundos');
-    expect(testButton, findsOneWidget); // kDebugMode esta activo en tests
+    final testButton = find.text('Enviar notificación de prueba');
+    expect(testButton, findsOneWidget); // visible siempre, no solo en debug
 
     await tester.tap(testButton);
     await tester.pumpAndSettle();
