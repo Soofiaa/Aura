@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _guardarPreferencias() {
-    final box = HiveBoxes.diasMenstruacion;
+    final box = HiveBoxes.getDiasBox();
     box.put('notificaciones', _notificaciones);
     box.put('modoOscuro', _modoOscuro);
 
@@ -32,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _borrarDatos() async {
-    final box = HiveBoxes.diasMenstruacion;
+    final box = HiveBoxes.getDiasBox();
     await box.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Datos borrados correctamente 💧")),
