@@ -21,10 +21,19 @@ class CycleSummary {
   /// proximo periodo registrado todavia).
   final int? cycleLengthDays;
 
+  /// true si hay un dia confirmado explicitamente como "sin sangrado"
+  /// (CycleRepository.setPeriodDayExplicitly, nunca el formulario
+  /// general) dentro de los dias de tolerancia despues del ultimo dia de
+  /// sangrado de este periodo. Permite que predictCycle deje de alargar
+  /// la fase menstrual por el promedio historico cuando la usuaria ya
+  /// confirmo que termino.
+  final bool periodConfirmedEnded;
+
   const CycleSummary({
     required this.startDate,
     required this.periodLengthDays,
     required this.cycleLengthDays,
+    this.periodConfirmedEnded = false,
   });
 
   @override
@@ -32,14 +41,17 @@ class CycleSummary {
       other is CycleSummary &&
       other.startDate == startDate &&
       other.periodLengthDays == periodLengthDays &&
-      other.cycleLengthDays == cycleLengthDays;
+      other.cycleLengthDays == cycleLengthDays &&
+      other.periodConfirmedEnded == periodConfirmedEnded;
 
   @override
-  int get hashCode => Object.hash(startDate, periodLengthDays, cycleLengthDays);
+  int get hashCode => Object.hash(
+      startDate, periodLengthDays, cycleLengthDays, periodConfirmedEnded);
 
   @override
   String toString() =>
-      'CycleSummary(startDate: $startDate, periodLengthDays: $periodLengthDays, cycleLengthDays: $cycleLengthDays)';
+      'CycleSummary(startDate: $startDate, periodLengthDays: $periodLengthDays, '
+      'cycleLengthDays: $cycleLengthDays, periodConfirmedEnded: $periodConfirmedEnded)';
 }
 
 /// Deriva los ciclos a partir de la lista de dias marcados como dia de
@@ -53,10 +65,13 @@ class CycleSummary {
 List<CycleSummary> deriveCycles(
   List<String> periodDays, {
   int maxGap = maxGapWithinPeriod,
+  List<String> explicitNonPeriodDays = const [],
 }) {
   if (periodDays.isEmpty) return [];
 
   final sorted = periodDays.toSet().toList()..sort(DayKey.compare);
+  final nonPeriodSorted = explicitNonPeriodDays.toSet().toList()
+    ..sort(DayKey.compare);
 
   // Agrupa en corridas: una corrida nueva empieza cuando el hueco con el
   // dia anterior supera maxGap.
@@ -83,10 +98,16 @@ List<CycleSummary> deriveCycles(
     final cycleLengthDays =
         isLast ? null : DayKey.diffInDays(periodStart, runs[i + 1].first);
 
+    final periodConfirmedEnded = nonPeriodSorted.any((explicitDate) {
+      final gap = DayKey.diffInDays(periodEnd, explicitDate);
+      return gap > 0 && gap <= maxGap;
+    });
+
     summaries.add(CycleSummary(
       startDate: periodStart,
       periodLengthDays: periodLengthDays,
       cycleLengthDays: cycleLengthDays,
+      periodConfirmedEnded: periodConfirmedEnded,
     ));
   }
 

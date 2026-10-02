@@ -148,4 +148,62 @@ void main() {
       expect(conSiguienteCiclo[0].cycleLengthDays, 28);
     });
   });
+
+  group('deriveCycles - periodConfirmedEnded', () {
+    test('sin explicitNonPeriodDays: false por defecto (retrocompatible)',
+        () {
+      final result = deriveCycles(['2026-01-01', '2026-01-02']);
+      expect(result.single.periodConfirmedEnded, isFalse);
+    });
+
+    test('un "no" explicito el dia siguiente al ultimo sangrado confirma el '
+        'fin del periodo', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03'],
+        explicitNonPeriodDays: ['2026-01-04'],
+      );
+      expect(result.single.periodConfirmedEnded, isTrue);
+    });
+
+    test('un "no" explicito dentro de maxGapWithinPeriod (7) confirma, pero '
+        'no cambia el agrupamiento ni periodLengthDays', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03'],
+        explicitNonPeriodDays: ['2026-01-08'], // +5 dias, dentro de 7
+      );
+      expect(result.single.periodConfirmedEnded, isTrue);
+      expect(result.single.periodLengthDays, 3);
+    });
+
+    test('un "no" explicito mas alla de maxGapWithinPeriod no confirma nada '
+        '(esta demasiado lejos para decir algo sobre ESTE periodo)', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03'],
+        explicitNonPeriodDays: ['2026-01-20'],
+      );
+      expect(result.single.periodConfirmedEnded, isFalse);
+    });
+
+    test('un "no" explicito ANTES del ultimo dia de sangrado no confirma '
+        'nada (dato contradictorio, se ignora)', () {
+      final result = deriveCycles(
+        ['2026-01-05', '2026-01-06', '2026-01-07'],
+        explicitNonPeriodDays: ['2026-01-04'],
+      );
+      expect(result.single.periodConfirmedEnded, isFalse);
+    });
+
+    test('cada periodo evalua su propio "no" explicito por separado', () {
+      final result = deriveCycles(
+        [
+          '2026-01-01', '2026-01-02', '2026-01-03', // periodo 1
+          '2026-02-01', '2026-02-02', '2026-02-03', // periodo 2 (abierto)
+        ],
+        explicitNonPeriodDays: ['2026-01-04'], // solo confirma el periodo 1
+      );
+      expect(result, hasLength(2));
+      expect(result[0].periodConfirmedEnded, isTrue);
+      expect(result[1].periodConfirmedEnded, isFalse);
+    });
+  });
 }
