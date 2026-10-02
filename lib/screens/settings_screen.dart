@@ -29,11 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   int _horaRecordatorio = 9;
   int _minutoRecordatorio = 0;
 
-  // dark_mode todavia no tiene columna en app_settings (fase 2, punto 4):
-  // queda como estado local de la pantalla, no persistido, igual que
-  // antes no afectaba el tema de la app.
-  bool _modoOscuro = false;
-
   @override
   void initState() {
     super.initState();
@@ -150,12 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       const SnackBar(
         content: Text('Notificación de prueba programada en 10 segundos.'),
       ),
-    );
-  }
-
-  Future<void> _guardarPreferencias() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Preferencias guardadas 🩵")),
     );
   }
 
@@ -286,41 +275,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               label: const Text("Probar notificación en 10 segundos"),
             ),
           ],
-
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 10),
-
-          const Text(
-            "Preferencias generales",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-
-          // 🌙 Tema
-          SwitchListTile(
-            title: const Text("Modo oscuro"),
-            subtitle: const Text("Reduce brillo y usa fondo oscuro"),
-            activeColor: const Color(0xFFA8D8EA),
-            value: _modoOscuro,
-            onChanged: (val) {
-              setState(() => _modoOscuro = val);
-            },
-          ),
-
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _guardarPreferencias,
-            icon: const Icon(Icons.save),
-            label: const Text("Guardar preferencias"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFA8D8EA),
-              foregroundColor: Colors.black,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
 
           const SizedBox(height: 40),
           const Divider(),
