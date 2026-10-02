@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../models/day_enums.dart';
 
@@ -77,6 +78,13 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'aura.sqlite'));
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(file, setup: _enableForeignKeys);
   });
+}
+
+/// SQLite no aplica ON DELETE CASCADE salvo que foreign_keys este
+/// activado explicitamente por conexion; sin esto, borrar un daily_log
+/// dejaria huerfanas sus filas en daily_log_symptoms.
+void _enableForeignKeys(Database database) {
+  database.execute('PRAGMA foreign_keys = ON');
 }
