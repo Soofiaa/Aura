@@ -3,7 +3,7 @@ import 'data/repositories/cycle_repository.dart';
 import 'utils/notifications.dart';
 import 'utils/colors.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +30,7 @@ class AuraApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: onboardingVisto
-          ? const HomeScreen()
+          ? const MainNavigationScreen()
           : const OnboardingScreen(),
     );
   }

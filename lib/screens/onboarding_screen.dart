@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/repositories/cycle_repository.dart';
-import 'home_screen.dart'; // reemplaza main_navigation.dart
+import 'main_navigation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
     );
   }
 
