@@ -125,6 +125,24 @@ class CycleRepository {
     return predictCycle(cycles: cycles, today: DayKey.today(), config: config);
   }
 
+  /// Igual que [getPrediction], pero reactivo: emite de nuevo cada vez
+  /// que cambia algun dia en daily_logs (registrar un dia, marcar un dia
+  /// desde el calendario, borrar todos los datos), sin importar por
+  /// donde se navego para llegar a home_screen. Evita tener que acordarse
+  /// de "recargar" a mano en cada punto de navegacion que podria cambiar
+  /// datos.
+  Stream<CyclePrediction?> watchPrediction({
+    PredictionConfig config = const PredictionConfig(),
+  }) {
+    return watchPeriodDayDates().map(
+      (dates) => predictCycle(
+        cycles: deriveCycles(dates),
+        today: DayKey.today(),
+        config: config,
+      ),
+    );
+  }
+
   Future<bool> hasAnyLog() async {
     final countExp = _db.dailyLogs.date.count();
     final query = _db.selectOnly(_db.dailyLogs)..addColumns([countExp]);
@@ -159,6 +177,24 @@ class CycleRepository {
       for (final row in rows)
         Mood.values.byName(row.data['mood'] as String): row.data['c'] as int,
     };
+  }
+
+  /// Igual que llamar hasAnyLog()+getSymptomFrequency()+getMoodFrequency()+
+  /// getAverageFlow() juntos, pero reactivo: se recalculan los 4 de nuevo
+  /// cada vez que cambia daily_logs. upsertDay() y deleteAllData() siempre
+  /// escriben en daily_logs en la misma transaccion en que tocan
+  /// daily_log_symptoms o app_settings, asi que observar solo daily_logs
+  /// alcanza para detectar cualquier cambio relevante para estas
+  /// estadisticas.
+  Stream<StatsSnapshot> watchStats() {
+    return _db.select(_db.dailyLogs).watch().asyncMap((_) async {
+      return StatsSnapshot(
+        hasAnyLog: await hasAnyLog(),
+        symptomFrequency: await getSymptomFrequency(),
+        moodFrequency: await getMoodFrequency(),
+        averageFlow: await getAverageFlow(),
+      );
+    });
   }
 
   /// Promedio de flujo en la escala Ligero=1, Moderado=2, Abundante=3
@@ -232,6 +268,23 @@ class CycleRepository {
   }
 }
 
+/// Resultado combinado de [CycleRepository.watchStats] (y equivalente a
+/// llamar hasAnyLog/getSymptomFrequency/getMoodFrequency/getAverageFlow
+/// por separado).
+class StatsSnapshot {
+  final bool hasAnyLog;
+  final Map<Symptom, int> symptomFrequency;
+  final Map<Mood, int> moodFrequency;
+  final double averageFlow;
+
+  const StatsSnapshot({
+    required this.hasAnyLog,
+    required this.symptomFrequency,
+    required this.moodFrequency,
+    required this.averageFlow,
+  });
+}
+
 AppDatabase? _appDatabaseInstance;
 
 /// Instancia unica de AppDatabase para toda la app (no hay DI framework
@@ -239,7 +292,14 @@ AppDatabase? _appDatabaseInstance;
 /// directamente.
 AppDatabase get appDatabase => _appDatabaseInstance ??= AppDatabase();
 
+/// Solo para tests: reemplaza la instancia global (ej. por una con
+/// NativeDatabase.memory()) antes de montar los widgets que la usan.
+set appDatabase(AppDatabase value) => _appDatabaseInstance = value;
+
 CycleRepository? _cycleRepositoryInstance;
 
 CycleRepository get cycleRepository =>
     _cycleRepositoryInstance ??= CycleRepository(appDatabase);
+
+/// Solo para tests: reemplaza el repositorio global.
+set cycleRepository(CycleRepository value) => _cycleRepositoryInstance = value;
