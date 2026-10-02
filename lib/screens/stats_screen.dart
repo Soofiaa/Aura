@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../data/database/hive_boxes.dart';
+import '../data/models/day_enums.dart';
+import '../data/repositories/cycle_repository.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -11,67 +11,47 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  late Box _box;
-  List<dynamic> registros = [];
+  bool _loading = true;
+  bool _hasAnyLog = false;
+  Map<Symptom, int> _sintomas = {};
+  Map<Mood, int> _estadosAnimo = {};
+  double _promedioFlujo = 0;
 
   @override
   void initState() {
     super.initState();
-    _box = HiveBoxes.getDiasBox();
-    registros = _box.get('registros', defaultValue: []);
+    _cargarEstadisticas();
   }
 
-  /// Contar frecuencia de síntomas
-  Map<String, int> getFrecuenciaSintomas() {
-    final Map<String, int> conteo = {};
-    for (var reg in registros) {
-      if (reg['sintomas'] != null) {
-        for (var s in reg['sintomas']) {
-          conteo[s] = (conteo[s] ?? 0) + 1;
-        }
-      }
-    }
-    return conteo;
-  }
+  Future<void> _cargarEstadisticas() async {
+    final results = await Future.wait([
+      cycleRepository.hasAnyLog(),
+      cycleRepository.getSymptomFrequency(),
+      cycleRepository.getMoodFrequency(),
+      cycleRepository.getAverageFlow(),
+    ]);
 
-  /// Contar frecuencia de estado de ánimo
-  Map<String, int> getFrecuenciaAnimo() {
-    final Map<String, int> conteo = {};
-    for (var reg in registros) {
-      final estado = reg['estado_animo'] ?? 'Sin dato';
-      conteo[estado] = (conteo[estado] ?? 0) + 1;
-    }
-    return conteo;
-  }
-
-  /// Calcular promedio de flujo
-  double getPromedioFlujo() {
-    if (registros.isEmpty) return 0;
-    final Map<String, int> valores = {
-      'Ligero': 1,
-      'Moderado': 2,
-      'Abundante': 3,
-    };
-    double total = 0;
-    for (var reg in registros) {
-      total += valores[reg['flujo']]?.toDouble() ?? 0;
-    }
-    return total / registros.length;
+    if (!mounted) return;
+    setState(() {
+      _hasAnyLog = results[0] as bool;
+      _sintomas = results[1] as Map<Symptom, int>;
+      _estadosAnimo = results[2] as Map<Mood, int>;
+      _promedioFlujo = results[3] as double;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final sintomas = getFrecuenciaSintomas();
-    final estadosAnimo = getFrecuenciaAnimo();
-    final promedioFlujo = getPromedioFlujo();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Estadísticas"),
         backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
-      body: registros.isEmpty
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : !_hasAnyLog
           ? const Center(
         child: Text(
           "Aún no hay registros guardados 🩷",
@@ -90,11 +70,11 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              promedioFlujo == 0
+              _promedioFlujo == 0
                   ? "Sin datos"
-                  : promedioFlujo < 1.5
+                  : _promedioFlujo < 1.5
                   ? "Ligero"
-                  : promedioFlujo < 2.5
+                  : _promedioFlujo < 2.5
                   ? "Moderado"
                   : "Abundante",
               style: const TextStyle(
@@ -105,7 +85,7 @@ class _StatsScreenState extends State<StatsScreen> {
             const SizedBox(height: 30),
 
             // 🩹 Gráfico de síntomas
-            if (sintomas.isNotEmpty) ...[
+            if (_sintomas.isNotEmpty) ...[
               const Text(
                 "Síntomas más frecuentes",
                 style:
@@ -134,12 +114,13 @@ class _StatsScreenState extends State<StatsScreen> {
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
                             final index = value.toInt();
-                            if (index < sintomas.keys.length) {
+                            final keys = _sintomas.keys.toList();
+                            if (index < keys.length) {
                               return Padding(
                                 padding:
                                 const EdgeInsets.only(top: 8.0),
                                 child: Text(
-                                  sintomas.keys.elementAt(index),
+                                  keys[index].label,
                                   style: const TextStyle(
                                       fontSize: 10,
                                       color: Colors.black),
@@ -152,12 +133,12 @@ class _StatsScreenState extends State<StatsScreen> {
                       ),
                     ),
                     barGroups: List.generate(
-                      sintomas.length,
+                      _sintomas.length,
                           (i) => BarChartGroupData(
                         x: i,
                         barRods: [
                           BarChartRodData(
-                            toY: sintomas.values.elementAt(i).toDouble(),
+                            toY: _sintomas.values.elementAt(i).toDouble(),
                             color: const Color(0xFFFAD4D8),
                             width: 18,
                             borderRadius: BorderRadius.circular(4),
@@ -172,7 +153,7 @@ class _StatsScreenState extends State<StatsScreen> {
             const SizedBox(height: 30),
 
             // 😊 Gráfico de estados de ánimo
-            if (estadosAnimo.isNotEmpty) ...[
+            if (_estadosAnimo.isNotEmpty) ...[
               const Text(
                 "Estados de ánimo registrados",
                 style:
@@ -184,17 +165,17 @@ class _StatsScreenState extends State<StatsScreen> {
                 child: PieChart(
                   PieChartData(
                     centerSpaceRadius: 40,
-                    sections: estadosAnimo.entries.map((entry) {
+                    sections: _estadosAnimo.entries.map((entry) {
                       final porcentaje = entry.value /
-                          estadosAnimo.values
+                          _estadosAnimo.values
                               .reduce((a, b) => a + b);
                       return PieChartSectionData(
                         value: entry.value.toDouble(),
                         color: Colors.primaries[
-                        estadosAnimo.keys.toList().indexOf(entry.key) %
+                        _estadosAnimo.keys.toList().indexOf(entry.key) %
                             Colors.primaries.length],
                         title:
-                        "${entry.key}\n${(porcentaje * 100).toStringAsFixed(0)}%",
+                        "${entry.key.label}\n${(porcentaje * 100).toStringAsFixed(0)}%",
                         radius: 70,
                         titleStyle: const TextStyle(
                             color: Colors.white,
