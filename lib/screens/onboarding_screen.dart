@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../data/database/hive_boxes.dart';
+import '../data/repositories/cycle_repository.dart';
 import 'home_screen.dart'; // reemplaza main_navigation.dart
 
 class OnboardingScreen extends StatefulWidget {
@@ -36,12 +35,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   void _finalizarOnboarding() async {
-    final box = HiveBoxes.getConfigBox(); // ✅ caja correcta
-    await box.put('onboardingVisto', true);
+    await cycleRepository.setOnboardingSeen(true);
 
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()), // ✅ pantalla real
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
 

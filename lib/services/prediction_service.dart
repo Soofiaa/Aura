@@ -1,17 +1,19 @@
-import 'package:hive_flutter/hive_flutter.dart';
-import '../data/database/hive_boxes.dart';
-
 class PredictionService {
-  final Box ciclosBox = HiveBoxes.getCiclosBox();
+  // Stub de compilacion: con Hive eliminado (fase 2), ya no hay una
+  // 'listaCiclos' de la que leer. Esta clase se reescribe en la fase 3
+  // sobre CycleRepository.getDerivedCycles(); hasta entonces se
+  // mantiene el comportamiento previo (que ya operaba siempre sobre una
+  // lista vacia, porque nada escribia 'listaCiclos' en Hive).
+  List<Map<String, dynamic>> _getCiclos() => const [];
 
   Map<String, dynamic>? getUltimoCiclo() {
-    final ciclos = ciclosBox.get('listaCiclos', defaultValue: []);
+    final ciclos = _getCiclos();
     if (ciclos.isEmpty) return null;
     return Map<String, dynamic>.from(ciclos.last);
   }
 
   double getDuracionPromedio() {
-    final ciclos = ciclosBox.get('listaCiclos', defaultValue: []);
+    final ciclos = _getCiclos();
     if (ciclos.isEmpty) return 28;
     final duraciones = ciclos.map((c) => (c['duracionCiclo'] ?? 28) as int).toList();
     final suma = duraciones.reduce((a, b) => a + b);
