@@ -125,22 +125,22 @@ class CycleRepository {
     return predictCycle(cycles: cycles, today: DayKey.today(), config: config);
   }
 
-  /// Igual que [getPrediction], pero reactivo: emite de nuevo cada vez
+  /// Igual que [getDerivedCycles], pero reactivo: emite de nuevo cada vez
   /// que cambia algun dia en daily_logs (registrar un dia, marcar un dia
   /// desde el calendario, borrar todos los datos), sin importar por
-  /// donde se navego para llegar a home_screen. Evita tener que acordarse
+  /// donde se navego para llegar a la pantalla. Evita tener que acordarse
   /// de "recargar" a mano en cada punto de navegacion que podria cambiar
   /// datos.
-  Stream<CyclePrediction?> watchPrediction({
-    PredictionConfig config = const PredictionConfig(),
-  }) {
-    return watchPeriodDayDates().map(
-      (dates) => predictCycle(
-        cycles: deriveCycles(dates),
-        today: DayKey.today(),
-        config: config,
-      ),
-    );
+  ///
+  /// Deliberadamente NO devuelve un `Stream<CyclePrediction?>` ya
+  /// calculado: ese calculo necesita un "hoy", y un stream atado solo a
+  /// escrituras en la base nunca se entera de que paso la medianoche o
+  /// de que la app volvio a primer plano al dia siguiente sin que nadie
+  /// haya tocado un dato. Por eso la UI (home_screen) es quien decide
+  /// "hoy" y llama a predictCycle() ella misma con cada emision de este
+  /// stream.
+  Stream<List<CycleSummary>> watchDerivedCycles() {
+    return watchPeriodDayDates().map(deriveCycles);
   }
 
   Future<bool> hasAnyLog() async {

@@ -3,9 +3,10 @@
 //
 // El caso "onboardingVisto: true" prueba HomeScreen directamente (en vez
 // de a traves de AuraApp) con un CycleRepository en memoria: HomeScreen
-// toca la base de datos real en initState (getPrediction), y el entorno
-// de flutter_test no tiene el canal de plataforma de path_provider que
-// esa base de datos necesita para abrir el archivo real.
+// toca la base de datos real en initState (watchDerivedCycles), y el
+// entorno de flutter_test no tiene el canal de plataforma de
+// path_provider que esa base de datos necesita para abrir el archivo
+// real.
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';

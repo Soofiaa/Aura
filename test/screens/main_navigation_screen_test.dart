@@ -58,7 +58,7 @@ void main() {
 
     expect(find.textContaining('Registra tu primer día'), findsOneWidget);
 
-    await tester.tap(find.text('Registrar nuevo ciclo'));
+    await tester.tap(find.text('Registrar día'));
     await tester.pumpAndSettle();
 
     final guardarButton = find.text('Guardar registro');

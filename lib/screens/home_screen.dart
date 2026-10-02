@@ -1,33 +1,82 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/cycle_deriver.dart';
 import '../domain/cycle_predictor.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
 import 'add_cycle_screen.dart';
-import 'calendar_screen.dart';
-import 'settings_screen.dart';
-import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   /// Permite inyectar un repositorio (ej. con base en memoria) en tests.
   /// En la app real se usa el singleton global [cycleRepository].
   final CycleRepository? repository;
 
-  const HomeScreen({super.key, this.repository});
+  /// Reloj inyectable para tests (controla que dia es "hoy" y cuanto
+  /// falta para la medianoche). En la app real, DateTime.now().
+  final DateTime Function()? clock;
+
+  const HomeScreen({super.key, this.repository, this.clock});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final CycleRepository _repository = widget.repository ?? cycleRepository;
+  DateTime Function() get _clock => widget.clock ?? DateTime.now;
 
   // Stream en vez de un Future cargado una vez en initState: se vuelve a
   // calcular solo cuando cambia algo en daily_logs (registrar un dia,
   // marcar desde el calendario, borrar datos), sin importar si volvimos
-  // aca con push/pop o cambiando de pestana en la NavigationBar.
-  late final Stream<CyclePrediction?> _predictionStream =
-      _repository.watchPrediction();
+  // aca con push/pop o cambiando de pestana en la NavigationBar. El motor
+  // (predictCycle) sigue siendo puro: "hoy" lo decide esta pantalla
+  // (_today, mas abajo), no el stream ni el repositorio.
+  late final Stream<List<CycleSummary>> _cyclesStream =
+      _repository.watchDerivedCycles();
+
+  late String _today = DayKey.fromDate(_clock());
+  Timer? _midnightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _midnightTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshToday();
+    }
+  }
+
+  /// Recalcula que dia es "hoy" (sin tocar la base de datos) y vuelve a
+  /// programar el timer de medianoche. Se llama al volver la app a
+  /// primer plano y cuando ese timer dispara.
+  void _refreshToday() {
+    final current = DayKey.fromDate(_clock());
+    if (current != _today) {
+      setState(() => _today = current);
+    }
+    _scheduleMidnightRefresh();
+  }
+
+  void _scheduleMidnightRefresh() {
+    _midnightTimer?.cancel();
+    final now = _clock();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextMidnight.difference(now), _refreshToday);
+  }
 
   String _formatDate(String dayKey) =>
       DateUtilsAura.formatFechaCorta(DayKey.toUtcAnchor(dayKey));
@@ -43,12 +92,16 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         backgroundColor: const Color(0xFFA8D8EA),
       ),
-      body: StreamBuilder<CyclePrediction?>(
-        stream: _predictionStream,
+      body: StreamBuilder<List<CycleSummary>>(
+        stream: _cyclesStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          final prediction = predictCycle(
+            cycles: snapshot.data ?? const [],
+            today: _today,
+          );
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -60,12 +113,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 20),
-                _buildPredictionCard(snapshot.data),
+                _buildPredictionCard(prediction),
                 const SizedBox(height: 12),
                 _buildDisclaimer(),
                 const SizedBox(height: 30),
 
-                // Botones principales
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -74,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text("Registrar nuevo ciclo"),
+                  label: const Text("Registrar día"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFAD4D8),
                     foregroundColor: Colors.black,
@@ -82,28 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                ),
-                const SizedBox(height: 10),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildMenuButton(
-                      Icons.calendar_month,
-                      "Calendario",
-                      const CalendarScreen(),
-                    ),
-                    _buildMenuButton(
-                      Icons.show_chart,
-                      "Estadísticas",
-                      const StatsScreen(),
-                    ),
-                    _buildMenuButton(
-                      Icons.settings,
-                      "Ajustes",
-                      const SettingsScreen(),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -304,29 +334,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuButton(IconData icon, String label, Widget destination) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => destination),
-            );
-          },
-          borderRadius: BorderRadius.circular(50),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFA8D8EA),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, size: 28, color: Colors.white),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(label),
-      ],
-    );
-  }
 }
