@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../data/database/app_database.dart' show DailyLogRow;
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_deriver.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _repository.watchDerivedCycles();
 
   late String _today = DayKey.fromDate(_clock());
+  late Stream<DailyLogRow?> _todayStream = _repository.watchDay(_today);
   Timer? _midnightTimer;
 
   @override
@@ -75,7 +77,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _refreshToday() {
     final current = DayKey.fromDate(_clock());
     if (current != _today) {
-      setState(() => _today = current);
+      setState(() {
+        _today = current;
+        _todayStream = _repository.watchDay(_today);
+      });
     }
     _scheduleMidnightRefresh();
   }
@@ -89,6 +94,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   String _formatDate(String dayKey) =>
       DateUtilsAura.formatFechaCorta(DayKey.toUtcAnchor(dayKey));
+
+  /// "Si"/"No" de la pregunta rapida. Usa setPeriodDayExplicitly (no
+  /// upsertDay): esta SI es una declaracion directa y dedicada, a
+  /// diferencia del interruptor del formulario general.
+  Future<void> _responderPeriodoHoy(bool isPeriodDay) async {
+    final date = _today;
+    final previous = await _repository.getDay(date);
+    await _repository.setPeriodDayExplicitly(date, isPeriodDay: isPeriodDay);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isPeriodDay
+              ? 'Día marcado como sangrado.'
+              : 'Registrado: hoy no hubo sangrado.',
+        ),
+        action: SnackBarAction(
+          label: 'Deshacer',
+          onPressed: () => _repository.restoreDaySnapshot(date, previous),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +152,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 20),
                 _buildPredictionCard(prediction),
+                StreamBuilder<DailyLogRow?>(
+                  stream: _todayStream,
+                  builder: (context, todaySnapshot) {
+                    final card = _buildPeriodCheckCard(
+                      prediction,
+                      todaySnapshot.data,
+                    );
+                    if (card == null) return const SizedBox.shrink();
+                    return Column(children: [
+                      const SizedBox(height: 12),
+                      card,
+                    ]);
+                  },
+                ),
                 const SizedBox(height: 12),
                 _buildDisclaimer(),
                 const SizedBox(height: 30),
@@ -194,6 +237,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       StaleDataPrediction() => _buildStaleCard(prediction),
       ActivePrediction() => _buildActiveCard(prediction),
     };
+  }
+
+  /// Null si no corresponde mostrarla: solo aplica en fase menstrual y
+  /// cuando hoy todavia no tiene una respuesta (ni is_period_day=true, ni
+  /// una negacion explicita ya registrada) -- si no, se preguntaria lo
+  /// mismo una y otra vez el mismo dia.
+  Widget? _buildPeriodCheckCard(CyclePrediction? prediction, DailyLogRow? today) {
+    if (prediction is! ActivePrediction) return null;
+    if (prediction.currentPhase != CyclePhase.menstrual) return null;
+
+    final yaRespondida = today != null &&
+        (today.isPeriodDay || (!today.isPeriodDay && today.periodDayExplicit));
+    if (yaRespondida) return null;
+
+    return _buildCardShell(children: [
+      const Text(
+        "¿Sigue tu período hoy?",
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton(
+            onPressed: () => _responderPeriodoHoy(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFA8D8EA),
+              foregroundColor: Colors.black,
+            ),
+            child: const Text("Sí"),
+          ),
+          OutlinedButton(
+            onPressed: () => _responderPeriodoHoy(false),
+            child: const Text("No"),
+          ),
+        ],
+      ),
+    ]);
   }
 
   Widget _buildStaleCard(StaleDataPrediction p) {
