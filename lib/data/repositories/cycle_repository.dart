@@ -1,8 +1,6 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/cycle_deriver.dart';
-import '../../domain/cycle_predictor.dart';
-import '../../utils/day_key.dart';
 import '../database/app_database.dart';
 import '../models/day_enums.dart';
 
@@ -112,17 +110,6 @@ class CycleRepository {
   Future<List<CycleSummary>> getDerivedCycles() async {
     final dates = await getPeriodDayDates();
     return deriveCycles(dates);
-  }
-
-  /// Prediccion para "hoy" (reloj real). El motor (predictCycle) sigue
-  /// siendo puro y testeable por separado; este metodo solo lo conecta
-  /// con los datos reales, igual que getDerivedCycles() envuelve
-  /// deriveCycles().
-  Future<CyclePrediction?> getPrediction({
-    PredictionConfig config = const PredictionConfig(),
-  }) async {
-    final cycles = await getDerivedCycles();
-    return predictCycle(cycles: cycles, today: DayKey.today(), config: config);
   }
 
   /// Igual que [getDerivedCycles], pero reactivo: emite de nuevo cada vez
