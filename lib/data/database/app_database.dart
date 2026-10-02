@@ -37,18 +37,25 @@ class DailyLogs extends Table {
 
 @DataClassName('DailyLogSymptomRow')
 class DailyLogSymptoms extends Table {
-  TextColumn get logDate =>
-      text().references(DailyLogs, #date, onDelete: KeyAction.cascade)();
+  TextColumn get logDate => text()();
   TextColumn get symptom => textEnum<Symptom>()();
 
   @override
   Set<Column> get primaryKey => {logDate, symptom};
+
+  // Declarado como SQL crudo en vez de .references(): con drift 2.20 ese
+  // helper no genero la clausula REFERENCES (ver commit), asi que se usa
+  // la forma explicita que si se verifico que aparece en el CREATE TABLE.
+  @override
+  List<String> get customConstraints => [
+        'FOREIGN KEY (log_date) REFERENCES daily_logs (date) ON DELETE CASCADE',
+      ];
 }
 
 /// Fila unica de ajustes de la app. dark_mode y default_cycle_length se
 /// dejan fuera deliberadamente por ahora (ver fase 2, punto 4).
 @DataClassName('AppSettingsRow')
-class AppSettingsTable extends Table {
+class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(0))();
   BoolColumn get onboardingSeen =>
       boolean().withDefault(const Constant(false))();
@@ -62,7 +69,7 @@ class AppSettingsTable extends Table {
   List<String> get customConstraints => ['CHECK (id = 0)'];
 }
 
-@DriftDatabase(tables: [DailyLogs, DailyLogSymptoms, AppSettingsTable])
+@DriftDatabase(tables: [DailyLogs, DailyLogSymptoms, AppSettings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 

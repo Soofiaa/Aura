@@ -394,9 +394,6 @@ class $DailyLogSymptomsTable extends DailyLogSymptoms
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES daily_logs (date) ON DELETE CASCADE',
-    ),
   );
   @override
   late final GeneratedColumnWithTypeConverter<Symptom, String> symptom =
@@ -605,12 +602,12 @@ class DailyLogSymptomsCompanion extends UpdateCompanion<DailyLogSymptomRow> {
   }
 }
 
-class $AppSettingsTableTable extends AppSettingsTable
-    with TableInfo<$AppSettingsTableTable, AppSettingsRow> {
+class $AppSettingsTable extends AppSettings
+    with TableInfo<$AppSettingsTable, AppSettingsRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $AppSettingsTableTable(this.attachedDatabase, [this._alias]);
+  $AppSettingsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -660,7 +657,7 @@ class $AppSettingsTableTable extends AppSettingsTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'app_settings_table';
+  static const String $name = 'app_settings';
   @override
   VerificationContext validateIntegrity(
     Insertable<AppSettingsRow> instance, {
@@ -714,8 +711,8 @@ class $AppSettingsTableTable extends AppSettingsTable
   }
 
   @override
-  $AppSettingsTableTable createAlias(String alias) {
-    return $AppSettingsTableTable(attachedDatabase, alias);
+  $AppSettingsTable createAlias(String alias) {
+    return $AppSettingsTable(attachedDatabase, alias);
   }
 }
 
@@ -737,8 +734,8 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     return map;
   }
 
-  AppSettingsTableCompanion toCompanion(bool nullToAbsent) {
-    return AppSettingsTableCompanion(
+  AppSettingsCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsCompanion(
       id: Value(id),
       onboardingSeen: Value(onboardingSeen),
       notificationsEnabled: Value(notificationsEnabled),
@@ -777,7 +774,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     onboardingSeen: onboardingSeen ?? this.onboardingSeen,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
   );
-  AppSettingsRow copyWithCompanion(AppSettingsTableCompanion data) {
+  AppSettingsRow copyWithCompanion(AppSettingsCompanion data) {
     return AppSettingsRow(
       id: data.id.present ? data.id.value : this.id,
       onboardingSeen: data.onboardingSeen.present
@@ -810,16 +807,16 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
           other.notificationsEnabled == this.notificationsEnabled);
 }
 
-class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsRow> {
+class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
   final Value<int> id;
   final Value<bool> onboardingSeen;
   final Value<bool> notificationsEnabled;
-  const AppSettingsTableCompanion({
+  const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
   });
-  AppSettingsTableCompanion.insert({
+  AppSettingsCompanion.insert({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
@@ -837,12 +834,12 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsRow> {
     });
   }
 
-  AppSettingsTableCompanion copyWith({
+  AppSettingsCompanion copyWith({
     Value<int>? id,
     Value<bool>? onboardingSeen,
     Value<bool>? notificationsEnabled,
   }) {
-    return AppSettingsTableCompanion(
+    return AppSettingsCompanion(
       id: id ?? this.id,
       onboardingSeen: onboardingSeen ?? this.onboardingSeen,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -866,7 +863,7 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsRow> {
 
   @override
   String toString() {
-    return (StringBuffer('AppSettingsTableCompanion(')
+    return (StringBuffer('AppSettingsCompanion(')
           ..write('id: $id, ')
           ..write('onboardingSeen: $onboardingSeen, ')
           ..write('notificationsEnabled: $notificationsEnabled')
@@ -882,9 +879,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DailyLogSymptomsTable dailyLogSymptoms = $DailyLogSymptomsTable(
     this,
   );
-  late final $AppSettingsTableTable appSettingsTable = $AppSettingsTableTable(
-    this,
-  );
+  late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -892,18 +887,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     dailyLogs,
     dailyLogSymptoms,
-    appSettingsTable,
+    appSettings,
   ];
-  @override
-  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'daily_logs',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('daily_log_symptoms', kind: UpdateKind.delete)],
-    ),
-  ]);
 }
 
 typedef $$DailyLogsTableCreateCompanionBuilder =
@@ -924,31 +909,6 @@ typedef $$DailyLogsTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<int> rowid,
     });
-
-final class $$DailyLogsTableReferences
-    extends BaseReferences<_$AppDatabase, $DailyLogsTable, DailyLogRow> {
-  $$DailyLogsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static MultiTypedResultKey<$DailyLogSymptomsTable, List<DailyLogSymptomRow>>
-  _dailyLogSymptomsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.dailyLogSymptoms,
-    aliasName: 'daily_logs__date__daily_log_symptoms__log_date',
-  );
-
-  $$DailyLogSymptomsTableProcessedTableManager get dailyLogSymptomsRefs {
-    final manager = $$DailyLogSymptomsTableTableManager(
-      $_db,
-      $_db.dailyLogSymptoms,
-    ).filter((f) => f.logDate.date.sqlEquals($_itemColumn<String>('date')!));
-
-    final cache = $_typedResult.readTableOrNull(
-      _dailyLogSymptomsRefsTable($_db),
-    );
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
 
 class $$DailyLogsTableFilterComposer
     extends Composer<_$AppDatabase, $DailyLogsTable> {
@@ -985,31 +945,6 @@ class $$DailyLogsTableFilterComposer
     column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
-
-  Expression<bool> dailyLogSymptomsRefs(
-    Expression<bool> Function($$DailyLogSymptomsTableFilterComposer f) f,
-  ) {
-    final $$DailyLogSymptomsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.date,
-      referencedTable: $db.dailyLogSymptoms,
-      getReferencedColumn: (t) => t.logDate,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DailyLogSymptomsTableFilterComposer(
-            $db: $db,
-            $table: $db.dailyLogSymptoms,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$DailyLogsTableOrderingComposer
@@ -1072,31 +1007,6 @@ class $$DailyLogsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
-
-  Expression<T> dailyLogSymptomsRefs<T extends Object>(
-    Expression<T> Function($$DailyLogSymptomsTableAnnotationComposer a) f,
-  ) {
-    final $$DailyLogSymptomsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.date,
-      referencedTable: $db.dailyLogSymptoms,
-      getReferencedColumn: (t) => t.logDate,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DailyLogSymptomsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.dailyLogSymptoms,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$DailyLogsTableTableManager
@@ -1110,9 +1020,12 @@ class $$DailyLogsTableTableManager
           $$DailyLogsTableAnnotationComposer,
           $$DailyLogsTableCreateCompanionBuilder,
           $$DailyLogsTableUpdateCompanionBuilder,
-          (DailyLogRow, $$DailyLogsTableReferences),
+          (
+            DailyLogRow,
+            BaseReferences<_$AppDatabase, $DailyLogsTable, DailyLogRow>,
+          ),
           DailyLogRow,
-          PrefetchHooks Function({bool dailyLogSymptomsRefs})
+          PrefetchHooks Function()
         > {
   $$DailyLogsTableTableManager(_$AppDatabase db, $DailyLogsTable table)
     : super(
@@ -1158,45 +1071,9 @@ class $$DailyLogsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$DailyLogsTable, DailyLogRow>(table),
-                  $$DailyLogsTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({dailyLogSymptomsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (dailyLogSymptomsRefs) db.dailyLogSymptoms,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (dailyLogSymptomsRefs)
-                    await $_getPrefetchedData<
-                      DailyLogRow,
-                      $DailyLogsTable,
-                      DailyLogSymptomRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$DailyLogsTableReferences
-                          ._dailyLogSymptomsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$DailyLogsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).dailyLogSymptomsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.logDate == item.date),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -1211,9 +1088,12 @@ typedef $$DailyLogsTableProcessedTableManager =
       $$DailyLogsTableAnnotationComposer,
       $$DailyLogsTableCreateCompanionBuilder,
       $$DailyLogsTableUpdateCompanionBuilder,
-      (DailyLogRow, $$DailyLogsTableReferences),
+      (
+        DailyLogRow,
+        BaseReferences<_$AppDatabase, $DailyLogsTable, DailyLogRow>,
+      ),
       DailyLogRow,
-      PrefetchHooks Function({bool dailyLogSymptomsRefs})
+      PrefetchHooks Function()
     >;
 typedef $$DailyLogSymptomsTableCreateCompanionBuilder =
     DailyLogSymptomsCompanion Function({
@@ -1228,37 +1108,6 @@ typedef $$DailyLogSymptomsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$DailyLogSymptomsTableReferences
-    extends
-        BaseReferences<
-          _$AppDatabase,
-          $DailyLogSymptomsTable,
-          DailyLogSymptomRow
-        > {
-  $$DailyLogSymptomsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $DailyLogsTable _logDateTable(_$AppDatabase db) => db.dailyLogs
-      .createAlias('daily_log_symptoms__log_date__daily_logs__date');
-
-  $$DailyLogsTableProcessedTableManager get logDate {
-    final $_column = $_itemColumn<String>('log_date')!;
-
-    final manager = $$DailyLogsTableTableManager(
-      $_db,
-      $_db.dailyLogs,
-    ).filter((f) => f.date.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_logDateTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
 class $$DailyLogSymptomsTableFilterComposer
     extends Composer<_$AppDatabase, $DailyLogSymptomsTable> {
   $$DailyLogSymptomsTableFilterComposer({
@@ -1268,34 +1117,16 @@ class $$DailyLogSymptomsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get logDate => $composableBuilder(
+    column: $table.logDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnWithTypeConverterFilters<Symptom, Symptom, String> get symptom =>
       $composableBuilder(
         column: $table.symptom,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
-
-  $$DailyLogsTableFilterComposer get logDate {
-    final $$DailyLogsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.logDate,
-      referencedTable: $db.dailyLogs,
-      getReferencedColumn: (t) => t.date,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DailyLogsTableFilterComposer(
-            $db: $db,
-            $table: $db.dailyLogs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$DailyLogSymptomsTableOrderingComposer
@@ -1307,33 +1138,15 @@ class $$DailyLogSymptomsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get logDate => $composableBuilder(
+    column: $table.logDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get symptom => $composableBuilder(
     column: $table.symptom,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$DailyLogsTableOrderingComposer get logDate {
-    final $$DailyLogsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.logDate,
-      referencedTable: $db.dailyLogs,
-      getReferencedColumn: (t) => t.date,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DailyLogsTableOrderingComposer(
-            $db: $db,
-            $table: $db.dailyLogs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$DailyLogSymptomsTableAnnotationComposer
@@ -1345,31 +1158,11 @@ class $$DailyLogSymptomsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get logDate =>
+      $composableBuilder(column: $table.logDate, builder: (column) => column);
+
   GeneratedColumnWithTypeConverter<Symptom, String> get symptom =>
       $composableBuilder(column: $table.symptom, builder: (column) => column);
-
-  $$DailyLogsTableAnnotationComposer get logDate {
-    final $$DailyLogsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.logDate,
-      referencedTable: $db.dailyLogs,
-      getReferencedColumn: (t) => t.date,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DailyLogsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.dailyLogs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$DailyLogSymptomsTableTableManager
@@ -1383,9 +1176,16 @@ class $$DailyLogSymptomsTableTableManager
           $$DailyLogSymptomsTableAnnotationComposer,
           $$DailyLogSymptomsTableCreateCompanionBuilder,
           $$DailyLogSymptomsTableUpdateCompanionBuilder,
-          (DailyLogSymptomRow, $$DailyLogSymptomsTableReferences),
+          (
+            DailyLogSymptomRow,
+            BaseReferences<
+              _$AppDatabase,
+              $DailyLogSymptomsTable,
+              DailyLogSymptomRow
+            >,
+          ),
           DailyLogSymptomRow,
-          PrefetchHooks Function({bool logDate})
+          PrefetchHooks Function()
         > {
   $$DailyLogSymptomsTableTableManager(
     _$AppDatabase db,
@@ -1421,58 +1221,9 @@ class $$DailyLogSymptomsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$DailyLogSymptomsTable, DailyLogSymptomRow>(
-                    table,
-                  ),
-                  $$DailyLogSymptomsTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({logDate = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (logDate) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.logDate,
-                                referencedTable:
-                                    $$DailyLogSymptomsTableReferences
-                                        ._logDateTable(db),
-                                referencedColumn:
-                                    $$DailyLogSymptomsTableReferences
-                                        ._logDateTable(db)
-                                        .date,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -1487,26 +1238,33 @@ typedef $$DailyLogSymptomsTableProcessedTableManager =
       $$DailyLogSymptomsTableAnnotationComposer,
       $$DailyLogSymptomsTableCreateCompanionBuilder,
       $$DailyLogSymptomsTableUpdateCompanionBuilder,
-      (DailyLogSymptomRow, $$DailyLogSymptomsTableReferences),
+      (
+        DailyLogSymptomRow,
+        BaseReferences<
+          _$AppDatabase,
+          $DailyLogSymptomsTable,
+          DailyLogSymptomRow
+        >,
+      ),
       DailyLogSymptomRow,
-      PrefetchHooks Function({bool logDate})
+      PrefetchHooks Function()
     >;
-typedef $$AppSettingsTableTableCreateCompanionBuilder =
-    AppSettingsTableCompanion Function({
+typedef $$AppSettingsTableCreateCompanionBuilder =
+    AppSettingsCompanion Function({
       Value<int> id,
       Value<bool> onboardingSeen,
       Value<bool> notificationsEnabled,
     });
-typedef $$AppSettingsTableTableUpdateCompanionBuilder =
-    AppSettingsTableCompanion Function({
+typedef $$AppSettingsTableUpdateCompanionBuilder =
+    AppSettingsCompanion Function({
       Value<int> id,
       Value<bool> onboardingSeen,
       Value<bool> notificationsEnabled,
     });
 
-class $$AppSettingsTableTableFilterComposer
-    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
-  $$AppSettingsTableTableFilterComposer({
+class $$AppSettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -1529,9 +1287,9 @@ class $$AppSettingsTableTableFilterComposer
   );
 }
 
-class $$AppSettingsTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
-  $$AppSettingsTableTableOrderingComposer({
+class $$AppSettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -1554,9 +1312,9 @@ class $$AppSettingsTableTableOrderingComposer
   );
 }
 
-class $$AppSettingsTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $AppSettingsTableTable> {
-  $$AppSettingsTableTableAnnotationComposer({
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -1577,47 +1335,41 @@ class $$AppSettingsTableTableAnnotationComposer
   );
 }
 
-class $$AppSettingsTableTableTableManager
+class $$AppSettingsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $AppSettingsTableTable,
+          $AppSettingsTable,
           AppSettingsRow,
-          $$AppSettingsTableTableFilterComposer,
-          $$AppSettingsTableTableOrderingComposer,
-          $$AppSettingsTableTableAnnotationComposer,
-          $$AppSettingsTableTableCreateCompanionBuilder,
-          $$AppSettingsTableTableUpdateCompanionBuilder,
+          $$AppSettingsTableFilterComposer,
+          $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
+          $$AppSettingsTableCreateCompanionBuilder,
+          $$AppSettingsTableUpdateCompanionBuilder,
           (
             AppSettingsRow,
-            BaseReferences<
-              _$AppDatabase,
-              $AppSettingsTableTable,
-              AppSettingsRow
-            >,
+            BaseReferences<_$AppDatabase, $AppSettingsTable, AppSettingsRow>,
           ),
           AppSettingsRow,
           PrefetchHooks Function()
         > {
-  $$AppSettingsTableTableTableManager(
-    _$AppDatabase db,
-    $AppSettingsTableTable table,
-  ) : super(
+  $$AppSettingsTableTableManager(_$AppDatabase db, $AppSettingsTable table)
+    : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$AppSettingsTableTableFilterComposer($db: db, $table: table),
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$AppSettingsTableTableOrderingComposer($db: db, $table: table),
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$AppSettingsTableTableAnnotationComposer($db: db, $table: table),
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<bool> onboardingSeen = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
-              }) => AppSettingsTableCompanion(
+              }) => AppSettingsCompanion(
                 id: id,
                 onboardingSeen: onboardingSeen,
                 notificationsEnabled: notificationsEnabled,
@@ -1627,41 +1379,32 @@ class $$AppSettingsTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<bool> onboardingSeen = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
-              }) => AppSettingsTableCompanion.insert(
+              }) => AppSettingsCompanion.insert(
                 id: id,
                 onboardingSeen: onboardingSeen,
                 notificationsEnabled: notificationsEnabled,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$AppSettingsTableTable, AppSettingsRow>(table),
-                  BaseReferences<
-                    _$AppDatabase,
-                    $AppSettingsTableTable,
-                    AppSettingsRow
-                  >(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: null,
         ),
       );
 }
 
-typedef $$AppSettingsTableTableProcessedTableManager =
+typedef $$AppSettingsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $AppSettingsTableTable,
+      $AppSettingsTable,
       AppSettingsRow,
-      $$AppSettingsTableTableFilterComposer,
-      $$AppSettingsTableTableOrderingComposer,
-      $$AppSettingsTableTableAnnotationComposer,
-      $$AppSettingsTableTableCreateCompanionBuilder,
-      $$AppSettingsTableTableUpdateCompanionBuilder,
+      $$AppSettingsTableFilterComposer,
+      $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
+      $$AppSettingsTableCreateCompanionBuilder,
+      $$AppSettingsTableUpdateCompanionBuilder,
       (
         AppSettingsRow,
-        BaseReferences<_$AppDatabase, $AppSettingsTableTable, AppSettingsRow>,
+        BaseReferences<_$AppDatabase, $AppSettingsTable, AppSettingsRow>,
       ),
       AppSettingsRow,
       PrefetchHooks Function()
@@ -1674,6 +1417,6 @@ class $AppDatabaseManager {
       $$DailyLogsTableTableManager(_db, _db.dailyLogs);
   $$DailyLogSymptomsTableTableManager get dailyLogSymptoms =>
       $$DailyLogSymptomsTableTableManager(_db, _db.dailyLogSymptoms);
-  $$AppSettingsTableTableTableManager get appSettingsTable =>
-      $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db, _db.appSettings);
 }
