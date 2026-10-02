@@ -40,7 +40,10 @@ void main() {
       expect(await repo.getSymptomsForDay('2026-01-01'), {Symptom.cansancio});
     });
 
-    test('interruptor apagado sin dia previo: no es dia de periodo', () async {
+    test(
+        'interruptor apagado sin dia previo: no es dia de periodo Y NO '
+        'produce una negacion explicita (hallazgo de la auditoria: el '
+        'formulario general no es una declaracion)', () async {
       await repo.upsertDay(
         date: '2026-01-02',
         isPeriodDaySwitch: false,
@@ -51,6 +54,25 @@ void main() {
       final day = await repo.getDay('2026-01-02');
       expect(day!.isPeriodDay, isFalse);
       expect(day.flow, isNull);
+      expect(day.mood, Mood.feliz);
+      expect(day.periodDayExplicit, isFalse);
+    });
+
+    test(
+        'interruptor apagado sobre un dia que YA era false: tampoco toca '
+        'period_day_explicit si ya era true (negacion explicita previa)',
+        () async {
+      await repo.setPeriodDayExplicitly('2026-01-03', isPeriodDay: false);
+      await repo.upsertDay(
+        date: '2026-01-03',
+        isPeriodDaySwitch: false,
+        mood: Mood.feliz,
+      );
+
+      final day = await repo.getDay('2026-01-03');
+      expect(day!.isPeriodDay, isFalse);
+      expect(day.periodDayExplicit, isTrue,
+          reason: 'la negacion explicita previa no se pierde');
       expect(day.mood, Mood.feliz);
     });
   });
@@ -70,20 +92,23 @@ void main() {
   });
 
   group(
-      'upsert no destructivo: dia marcado desde el calendario, luego '
-      'registro de sintomas con el interruptor apagado', () {
+      'upsertDay con interruptor prellenado: apagarlo es una correccion '
+      'deliberada (revisado tras la fase de registro rapido de fin de '
+      'periodo)', () {
     test(
-        'conserva is_period_day=true y el flow existente (no desmarca por '
-        'accidente); mood/notes/sintomas se actualizan con lo nuevo', () async {
+        'dia marcado desde el calendario, luego el formulario se abre '
+        '(prellena el interruptor en "si") y la usuaria lo apaga a '
+        'proposito: SI desmarca, y queda como negacion explicita', () async {
       // 1) El dia se marca como periodo desde el calendario (sin flow).
       await repo.markPeriodDay('2026-03-05');
       var day = await repo.getDay('2026-03-05');
       expect(day!.isPeriodDay, isTrue);
-      expect(day.flow, isNull);
+      expect(day.periodDayExplicit, isFalse);
 
-      // 2) Se guarda un registro de sintomas ese mismo dia con el
-      // interruptor de "dia de sangrado" APAGADO (p.ej. la usuaria solo
-      // quiere anotar un sintoma, sin tocar el estado de sangrado).
+      // 2) add_cycle_screen abre ese dia: el interruptor se prellena en
+      // "si" (porque is_period_day ya era true) y la usuaria lo apaga a
+      // proposito antes de guardar -- unica forma de que isPeriodDaySwitch
+      // llegue en false para un dia que ya estaba en true.
       await repo.upsertDay(
         date: '2026-03-05',
         isPeriodDaySwitch: false,
@@ -92,12 +117,12 @@ void main() {
         symptoms: {Symptom.dolorDeCabeza},
       );
 
-      // Comportamiento definido: is_period_day sigue true (no se
-      // desmarca), flow sigue null (no se inventa uno), y mood/notes/
-      // sintomas se actualizan con el nuevo registro.
       day = await repo.getDay('2026-03-05');
-      expect(day!.isPeriodDay, isTrue);
+      expect(day!.isPeriodDay, isFalse,
+          reason: 'apagar un interruptor prellenado es una correccion '
+              'deliberada, equivalente a "Quitar marca"');
       expect(day.flow, isNull);
+      expect(day.periodDayExplicit, isTrue);
       expect(day.mood, Mood.cansada);
       expect(day.notes, 'dolor de cabeza leve');
       expect(
@@ -105,8 +130,9 @@ void main() {
         {Symptom.dolorDeCabeza},
       );
 
-      // 3) Si despues se guarda con el interruptor encendido y flow,
-      // ahi si se fija el flow (edicion explicita).
+      // 3) Si despues se guarda con el interruptor encendido y flow, se
+      // fija el flow y se limpia la negacion explicita (un "si" ya no es
+      // una negacion).
       await repo.upsertDay(
         date: '2026-03-05',
         isPeriodDaySwitch: true,
@@ -116,6 +142,109 @@ void main() {
       day = await repo.getDay('2026-03-05');
       expect(day!.isPeriodDay, isTrue);
       expect(day.flow, FlowIntensity.abundante);
+      expect(day.periodDayExplicit, isFalse);
+    });
+  });
+
+  group('setPeriodDayExplicitly', () {
+    test('confirmar "si" marca is_period_day y period_day_explicit en true',
+        () async {
+      await repo.setPeriodDayExplicitly('2026-05-01', isPeriodDay: true);
+      final day = await repo.getDay('2026-05-01');
+      expect(day!.isPeriodDay, isTrue);
+      expect(day.periodDayExplicit, isTrue);
+    });
+
+    test('confirmar "no" sobre un dia sin fila previa lo crea en false',
+        () async {
+      await repo.setPeriodDayExplicitly('2026-05-02', isPeriodDay: false);
+      final day = await repo.getDay('2026-05-02');
+      expect(day!.isPeriodDay, isFalse);
+      expect(day.periodDayExplicit, isTrue);
+    });
+
+    test('confirmar "no" sobre un dia marcado true lo baja a false y '
+        'limpia el flow (el CHECK de la tabla lo exige)', () async {
+      await repo.markPeriodDay('2026-05-03');
+      await repo.upsertDay(
+        date: '2026-05-03',
+        isPeriodDaySwitch: true,
+        flow: FlowIntensity.abundante,
+      );
+
+      await repo.setPeriodDayExplicitly('2026-05-03', isPeriodDay: false);
+
+      final day = await repo.getDay('2026-05-03');
+      expect(day!.isPeriodDay, isFalse);
+      expect(day.flow, isNull);
+      expect(day.periodDayExplicit, isTrue);
+    });
+
+    test('no toca mood/notes/sintomas existentes', () async {
+      await repo.upsertDay(
+        date: '2026-05-04',
+        isPeriodDaySwitch: true,
+        mood: Mood.triste,
+        notes: 'nota',
+        symptoms: {Symptom.acne},
+      );
+
+      await repo.setPeriodDayExplicitly('2026-05-04', isPeriodDay: false);
+
+      final day = await repo.getDay('2026-05-04');
+      expect(day!.mood, Mood.triste);
+      expect(day.notes, 'nota');
+      expect(await repo.getSymptomsForDay('2026-05-04'), {Symptom.acne});
+    });
+  });
+
+  group('restoreDaySnapshot (Deshacer)', () {
+    test('restaura la fila exacta de antes si existia', () async {
+      await repo.markPeriodDay('2026-06-01');
+      await repo.upsertDay(
+        date: '2026-06-01',
+        isPeriodDaySwitch: true,
+        flow: FlowIntensity.ligero,
+        mood: Mood.normal,
+      );
+      final snapshot = await repo.getDay('2026-06-01');
+
+      await repo.setPeriodDayExplicitly('2026-06-01', isPeriodDay: false);
+      expect((await repo.getDay('2026-06-01'))!.isPeriodDay, isFalse);
+
+      await repo.restoreDaySnapshot('2026-06-01', snapshot);
+
+      final restored = await repo.getDay('2026-06-01');
+      expect(restored!.isPeriodDay, isTrue);
+      expect(restored.flow, FlowIntensity.ligero);
+      expect(restored.mood, Mood.normal);
+      expect(restored.periodDayExplicit, isFalse);
+    });
+
+    test('borra la fila si no existia ninguna antes', () async {
+      await repo.setPeriodDayExplicitly('2026-06-02', isPeriodDay: false);
+      expect(await repo.getDay('2026-06-02'), isNotNull);
+
+      await repo.restoreDaySnapshot('2026-06-02', null);
+
+      expect(await repo.getDay('2026-06-02'), isNull);
+    });
+  });
+
+  group('watchDay', () {
+    test('emite de nuevo cuando cambia la fila de esa fecha', () async {
+      final emissions = <bool?>[];
+      final sub = repo
+          .watchDay('2026-07-05')
+          .map((row) => row?.isPeriodDay)
+          .listen(emissions.add);
+
+      await Future<void>.delayed(Duration.zero);
+      await repo.setPeriodDayExplicitly('2026-07-05', isPeriodDay: true);
+      await Future<void>.delayed(Duration.zero);
+
+      await sub.cancel();
+      expect(emissions, [null, true]);
     });
   });
 

@@ -27,17 +27,23 @@ class CycleRepository {
 
   /// Upsert por fecha para el formulario de add_cycle_screen.
   ///
-  /// Semantica decidida para no desmarcar un dia de sangrado por
-  /// accidente (ver fase 2, conflicto flow/period):
-  /// - Si [isPeriodDaySwitch] es true: is_period_day pasa a true y flow
-  ///   se fija a [flow] (lo que haya elegido el dropdown).
-  /// - Si [isPeriodDaySwitch] es false: is_period_day y flow se
-  ///   CONSERVAN tal como estaban (no se fuerzan a false/null). Esto
-  ///   cubre el caso "dia marcado como periodo desde el calendario, luego
-  ///   se guarda un registro de sintomas con el interruptor apagado": el
-  ///   dia sigue siendo un dia de periodo, con el mismo flow que tenia.
-  ///   Si el dia no existia antes, queda is_period_day=false, flow=null,
-  ///   como es natural.
+  /// Semantica del interruptor de sangrado (ver fase 2, y revisada en la
+  /// fase de registro rapido de fin de periodo):
+  /// - Si [isPeriodDaySwitch] es true: is_period_day pasa a true, flow se
+  ///   fija a [flow], y period_day_explicit se limpia a false (un "si"
+  ///   ya no es una negacion).
+  /// - Si [isPeriodDaySwitch] es false y el dia YA estaba en true: esto
+  ///   solo puede pasar si la usuaria vio el interruptor prellenado en
+  ///   "si" (add_cycle_screen prellena desde el dato existente) y lo
+  ///   apago a proposito -- es una correccion deliberada, equivalente a
+  ///   "Quitar marca" del calendario. is_period_day pasa a false, flow a
+  ///   null (el CHECK de la tabla lo exige igual) y period_day_explicit
+  ///   a true.
+  /// - Si [isPeriodDaySwitch] es false y el dia NO estaba en true (sin
+  ///   fila previa, o ya en false): es el default del formulario, no una
+  ///   declaracion -- is_period_day se queda en false (o se crea en
+  ///   false) y period_day_explicit NO se toca (si ya era true por una
+  ///   negacion explicita previa, se mantiene).
   ///
   /// mood, notes y symptoms siempre se sobrescriben con lo que llega
   /// (el formulario siempre presenta un valor actual para esos campos,
@@ -52,10 +58,25 @@ class CycleRepository {
   }) async {
     await _db.transaction(() async {
       final existing = await getDay(date);
+      final wasExplicitTrue = existing?.isPeriodDay == true;
 
-      final effectiveIsPeriodDay =
-          isPeriodDaySwitch ? true : (existing?.isPeriodDay ?? false);
-      final effectiveFlow = isPeriodDaySwitch ? flow : existing?.flow;
+      final bool effectiveIsPeriodDay;
+      final FlowIntensity? effectiveFlow;
+      final bool? explicitOverride;
+
+      if (isPeriodDaySwitch) {
+        effectiveIsPeriodDay = true;
+        effectiveFlow = flow;
+        explicitOverride = false;
+      } else if (wasExplicitTrue) {
+        effectiveIsPeriodDay = false;
+        effectiveFlow = null;
+        explicitOverride = true;
+      } else {
+        effectiveIsPeriodDay = existing?.isPeriodDay ?? false;
+        effectiveFlow = existing?.flow;
+        explicitOverride = null;
+      }
 
       await _db.into(_db.dailyLogs).insertOnConflictUpdate(
             DailyLogsCompanion(
@@ -64,6 +85,9 @@ class CycleRepository {
               flow: Value(effectiveFlow),
               mood: Value(mood),
               notes: Value(notes),
+              periodDayExplicit: explicitOverride == null
+                  ? const Value.absent()
+                  : Value(explicitOverride),
             ),
           );
 
@@ -93,6 +117,55 @@ class CycleRepository {
           DailyLogsCompanion(date: Value(date), isPeriodDay: const Value(true)),
         );
     return true;
+  }
+
+  /// Confirma explicitamente si [date] fue o no un dia de sangrado,
+  /// desde una accion directa y dedicada (la pregunta "Sigue tu periodo
+  /// hoy?" en Inicio, o "Quitar marca" en el calendario) -- NUNCA desde
+  /// el formulario general (ese usa [upsertDay]). Siempre marca
+  /// period_day_explicit=true, sea que [isPeriodDay] confirme true o
+  /// false. No toca mood, notes ni sintomas.
+  Future<void> setPeriodDayExplicitly(
+    String date, {
+    required bool isPeriodDay,
+  }) async {
+    final existing = await getDay(date);
+    await _db.into(_db.dailyLogs).insertOnConflictUpdate(
+          DailyLogsCompanion(
+            date: Value(date),
+            isPeriodDay: Value(isPeriodDay),
+            // Si se confirma que no hubo sangrado, cualquier flow previo
+            // deja de tener sentido (y el CHECK de la tabla lo exige).
+            flow: Value(isPeriodDay ? existing?.flow : null),
+            periodDayExplicit: const Value(true),
+          ),
+        );
+  }
+
+  Stream<DailyLogRow?> watchDay(String date) {
+    return (_db.select(_db.dailyLogs)..where((t) => t.date.equals(date)))
+        .watchSingleOrNull();
+  }
+
+  /// Deshace una escritura anterior restaurando exactamente la fila que
+  /// habia antes (o borrandola si no existia ninguna). Pensado para el
+  /// "Deshacer" que acompaña a [setPeriodDayExplicitly].
+  Future<void> restoreDaySnapshot(String date, DailyLogRow? snapshot) async {
+    if (snapshot == null) {
+      await (_db.delete(_db.dailyLogs)..where((t) => t.date.equals(date)))
+          .go();
+      return;
+    }
+    await _db.into(_db.dailyLogs).insertOnConflictUpdate(
+          DailyLogsCompanion(
+            date: Value(date),
+            isPeriodDay: Value(snapshot.isPeriodDay),
+            flow: Value(snapshot.flow),
+            mood: Value(snapshot.mood),
+            notes: Value(snapshot.notes),
+            periodDayExplicit: Value(snapshot.periodDayExplicit),
+          ),
+        );
   }
 
   Future<List<String>> getPeriodDayDates() async {
