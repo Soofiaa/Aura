@@ -85,13 +85,16 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'aura.sqlite'));
-    return NativeDatabase.createInBackground(file, setup: _enableForeignKeys);
+    return NativeDatabase.createInBackground(file, setup: enableForeignKeys);
   });
 }
 
 /// SQLite no aplica ON DELETE CASCADE salvo que foreign_keys este
 /// activado explicitamente por conexion; sin esto, borrar un daily_log
-/// dejaria huerfanas sus filas en daily_log_symptoms.
-void _enableForeignKeys(Database database) {
+/// dejaria huerfanas sus filas en daily_log_symptoms. Publica a proposito:
+/// cualquier QueryExecutor nuevo (incluidos los de test) debe pasar esto
+/// como `setup`, o el cascade declarado en el esquema no se aplica de
+/// verdad.
+void enableForeignKeys(Database database) {
   database.execute('PRAGMA foreign_keys = ON');
 }
