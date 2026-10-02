@@ -142,6 +142,21 @@ class CycleRepository {
         );
   }
 
+  /// Igual que [markPeriodDay], para varios dias a la vez (confirmar una
+  /// seleccion de rango en el calendario). No toca periodDayExplicit,
+  /// igual que markPeriodDay: si alguno de estos dias ya era explicito
+  /// en false, el flag se mantiene pero deja de tener efecto porque
+  /// deriveCycles solo lo consulta cuando isPeriodDay es false.
+  Future<void> markPeriodDays(List<String> dates) async {
+    if (dates.isEmpty) return;
+    await _db.batch((batch) {
+      batch.insertAllOnConflictUpdate(_db.dailyLogs, [
+        for (final date in dates)
+          DailyLogsCompanion(date: Value(date), isPeriodDay: const Value(true)),
+      ]);
+    });
+  }
+
   Stream<DailyLogRow?> watchDay(String date) {
     return (_db.select(_db.dailyLogs)..where((t) => t.date.equals(date)))
         .watchSingleOrNull();
