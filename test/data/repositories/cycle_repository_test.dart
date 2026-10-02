@@ -211,6 +211,52 @@ void main() {
       expect(await repo.getOnboardingSeen(), isTrue);
       expect(await repo.getNotificationsEnabled(), isFalse);
     });
+
+    test('getNotificationSettings: defaults correctos', () async {
+      final settings = await repo.getNotificationSettings();
+      expect(settings.notificationsEnabled, isFalse);
+      expect(settings.periodReminderEnabled, isTrue);
+      expect(settings.fertileWindowRemindersEnabled, isFalse);
+      expect(settings.showDetailsEnabled, isFalse);
+      expect(settings.reminderHour, 9);
+      expect(settings.reminderMinute, 0);
+    });
+
+    test('los setters de notificaciones no se pisan entre si', () async {
+      await repo.setNotificationsEnabled(true);
+      await repo.setPeriodReminderEnabled(false);
+      await repo.setFertileWindowRemindersEnabled(true);
+      await repo.setShowDetailsEnabled(true);
+      await repo.setReminderTime(hour: 20, minute: 30);
+
+      final settings = await repo.getNotificationSettings();
+      expect(settings.notificationsEnabled, isTrue);
+      expect(settings.periodReminderEnabled, isFalse);
+      expect(settings.fertileWindowRemindersEnabled, isTrue);
+      expect(settings.showDetailsEnabled, isTrue);
+      expect(settings.reminderHour, 20);
+      expect(settings.reminderMinute, 30);
+    });
+
+    test('watchNotificationSettings emite de nuevo al cambiar un toggle',
+        () async {
+      // Pre-crea la fila: si el stream tuviera que crearla el solo en su
+      // primera emision, esa misma escritura dispara una emision extra.
+      await repo.getNotificationSettings();
+
+      final emissions = <bool>[];
+      final sub = repo
+          .watchNotificationSettings()
+          .map((s) => s.fertileWindowRemindersEnabled)
+          .listen(emissions.add);
+
+      await Future<void>.delayed(Duration.zero);
+      await repo.setFertileWindowRemindersEnabled(true);
+      await Future<void>.delayed(Duration.zero);
+
+      await sub.cancel();
+      expect(emissions, [false, true]);
+    });
   });
 
   group('deleteAllData', () {

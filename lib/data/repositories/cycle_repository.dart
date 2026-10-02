@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/cycle_deriver.dart';
+import '../../domain/notification_planner.dart';
 import '../database/app_database.dart';
 import '../models/day_enums.dart';
 
@@ -240,6 +241,66 @@ class CycleRepository {
             notificationsEnabled: Value(value),
           ),
         );
+  }
+
+  Future<void> setPeriodReminderEnabled(bool value) async {
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            periodReminderEnabled: Value(value),
+          ),
+        );
+  }
+
+  Future<void> setFertileWindowRemindersEnabled(bool value) async {
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            fertileWindowRemindersEnabled: Value(value),
+          ),
+        );
+  }
+
+  Future<void> setShowDetailsEnabled(bool value) async {
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            showDetailsEnabled: Value(value),
+          ),
+        );
+  }
+
+  Future<void> setReminderTime({required int hour, required int minute}) async {
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            reminderHour: Value(hour),
+            reminderMinute: Value(minute),
+          ),
+        );
+  }
+
+  NotificationSettings _toNotificationSettings(AppSettingsRow row) =>
+      NotificationSettings(
+        notificationsEnabled: row.notificationsEnabled,
+        periodReminderEnabled: row.periodReminderEnabled,
+        fertileWindowRemindersEnabled: row.fertileWindowRemindersEnabled,
+        showDetailsEnabled: row.showDetailsEnabled,
+        reminderHour: row.reminderHour,
+        reminderMinute: row.reminderMinute,
+      );
+
+  Future<NotificationSettings> getNotificationSettings() async =>
+      _toNotificationSettings(await _ensureSettingsRow());
+
+  /// Reactivo: se recalcula cada vez que cambia app_settings (cualquier
+  /// toggle, la hora, etc), para que quien reconcilia notificaciones
+  /// (ver NotificationReconciler) no tenga que sondear a mano.
+  Stream<NotificationSettings> watchNotificationSettings() {
+    return (_db.select(_db.appSettings)..where((t) => t.id.equals(0)))
+        .watchSingleOrNull()
+        .asyncMap((row) async =>
+            _toNotificationSettings(row ?? await _ensureSettingsRow()));
   }
 
   /// Borra TODAS las tablas (daily_logs, daily_log_symptoms,
