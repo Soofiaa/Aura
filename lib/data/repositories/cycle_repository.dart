@@ -44,7 +44,7 @@ class CycleRepository {
   Future<void> upsertDay({
     required String date,
     required bool isPeriodDaySwitch,
-    Flow? flow,
+    FlowIntensity? flow,
     Mood? mood,
     String? notes,
     Set<Symptom> symptoms = const {},

@@ -18,7 +18,7 @@ class DailyLogs extends Table {
   TextColumn get date => text()();
   BoolColumn get isPeriodDay =>
       boolean().withDefault(const Constant(false))();
-  TextColumn get flow => textEnum<Flow>().nullable()();
+  TextColumn get flow => textEnum<FlowIntensity>().nullable()();
   TextColumn get mood => textEnum<Mood>().nullable()();
   TextColumn get notes => text().nullable()();
 

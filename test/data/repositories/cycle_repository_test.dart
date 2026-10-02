@@ -26,7 +26,7 @@ void main() {
       await repo.upsertDay(
         date: '2026-01-01',
         isPeriodDaySwitch: true,
-        flow: Flow.moderado,
+        flow: FlowIntensity.moderado,
         mood: Mood.normal,
         notes: 'ok',
         symptoms: {Symptom.cansancio},
@@ -34,7 +34,7 @@ void main() {
 
       final day = await repo.getDay('2026-01-01');
       expect(day!.isPeriodDay, isTrue);
-      expect(day.flow, Flow.moderado);
+      expect(day.flow, FlowIntensity.moderado);
       expect(day.mood, Mood.normal);
       expect(day.notes, 'ok');
       expect(await repo.getSymptomsForDay('2026-01-01'), {Symptom.cansancio});
@@ -110,12 +110,12 @@ void main() {
       await repo.upsertDay(
         date: '2026-03-05',
         isPeriodDaySwitch: true,
-        flow: Flow.abundante,
+        flow: FlowIntensity.abundante,
         mood: Mood.cansada,
       );
       day = await repo.getDay('2026-03-05');
       expect(day!.isPeriodDay, isTrue);
-      expect(day.flow, Flow.abundante);
+      expect(day.flow, FlowIntensity.abundante);
     });
   });
 
@@ -124,7 +124,7 @@ void main() {
       await repo.upsertDay(
         date: '2026-04-01',
         isPeriodDaySwitch: true,
-        flow: Flow.ligero,
+        flow: FlowIntensity.ligero,
         symptoms: {Symptom.acne, Symptom.hinchazon},
       );
       expect(await repo.getSymptomsForDay('2026-04-01'), hasLength(2));
@@ -154,14 +154,14 @@ void main() {
       await repo.upsertDay(
         date: '2026-06-01',
         isPeriodDaySwitch: true,
-        flow: Flow.ligero,
+        flow: FlowIntensity.ligero,
         mood: Mood.feliz,
         symptoms: {Symptom.cansancio, Symptom.antojos},
       );
       await repo.upsertDay(
         date: '2026-06-02',
         isPeriodDaySwitch: true,
-        flow: Flow.abundante,
+        flow: FlowIntensity.abundante,
         mood: Mood.feliz,
         symptoms: {Symptom.cansancio},
       );
@@ -217,7 +217,7 @@ void main() {
       await repo.upsertDay(
         date: '2026-07-01',
         isPeriodDaySwitch: true,
-        flow: Flow.ligero,
+        flow: FlowIntensity.ligero,
         symptoms: {Symptom.acne},
       );
       await repo.setOnboardingSeen(true);

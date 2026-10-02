@@ -1,21 +1,23 @@
 /// Enums compartidos entre el esquema drift y la UI. Los nombres de los
 /// valores (`.name`) son los que drift persiste como texto en la base de
 /// datos via textEnum(), por lo que renombrar un valor es una migracion.
-enum Flow { ligero, moderado, abundante }
+// Nombrado FlowIntensity (no "Flow") porque Flow ya es un widget de
+// Flutter (package:flutter/widgets/basic.dart) y choca con ese import.
+enum FlowIntensity { ligero, moderado, abundante }
 
-extension FlowLabel on Flow {
+extension FlowIntensityLabel on FlowIntensity {
   String get label => switch (this) {
-        Flow.ligero => 'Ligero',
-        Flow.moderado => 'Moderado',
-        Flow.abundante => 'Abundante',
+        FlowIntensity.ligero => 'Ligero',
+        FlowIntensity.moderado => 'Moderado',
+        FlowIntensity.abundante => 'Abundante',
       };
 
   /// Peso usado para calcular el flujo promedio (coincide con la escala
   /// que ya usaba stats_screen.dart: Ligero=1, Moderado=2, Abundante=3).
   int get weight => switch (this) {
-        Flow.ligero => 1,
-        Flow.moderado => 2,
-        Flow.abundante => 3,
+        FlowIntensity.ligero => 1,
+        FlowIntensity.moderado => 2,
+        FlowIntensity.abundante => 3,
       };
 }
 

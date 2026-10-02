@@ -34,14 +34,14 @@ class $DailyLogsTable extends DailyLogs
     defaultValue: const Constant(false),
   );
   @override
-  late final GeneratedColumnWithTypeConverter<Flow?, String> flow =
+  late final GeneratedColumnWithTypeConverter<FlowIntensity?, String> flow =
       GeneratedColumn<String>(
         'flow',
         aliasedName,
         true,
         type: DriftSqlType.string,
         requiredDuringInsert: false,
-      ).withConverter<Flow?>($DailyLogsTable.$converterflown);
+      ).withConverter<FlowIntensity?>($DailyLogsTable.$converterflown);
   @override
   late final GeneratedColumnWithTypeConverter<Mood?, String> mood =
       GeneratedColumn<String>(
@@ -138,9 +138,9 @@ class $DailyLogsTable extends DailyLogs
     return $DailyLogsTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<Flow, String, String> $converterflow =
-      const EnumNameConverter<Flow>(Flow.values);
-  static JsonTypeConverter2<Flow?, String?, String?> $converterflown =
+  static JsonTypeConverter2<FlowIntensity, String, String> $converterflow =
+      const EnumNameConverter<FlowIntensity>(FlowIntensity.values);
+  static JsonTypeConverter2<FlowIntensity?, String?, String?> $converterflown =
       JsonTypeConverter2.asNullable($converterflow);
   static JsonTypeConverter2<Mood, String, String> $convertermood =
       const EnumNameConverter<Mood>(Mood.values);
@@ -151,7 +151,7 @@ class $DailyLogsTable extends DailyLogs
 class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
   final String date;
   final bool isPeriodDay;
-  final Flow? flow;
+  final FlowIntensity? flow;
   final Mood? mood;
   final String? notes;
   const DailyLogRow({
@@ -230,7 +230,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
   DailyLogRow copyWith({
     String? date,
     bool? isPeriodDay,
-    Value<Flow?> flow = const Value.absent(),
+    Value<FlowIntensity?> flow = const Value.absent(),
     Value<Mood?> mood = const Value.absent(),
     Value<String?> notes = const Value.absent(),
   }) => DailyLogRow(
@@ -280,7 +280,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
 class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
   final Value<String> date;
   final Value<bool> isPeriodDay;
-  final Value<Flow?> flow;
+  final Value<FlowIntensity?> flow;
   final Value<Mood?> mood;
   final Value<String?> notes;
   final Value<int> rowid;
@@ -321,7 +321,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
   DailyLogsCompanion copyWith({
     Value<String>? date,
     Value<bool>? isPeriodDay,
-    Value<Flow?>? flow,
+    Value<FlowIntensity?>? flow,
     Value<Mood?>? mood,
     Value<String?>? notes,
     Value<int>? rowid,
@@ -895,7 +895,7 @@ typedef $$DailyLogsTableCreateCompanionBuilder =
     DailyLogsCompanion Function({
       required String date,
       Value<bool> isPeriodDay,
-      Value<Flow?> flow,
+      Value<FlowIntensity?> flow,
       Value<Mood?> mood,
       Value<String?> notes,
       Value<int> rowid,
@@ -904,7 +904,7 @@ typedef $$DailyLogsTableUpdateCompanionBuilder =
     DailyLogsCompanion Function({
       Value<String> date,
       Value<bool> isPeriodDay,
-      Value<Flow?> flow,
+      Value<FlowIntensity?> flow,
       Value<Mood?> mood,
       Value<String?> notes,
       Value<int> rowid,
@@ -929,11 +929,11 @@ class $$DailyLogsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<Flow?, Flow, String> get flow =>
-      $composableBuilder(
-        column: $table.flow,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
+  ColumnWithTypeConverterFilters<FlowIntensity?, FlowIntensity, String>
+  get flow => $composableBuilder(
+    column: $table.flow,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 
   ColumnWithTypeConverterFilters<Mood?, Mood, String> get mood =>
       $composableBuilder(
@@ -999,7 +999,7 @@ class $$DailyLogsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumnWithTypeConverter<Flow?, String> get flow =>
+  GeneratedColumnWithTypeConverter<FlowIntensity?, String> get flow =>
       $composableBuilder(column: $table.flow, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<Mood?, String> get mood =>
@@ -1042,7 +1042,7 @@ class $$DailyLogsTableTableManager
               ({
                 Value<String> date = const Value.absent(),
                 Value<bool> isPeriodDay = const Value.absent(),
-                Value<Flow?> flow = const Value.absent(),
+                Value<FlowIntensity?> flow = const Value.absent(),
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1058,7 +1058,7 @@ class $$DailyLogsTableTableManager
               ({
                 required String date,
                 Value<bool> isPeriodDay = const Value.absent(),
-                Value<Flow?> flow = const Value.absent(),
+                Value<FlowIntensity?> flow = const Value.absent(),
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
