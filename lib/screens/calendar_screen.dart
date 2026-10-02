@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../data/database/hive_boxes.dart';
+import '../data/repositories/cycle_repository.dart';
+import '../utils/day_key.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -15,31 +15,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  late Box ciclosBox;
+  // Claves 'yyyy-MM-dd' de los dias marcados como dia de sangrado.
+  List<String> _periodDayKeys = [];
 
   @override
   void initState() {
     super.initState();
-    ciclosBox = HiveBoxes.getCiclosBox();
+    _cargarDiasMenstruacion();
   }
 
-  List<DateTime> get diasMenstruacion {
-    // Obtenemos las fechas guardadas en Hive
-    final List storedDates = ciclosBox.get('dias', defaultValue: []);
-    return storedDates.map((d) => DateTime.parse(d)).toList();
+  Future<void> _cargarDiasMenstruacion() async {
+    final keys = await cycleRepository.getPeriodDayDates();
+    if (!mounted) return;
+    setState(() => _periodDayKeys = keys);
   }
 
-  void registrarDia(DateTime date) {
-    final List storedDates = ciclosBox.get('dias', defaultValue: []);
-    final dateStr = date.toIso8601String();
+  Future<void> registrarDia(DateTime date) async {
+    final wasNew = await cycleRepository.markPeriodDay(DayKey.fromDate(date));
 
-    if (!storedDates.contains(dateStr)) {
-      storedDates.add(dateStr);
-      ciclosBox.put('dias', storedDates);
+    if (!mounted) return;
+    if (wasNew) {
+      await _cargarDiasMenstruacion();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Día registrado como menstruación')),
       );
-      setState(() {});
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ese día ya estaba registrado')),
@@ -95,10 +95,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, focusedDay) {
                   // Colorear días guardados
-                  if (diasMenstruacion.any((d) =>
-                  d.year == day.year &&
-                      d.month == day.month &&
-                      d.day == day.day)) {
+                  if (_periodDayKeys.contains(DayKey.fromDate(day))) {
                     return Container(
                       margin: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
