@@ -181,17 +181,30 @@ class CycleRepository {
     return query.watch().map((rows) => rows.map((r) => r.date).toList());
   }
 
+  /// Separa las filas de daily_logs en dias de sangrado y dias
+  /// confirmados explicitamente como "sin sangrado" (nunca los default
+  /// del formulario general), para pasarselos a deriveCycles. Ambas
+  /// listas salen de la MISMA lectura, para que nunca queden
+  /// inconsistentes entre si.
+  List<CycleSummary> _deriveFromRows(List<DailyLogRow> rows) {
+    final periodDays = [for (final r in rows) if (r.isPeriodDay) r.date];
+    final explicitNonPeriodDays = [
+      for (final r in rows) if (!r.isPeriodDay && r.periodDayExplicit) r.date,
+    ];
+    return deriveCycles(periodDays, explicitNonPeriodDays: explicitNonPeriodDays);
+  }
+
   Future<List<CycleSummary>> getDerivedCycles() async {
-    final dates = await getPeriodDayDates();
-    return deriveCycles(dates);
+    final rows = await _db.select(_db.dailyLogs).get();
+    return _deriveFromRows(rows);
   }
 
   /// Igual que [getDerivedCycles], pero reactivo: emite de nuevo cada vez
   /// que cambia algun dia en daily_logs (registrar un dia, marcar un dia
-  /// desde el calendario, borrar todos los datos), sin importar por
-  /// donde se navego para llegar a la pantalla. Evita tener que acordarse
-  /// de "recargar" a mano en cada punto de navegacion que podria cambiar
-  /// datos.
+  /// desde el calendario, confirmar fin de periodo, borrar todos los
+  /// datos), sin importar por donde se navego para llegar a la pantalla.
+  /// Evita tener que acordarse de "recargar" a mano en cada punto de
+  /// navegacion que podria cambiar datos.
   ///
   /// Deliberadamente NO devuelve un `Stream<CyclePrediction?>` ya
   /// calculado: ese calculo necesita un "hoy", y un stream atado solo a
@@ -201,7 +214,7 @@ class CycleRepository {
   /// "hoy" y llama a predictCycle() ella misma con cada emision de este
   /// stream.
   Stream<List<CycleSummary>> watchDerivedCycles() {
-    return watchPeriodDayDates().map(deriveCycles);
+    return _db.select(_db.dailyLogs).watch().map(_deriveFromRows);
   }
 
   Future<bool> hasAnyLog() async {

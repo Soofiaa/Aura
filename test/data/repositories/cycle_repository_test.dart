@@ -276,6 +276,47 @@ void main() {
       expect(cycles.single.startDate, '2026-05-01');
       expect(cycles.single.periodLengthDays, 2);
     });
+
+    test(
+        'un dia confirmado explicitamente como "sin sangrado" via '
+        'setPeriodDayExplicitly llega a periodConfirmedEnded', () async {
+      await repo.markPeriodDay('2026-05-20');
+      await repo.markPeriodDay('2026-05-21');
+      await repo.setPeriodDayExplicitly('2026-05-22', isPeriodDay: false);
+
+      final cycles = await repo.getDerivedCycles();
+      expect(cycles.single.periodConfirmedEnded, isTrue);
+    });
+
+    test(
+        'un dia con is_period_day=false del formulario general (sin '
+        'period_day_explicit) NO llega a periodConfirmedEnded', () async {
+      await repo.markPeriodDay('2026-05-25');
+      await repo.markPeriodDay('2026-05-26');
+      // Registro de sintomas comun, sin fila previa, interruptor apagado:
+      // exactamente el hallazgo de la auditoria.
+      await repo.upsertDay(date: '2026-05-27', isPeriodDaySwitch: false);
+
+      final cycles = await repo.getDerivedCycles();
+      expect(cycles.single.periodConfirmedEnded, isFalse);
+    });
+
+    test('watchDerivedCycles tambien refleja la confirmacion explicita',
+        () async {
+      await repo.markPeriodDay('2026-06-10');
+      final emissions = <bool>[];
+      final sub = repo
+          .watchDerivedCycles()
+          .map((cycles) => cycles.single.periodConfirmedEnded)
+          .listen(emissions.add);
+
+      await Future<void>.delayed(Duration.zero);
+      await repo.setPeriodDayExplicitly('2026-06-11', isPeriodDay: false);
+      await Future<void>.delayed(Duration.zero);
+
+      await sub.cancel();
+      expect(emissions, [false, true]);
+    });
   });
 
   group('estadisticas', () {
