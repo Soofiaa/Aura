@@ -7,12 +7,18 @@ plugins {
 
 android {
     namespace = "com.soofiaa.aura"
+    compileSdk = flutter.compileSdkVersion
     defaultConfig {
         applicationId = "com.soofiaa.aura"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+    }
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     buildTypes {
         getByName("debug") {
@@ -35,4 +41,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Requerido por flutter_local_notifications (ver
+    // https://developer.android.com/studio/write/java8-support.html).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
