@@ -126,7 +126,7 @@ class ChartWidget extends StatelessWidget {
           sectionsSpace: 2,
           sections: datos.entries.map((entry) {
             final index = datos.keys.toList().indexOf(entry.key);
-            final color = AppColors._pieColors[index % AppColors._pieColors.length];
+            final color = _PieColors._pieColors[index % _PieColors._pieColors.length];
             final total = datos.values.reduce((a, b) => a + b);
             final porcentaje = (entry.value / total * 100).toStringAsFixed(1);
 
