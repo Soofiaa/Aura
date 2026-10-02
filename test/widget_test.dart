@@ -21,12 +21,17 @@ void main() {
       (WidgetTester tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
     final repo = CycleRepository(db);
-    addTearDown(db.close);
 
     await tester.pumpWidget(MaterialApp(home: HomeScreen(repository: repo)));
     await tester.pumpAndSettle();
 
     expect(find.text('Aura 🌸'), findsOneWidget);
+
+    // Cerrar explicitamente aca (no via addTearDown): drift deja un
+    // Timer interno pendiente hasta que la conexion se cierra, y el
+    // binding de test revienta con "A Timer is still pending" si eso
+    // pasa despues de que termina el cuerpo del test.
+    await db.close();
   });
 
   testWidgets('AuraApp arranca y muestra el onboarding cuando onboardingVisto es false',
