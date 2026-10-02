@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'data/database/hive_boxes.dart';
 import 'utils/notifications.dart';
-import 'utils/color.dart';
+import 'utils/colors.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 

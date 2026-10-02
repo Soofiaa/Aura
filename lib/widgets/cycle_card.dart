@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/color.dart';
+import '../utils/colors.dart';
 import '../utils/date_utils.dart';
 
 class CycleCard extends StatelessWidget {

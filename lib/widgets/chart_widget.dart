@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../utils/color.dart';
+import '../utils/colors.dart';
 
 /// 📊 Widget genérico para mostrar gráficos de barras o pastel en Aura.
 class ChartWidget extends StatelessWidget {
