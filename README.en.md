@@ -1,0 +1,108 @@
+# Aura
+
+An Android app to log your menstrual cycle and estimate its phases. **100% local**: no account, no server, no cloud, no analytics.
+
+[Versión en español](README.md)
+
+> **Status:** v1.0 · Android only · personal portfolio project, in real daily use.
+
+<!-- Replace with your screenshots (docs/screenshots/ folder) -->
+| Home | Calendar | Statistics | Settings |
+|:--:|:--:|:--:|:--:|
+| ![Home](docs/screenshots/home.png) | ![Calendar](docs/screenshots/calendar.png) | ![Statistics](docs/screenshots/stats.png) | ![Settings](docs/screenshots/settings.png) |
+
+## What it does
+
+- Logs bleeding days, flow intensity, mood, symptoms and notes.
+- Derives cycles from those logs (cycles are never created by hand).
+- Predicts next period, ovulation and fertile window, with a **range** and a confidence level (low / medium / high).
+- Shows the current phase: menstrual, follicular, ovulatory and luteal.
+- Calendar with phase markers and cycle-length statistics.
+- Optional local reminders, with discreet text by default.
+- Lets you mark the end of a period and remove marks.
+- Full data wipe from Settings.
+
+## Privacy by design
+
+- Data lives only in a SQLite database inside the app's private storage.
+- `allowBackup="false"`: Android does not copy it to the cloud.
+- Notifications use generic text and private lock-screen visibility unless the user opts into details.
+- Privacy policy: [`docs/privacy.html`](docs/privacy.html).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI[Flutter screens] --> Repo[CycleRepository]
+    Repo --> DB[(drift / SQLite)]
+    Repo --> Dom[Pure domain]
+    Dom --> Der[cycle_deriver]
+    Dom --> Pred[cycle_predictor]
+    Dom --> Plan[notification_planner]
+    Plan --> Rec[NotificationReconciler]
+    Rec --> Sch[NotificationScheduler]
+    DB -. reactive streams .-> UI
+```
+
+```
+lib/
+├── domain/        # pure logic, no Flutter or database
+│   ├── cycle_deriver.dart
+│   ├── cycle_predictor.dart
+│   └── notification_planner.dart
+├── data/
+│   ├── database/        # drift (schema v3)
+│   ├── repositories/    # CycleRepository
+│   └── notifications/   # reconciler + scheduler
+├── screens/       # home, calendar, add entry, stats, settings, onboarding
+└── utils/         # DayKey, colors, strings
+```
+
+## Design decisions (and why)
+
+**Dates as `yyyy-MM-dd` text, arithmetic in UTC.** A calendar day is not an instant. Storing it as text avoids time-zone drift. In Chile the DST change happens at midnight, so local midnight sometimes doesn't exist; doing arithmetic on `DayKey` in UTC removes that whole class of bugs.
+
+**Derived cycles, not stored.** Only bleeding days are stored. A new cycle starts when the previous bleeding day is more than 7 days earlier. This gives a single source of truth, and editing one day recomputes everything consistently.
+
+**A pure, testable prediction engine.** Linearly weighted average of the last 6 complete cycles (recent ones weigh more), with a weighted standard deviation. The uncertainty range is `max(1.5·σ, 2 days)` (3 days with fewer than 2 cycles). Ovulation = next period − 14 days; fertile window = ovulation −5 … ovulation. Cycles of 15–60 days are considered valid. After more than 60 days without data, the app shows "stale data" instead of a false prediction.
+
+**Pure notification planner + reconciler.** `planNotifications` computes what should be scheduled (a pure function tested with fixed dates). The reconciler diffs that against what's already scheduled and applies the change. A `NotificationScheduler` interface allows a fake in tests.
+
+**`period_day_explicit` (schema v3).** Distinguishes "the user explicitly said there was no bleeding" from a default value. It is a deliberate exception to non-destructive writes, needed so "remove mark" and period-end are reliable.
+
+## How prediction works (and its limits)
+
+Aura uses the **calendar method**: it projects from past cycles. It is an estimate, not a measurement. It uses no basal temperature or hormone tests, so with irregular cycles the range will be wide and confidence low. **It is not a contraceptive method or a medical device.**
+
+## Quality and testing
+
+120+ tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Testing on a real device found bugs the tests had missed (time zone defaulting to UTC, foreign keys not enforced in the test database, pending timers), and each one was fixed with a regression test.
+
+## Running it
+
+Requirements: stable Flutter and JDK 17–21 (not 25).
+
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter run
+flutter test
+```
+
+Signed release build: see [`android/RELEASE.md`](android/RELEASE.md). The signing key and `key.properties` are **not** in the repository.
+
+## Not yet implemented
+
+- Backup export / import
+- Dark mode
+- iOS
+- English UI locale
+
+## Health notice
+
+Aura provides estimates for informational purposes only. It does not replace advice from a healthcare professional.
+
+## License
+
+<!-- Pick a license (e.g. MIT) and add a LICENSE file, or leave "All rights reserved". -->
+To be decided.

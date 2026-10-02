@@ -1,16 +1,108 @@
-# aura
+# Aura
 
-Aplicación menstrual con almacenamiento local.
+Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100 % local**: sin cuenta, sin servidor, sin nube, sin analítica.
 
-## Getting Started
+[English version](README.en.md)
 
-This project is a starting point for a Flutter application.
+> **Estado:** v1.0 · solo Android · proyecto personal de portafolio, en uso real.
 
-A few resources to get you started if this is your first Flutter project:
+<!-- Reemplaza estas rutas con tus capturas (carpeta docs/screenshots/) -->
+| Inicio | Calendario | Estadísticas | Ajustes |
+|:--:|:--:|:--:|:--:|
+| ![Inicio](docs/screenshots/home.png) | ![Calendario](docs/screenshots/calendar.png) | ![Estadísticas](docs/screenshots/stats.png) | ![Ajustes](docs/screenshots/settings.png) |
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Qué hace
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Registra días de sangrado, intensidad del flujo, ánimo, síntomas y notas.
+- Deriva los ciclos a partir de esos registros (no se "crean" ciclos a mano).
+- Predice próximo período, ovulación y ventana fértil, con un **rango** y un nivel de confianza (baja / media / alta).
+- Muestra la fase actual: menstrual, folicular, ovulatoria y lútea.
+- Calendario con marcas por fase y estadísticas de duración de ciclos.
+- Recordatorios locales (opcionales) con texto discreto por defecto.
+- Permite marcar el fin del período y quitar marcas.
+- Borrado total de datos desde Ajustes.
+
+## Privacidad por diseño
+
+- Los datos viven solo en una base SQLite dentro del almacenamiento privado de la app.
+- `allowBackup="false"`: Android no los copia a la nube.
+- Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
+- Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    UI[Pantallas Flutter] --> Repo[CycleRepository]
+    Repo --> DB[(drift / SQLite)]
+    Repo --> Dom[Dominio puro]
+    Dom --> Der[cycle_deriver]
+    Dom --> Pred[cycle_predictor]
+    Dom --> Plan[notification_planner]
+    Plan --> Rec[NotificationReconciler]
+    Rec --> Sch[NotificationScheduler]
+    DB -. streams reactivos .-> UI
+```
+
+```
+lib/
+├── domain/        # lógica pura, sin Flutter ni base de datos
+│   ├── cycle_deriver.dart
+│   ├── cycle_predictor.dart
+│   └── notification_planner.dart
+├── data/
+│   ├── database/        # drift (esquema v3)
+│   ├── repositories/    # CycleRepository
+│   └── notifications/   # reconciler + scheduler
+├── screens/       # home, calendario, registro, estadísticas, ajustes, onboarding
+└── utils/         # DayKey, colores, textos
+```
+
+## Decisiones de diseño (y por qué)
+
+**Fechas como texto `yyyy-MM-dd` y aritmética en UTC.** Un día del calendario no es un instante. Guardarlo como texto evita corrimientos por zona horaria. En Chile el cambio de hora ocurre a medianoche, así que a veces la medianoche local no existe; operar sobre `DayKey` en UTC elimina esa clase de errores.
+
+**Ciclos derivados, no almacenados.** Solo se guardan los días de sangrado. Un nuevo ciclo empieza cuando el día de sangrado anterior está a más de 7 días. Así hay una única fuente de verdad y editar un día recalcula todo de forma consistente.
+
+**Motor de predicción puro y testeable.** Promedio ponderado linealmente de los últimos 6 ciclos completos (los recientes pesan más), con desviación ponderada. El rango de incertidumbre es `max(1,5·σ, 2 días)` (3 días con menos de 2 ciclos). Ovulación = próximo período − 14 días; ventana fértil = ovulación −5 … ovulación. Se aceptan ciclos de 15 a 60 días. Si pasan más de 60 días sin datos, se muestra "datos desactualizados" en vez de una predicción falsa.
+
+**Planificador de notificaciones puro + reconciliador.** `planNotifications` calcula qué debe estar programado (función pura, testeada con fechas fijas). El reconciliador compara con lo ya programado y aplica la diferencia. Una interfaz `NotificationScheduler` permite usar un doble en los tests.
+
+**`period_day_explicit` (esquema v3).** Distingue "el usuario dijo explícitamente que no hubo sangrado" de "valor por defecto". Es una excepción deliberada a las escrituras no destructivas, necesaria para que "quitar marca" y el fin del período sean fiables.
+
+## Cómo funciona la predicción (y sus límites)
+
+Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es una estimación, no una medición. No usa temperatura basal ni pruebas hormonales, por lo que con ciclos irregulares el rango será amplio y la confianza baja. **No es un método anticonceptivo ni un dispositivo médico.**
+
+## Calidad y pruebas
+
+Más de 120 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso). La verificación en dispositivo real encontró errores que los tests no detectaban (zona horaria inicial en UTC, claves foráneas no aplicadas en la base de pruebas, timers pendientes), y cada uno quedó corregido con su test.
+
+## Cómo ejecutarlo
+
+Requisitos: Flutter estable y JDK 17–21 (no 25).
+
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter run
+flutter test
+```
+
+Build de release firmado: ver [`android/RELEASE.md`](android/RELEASE.md). La clave de firma y `key.properties` **no** están en el repositorio.
+
+## Qué no tiene (todavía)
+
+- Exportar / importar copia de seguridad
+- Modo oscuro
+- iOS
+- Idioma inglés en la interfaz
+
+## Aviso de salud
+
+Aura ofrece estimaciones con fines informativos. No sustituye la opinión de un profesional de la salud.
+
+## Licencia
+
+<!-- Elige una licencia (p. ej. MIT) y agrega el archivo LICENSE, o deja "Todos los derechos reservados". -->
+Pendiente de definir.
