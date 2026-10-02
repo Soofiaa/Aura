@@ -3,6 +3,10 @@ import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_predictor.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
+import 'add_cycle_screen.dart';
+import 'calendar_screen.dart';
+import 'settings_screen.dart';
+import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   /// Permite inyectar un repositorio (ej. con base en memoria) en tests.
@@ -18,23 +22,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final CycleRepository _repository = widget.repository ?? cycleRepository;
 
-  bool _loading = true;
-  CyclePrediction? _prediction;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarPrediccion();
-  }
-
-  Future<void> _cargarPrediccion() async {
-    final prediction = await _repository.getPrediction();
-    if (!mounted) return;
-    setState(() {
-      _prediction = prediction;
-      _loading = false;
-    });
-  }
+  // Stream en vez de un Future cargado una vez en initState: se vuelve a
+  // calcular solo cuando cambia algo en daily_logs (registrar un dia,
+  // marcar desde el calendario, borrar datos), sin importar si volvimos
+  // aca con push/pop o cambiando de pestana en la NavigationBar.
+  late final Stream<CyclePrediction?> _predictionStream =
+      _repository.watchPrediction();
 
   String _formatDate(String dayKey) =>
       DateUtilsAura.formatFechaCorta(DayKey.toUtcAnchor(dayKey));
@@ -50,54 +43,73 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         backgroundColor: const Color(0xFFA8D8EA),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Tu ciclo actual",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildPredictionCard(),
-                  const SizedBox(height: 12),
-                  _buildDisclaimer(),
-                  const SizedBox(height: 30),
+      body: StreamBuilder<CyclePrediction?>(
+        stream: _predictionStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 10),
+                const Text(
+                  "Tu ciclo actual",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 20),
+                _buildPredictionCard(snapshot.data),
+                const SizedBox(height: 12),
+                _buildDisclaimer(),
+                const SizedBox(height: 30),
 
-                  // Botones principales
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Función próximamente')),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text("Registrar nuevo ciclo"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFAD4D8),
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                // Botones principales
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddCycleScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text("Registrar nuevo ciclo"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFAD4D8),
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMenuButton(
+                      Icons.calendar_month,
+                      "Calendario",
+                      const CalendarScreen(),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildMenuButton(Icons.calendar_month, "Calendario"),
-                      _buildMenuButton(Icons.show_chart, "Estadísticas"),
-                      _buildMenuButton(Icons.settings, "Ajustes"),
-                    ],
-                  ),
-                ],
-              ),
+                    _buildMenuButton(
+                      Icons.show_chart,
+                      "Estadísticas",
+                      const StatsScreen(),
+                    ),
+                    _buildMenuButton(
+                      Icons.settings,
+                      "Ajustes",
+                      const SettingsScreen(),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -120,8 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPredictionCard() {
-    final prediction = _prediction;
+  Widget _buildPredictionCard(CyclePrediction? prediction) {
     if (prediction == null) {
       return _buildCardShell(children: [
         const Icon(Icons.favorite_border, color: Colors.grey, size: 50),
@@ -293,13 +304,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuButton(IconData icon, String label) {
+  Widget _buildMenuButton(IconData icon, String label, Widget destination) {
     return Column(
       children: [
         InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Abrir $label')),
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => destination),
             );
           },
           borderRadius: BorderRadius.circular(50),

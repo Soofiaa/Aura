@@ -11,35 +11,10 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  bool _loading = true;
-  bool _hasAnyLog = false;
-  Map<Symptom, int> _sintomas = {};
-  Map<Mood, int> _estadosAnimo = {};
-  double _promedioFlujo = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarEstadisticas();
-  }
-
-  Future<void> _cargarEstadisticas() async {
-    final results = await Future.wait([
-      cycleRepository.hasAnyLog(),
-      cycleRepository.getSymptomFrequency(),
-      cycleRepository.getMoodFrequency(),
-      cycleRepository.getAverageFlow(),
-    ]);
-
-    if (!mounted) return;
-    setState(() {
-      _hasAnyLog = results[0] as bool;
-      _sintomas = results[1] as Map<Symptom, int>;
-      _estadosAnimo = results[2] as Map<Mood, int>;
-      _promedioFlujo = results[3] as double;
-      _loading = false;
-    });
-  }
+  // Stream en vez de una carga unica en initState: se recalcula solo
+  // cuando cambia algo en daily_logs, sin importar si volvimos a esta
+  // pestana despues de registrar un dia o marcar el calendario.
+  late final Stream<StatsSnapshot> _statsStream = cycleRepository.watchStats();
 
   @override
   Widget build(BuildContext context) {
@@ -49,146 +24,159 @@ class _StatsScreenState extends State<StatsScreen> {
         backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : !_hasAnyLog
-          ? const Center(
-        child: Text(
-          "Aún no hay registros guardados 🩷",
-          style: TextStyle(fontSize: 18),
-        ),
-      )
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Promedio de flujo",
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _promedioFlujo == 0
-                  ? "Sin datos"
-                  : _promedioFlujo < 1.5
-                  ? "Ligero"
-                  : _promedioFlujo < 2.5
-                  ? "Moderado"
-                  : "Abundante",
-              style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.pinkAccent),
-            ),
-            const SizedBox(height: 30),
+      body: StreamBuilder<StatsSnapshot>(
+        stream: _statsStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // 🩹 Gráfico de síntomas
-            if (_sintomas.isNotEmpty) ...[
-              const Text(
-                "Síntomas más frecuentes",
-                style:
-                TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          final stats = snapshot.data!;
+          final sintomas = stats.symptomFrequency;
+          final estadosAnimo = stats.moodFrequency;
+          final promedioFlujo = stats.averageFlow;
+
+          if (!stats.hasAnyLog) {
+            return const Center(
+              child: Text(
+                "Aún no hay registros guardados 🩷",
+                style: TextStyle(fontSize: 18),
               ),
-              const SizedBox(height: 15),
-              AspectRatio(
-                aspectRatio: 1.3,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    borderData: FlBorderData(show: false),
-                    gridData: const FlGridData(show: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            final index = value.toInt();
-                            final keys = _sintomas.keys.toList();
-                            if (index < keys.length) {
-                              return Padding(
-                                padding:
-                                const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  keys[index].label,
-                                  style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  "Promedio de flujo",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  promedioFlujo == 0
+                      ? "Sin datos"
+                      : promedioFlujo < 1.5
+                      ? "Ligero"
+                      : promedioFlujo < 2.5
+                      ? "Moderado"
+                      : "Abundante",
+                  style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.pinkAccent),
+                ),
+                const SizedBox(height: 30),
+
+                // 🩹 Gráfico de síntomas
+                if (sintomas.isNotEmpty) ...[
+                  const Text(
+                    "Síntomas más frecuentes",
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 15),
+                  AspectRatio(
+                    aspectRatio: 1.3,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        borderData: FlBorderData(show: false),
+                        gridData: const FlGridData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                final keys = sintomas.keys.toList();
+                                if (index < keys.length) {
+                                  return Padding(
+                                    padding:
+                                    const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      keys[index].label,
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.black),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ),
+                        ),
+                        barGroups: List.generate(
+                          sintomas.length,
+                              (i) => BarChartGroupData(
+                            x: i,
+                            barRods: [
+                              BarChartRodData(
+                                toY: sintomas.values.elementAt(i).toDouble(),
+                                color: const Color(0xFFFAD4D8),
+                                width: 18,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    barGroups: List.generate(
-                      _sintomas.length,
-                          (i) => BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: _sintomas.values.elementAt(i).toDouble(),
-                            color: const Color(0xFFFAD4D8),
-                            width: 18,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ],
+                  ),
+                ],
+                const SizedBox(height: 30),
+
+                // 😊 Gráfico de estados de ánimo
+                if (estadosAnimo.isNotEmpty) ...[
+                  const Text(
+                    "Estados de ánimo registrados",
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 15),
+                  AspectRatio(
+                    aspectRatio: 1.2,
+                    child: PieChart(
+                      PieChartData(
+                        centerSpaceRadius: 40,
+                        sections: estadosAnimo.entries.map((entry) {
+                          final porcentaje = entry.value /
+                              estadosAnimo.values
+                                  .reduce((a, b) => a + b);
+                          return PieChartSectionData(
+                            value: entry.value.toDouble(),
+                            color: Colors.primaries[
+                            estadosAnimo.keys.toList().indexOf(entry.key) %
+                                Colors.primaries.length],
+                            title:
+                            "${entry.key.label}\n${(porcentaje * 100).toStringAsFixed(0)}%",
+                            radius: 70,
+                            titleStyle: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 30),
-
-            // 😊 Gráfico de estados de ánimo
-            if (_estadosAnimo.isNotEmpty) ...[
-              const Text(
-                "Estados de ánimo registrados",
-                style:
-                TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 15),
-              AspectRatio(
-                aspectRatio: 1.2,
-                child: PieChart(
-                  PieChartData(
-                    centerSpaceRadius: 40,
-                    sections: _estadosAnimo.entries.map((entry) {
-                      final porcentaje = entry.value /
-                          _estadosAnimo.values
-                              .reduce((a, b) => a + b);
-                      return PieChartSectionData(
-                        value: entry.value.toDouble(),
-                        color: Colors.primaries[
-                        _estadosAnimo.keys.toList().indexOf(entry.key) %
-                            Colors.primaries.length],
-                        title:
-                        "${entry.key.label}\n${(porcentaje * 100).toStringAsFixed(0)}%",
-                        radius: 70,
-                        titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
