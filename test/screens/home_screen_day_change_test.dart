@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/data/database/app_database.dart';
+import 'package:aura/data/notifications/notification_reconciler.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/home_screen.dart';
+
+import '../support/fake_notification_scheduler.dart';
 
 /// Marca [periodStart] y los [length] dias siguientes como dias de
 /// sangrado, sin pasar por el formulario (solo para dejar datos de
@@ -42,11 +45,19 @@ void main() {
       'atraso se recalculan sin tocar la base', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
     final repo = await _seedRegularCycles(db);
+    // Reconciliador con scheduler falso: sin esto, didChangeAppLifecycleState
+    // tocaria el singleton global (FlutterLocalNotificationsScheduler real),
+    // que usa canales de plataforma inexistentes en flutter_test.
+    final reconciler = NotificationReconciler(repo, FakeNotificationScheduler());
 
     var fakeNow = DateTime(2026, 3, 28); // dia 3 del ciclo abierto
 
     await tester.pumpWidget(MaterialApp(
-      home: HomeScreen(repository: repo, clock: () => fakeNow),
+      home: HomeScreen(
+        repository: repo,
+        clock: () => fakeNow,
+        reconciler: reconciler,
+      ),
     ));
     await tester.pumpAndSettle();
 
@@ -70,6 +81,7 @@ void main() {
     // test. Ojo: desmontar el widget primero (pumpWidget con otro
     // widget) antes de cerrar la base cuelga el test; cerrar
     // directamente con el widget todavia montado funciona bien.
+    await reconciler.dispose();
     await db.close();
   });
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'data/notifications/notification_reconciler.dart';
 import 'data/repositories/cycle_repository.dart';
-import 'utils/notifications.dart';
 import 'utils/colors.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/main_navigation_screen.dart';
@@ -14,7 +14,10 @@ Future<void> main() async {
   // LocaleDataException la primera vez que se usan.
   await initializeDateFormatting();
 
-  await NotificationService.init();
+  await notificationScheduler.init();
+  // Suscripcion viva por el resto de la vida de la app: no se dispose()
+  // nunca aca a proposito, igual que cycleRepository.
+  notificationReconciler.start();
 
   final onboardingVisto = await cycleRepository.getOnboardingSeen();
 

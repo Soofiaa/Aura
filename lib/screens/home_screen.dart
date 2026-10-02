@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_deriver.dart';
 import '../domain/cycle_predictor.dart';
@@ -17,7 +18,12 @@ class HomeScreen extends StatefulWidget {
   /// falta para la medianoche). En la app real, DateTime.now().
   final DateTime Function()? clock;
 
-  const HomeScreen({super.key, this.repository, this.clock});
+  /// Inyectable para tests (evita tocar el scheduler real de
+  /// notificaciones, que usa canales de plataforma). En la app real, el
+  /// singleton global [notificationReconciler].
+  final NotificationReconciler? reconciler;
+
+  const HomeScreen({super.key, this.repository, this.clock, this.reconciler});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,6 +31,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final CycleRepository _repository = widget.repository ?? cycleRepository;
+  late final NotificationReconciler _reconciler =
+      widget.reconciler ?? notificationReconciler;
   DateTime Function() get _clock => widget.clock ?? DateTime.now;
 
   // Stream en vez de un Future cargado una vez en initState: se vuelve a
@@ -57,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _refreshToday();
+      _reconciler.onAppResumed();
     }
   }
 
