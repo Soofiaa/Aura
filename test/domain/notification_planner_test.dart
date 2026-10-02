@@ -1,0 +1,301 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/domain/cycle_predictor.dart';
+import 'package:aura/domain/notification_planner.dart';
+
+ActivePrediction _prediction({
+  String nextPeriodEarliestDate = '2026-04-21',
+  String fertileWindowStartDate = '2026-04-04',
+  PredictionConfidence confidence = PredictionConfidence.high,
+}) {
+  return ActivePrediction(
+    lastPeriodStartDate: '2026-03-26',
+    daysSinceLastPeriodStart: 10,
+    averageCycleLengthDays: 28,
+    cycleLengthStdDevDays: 0,
+    averagePeriodLengthDays: 5,
+    completeCyclesConsidered: 4,
+    excludedCyclesCount: 0,
+    nextPeriodEarliestDate: nextPeriodEarliestDate,
+    nextPeriodExpectedDate: '2026-04-23',
+    nextPeriodLatestDate: '2026-04-25',
+    estimatedOvulationDate: '2026-04-09',
+    fertileWindowStartDate: fertileWindowStartDate,
+    fertileWindowEndDate: '2026-04-09',
+    currentPhase: CyclePhase.lutea,
+    isPeriodLate: false,
+    daysLate: 0,
+    confidence: confidence,
+    confidenceReasons: const [],
+  );
+}
+
+const _settingsBase = NotificationSettings(
+  notificationsEnabled: true,
+  periodReminderEnabled: true,
+  fertileWindowRemindersEnabled: true,
+  showDetailsEnabled: false,
+  reminderHour: 9,
+  reminderMinute: 0,
+);
+
+void main() {
+  group('planNotifications - casos base', () {
+    test('predice ambos avisos con todo activado y tiempo de sobra', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: _settingsBase,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+
+      expect(plan, hasLength(2));
+      expect(plan[0].kind, NotificationKind.fertileWindowReminder);
+      expect(plan[0].date, '2026-04-04');
+      expect(plan[1].kind, NotificationKind.periodReminder);
+      expect(plan[1].date, '2026-04-20'); // extremo temprano - 1
+      expect(plan[1].hour, 9);
+      expect(plan[1].minute, 0);
+    });
+
+    test('interruptor general apagado: nada, aunque los demas esten prendidos',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: const NotificationSettings(
+          notificationsEnabled: false,
+          periodReminderEnabled: true,
+          fertileWindowRemindersEnabled: true,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, isEmpty);
+    });
+
+    test('recordatorio de periodo desactivado: solo queda el fertil', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: const NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: false,
+          fertileWindowRemindersEnabled: true,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, hasLength(1));
+      expect(plan.single.kind, NotificationKind.fertileWindowReminder);
+    });
+
+    test('ventana fertil desactivada (default): solo el recordatorio de periodo',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: const NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: true,
+          fertileWindowRemindersEnabled: false,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, hasLength(1));
+      expect(plan.single.kind, NotificationKind.periodReminder);
+    });
+  });
+
+  group('planNotifications - hora del dia (evita programar en el pasado)', () {
+    test('hoy es el dia del aviso, antes de la hora: se incluye', () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase, // 9:00
+        today: '2026-04-20', // == fecha del aviso de periodo
+        nowMinutesOfDay: 8 * 60 + 30, // 8:30, antes de las 9:00
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isTrue,
+      );
+    });
+
+    test('hoy es el dia del aviso, despues de la hora: se omite (ya paso)',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase, // 9:00
+        today: '2026-04-20',
+        nowMinutesOfDay: 15 * 60 + 37, // 15:37, ya paso
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isFalse,
+      );
+    });
+
+    test('hoy es el dia del aviso, exactamente a la hora: se omite', () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase,
+        today: '2026-04-20',
+        nowMinutesOfDay: 9 * 60, // exactamente 9:00
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isFalse,
+      );
+    });
+
+    test('fecha de aviso ya quedo en el pasado respecto a hoy: se omite', () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase,
+        today: '2026-04-25', // el aviso hubiera sido el 2026-04-20
+        nowMinutesOfDay: 0,
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isFalse,
+      );
+    });
+
+    test('fecha de aviso en el futuro: se incluye sin importar la hora actual',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase,
+        today: '2026-04-01', // el aviso es el 2026-04-20, todavia lejos
+        nowMinutesOfDay: 23 * 60 + 59,
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isTrue,
+      );
+    });
+  });
+
+  group('planNotifications - prediccion nula u obsoleta', () {
+    test('prediccion nula: lista vacia', () {
+      final plan = planNotifications(
+        prediction: null,
+        settings: _settingsBase,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, isEmpty);
+    });
+
+    test('datos desactualizados (StaleDataPrediction): lista vacia', () {
+      final plan = planNotifications(
+        prediction: const StaleDataPrediction(
+          lastPeriodStartDate: '2026-01-01',
+          daysSinceLastPeriodStart: 90,
+        ),
+        settings: _settingsBase,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, isEmpty);
+    });
+  });
+
+  group('planNotifications - confianza baja suprime el aviso fertil', () {
+    test('confianza baja: el aviso fertil NO se planifica aunque este activado',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(confidence: PredictionConfidence.low),
+        settings: _settingsBase,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(
+        plan.any((n) => n.kind == NotificationKind.fertileWindowReminder),
+        isFalse,
+      );
+      // el recordatorio de periodo no depende de la confianza.
+      expect(
+        plan.any((n) => n.kind == NotificationKind.periodReminder),
+        isTrue,
+      );
+    });
+
+    test('confianza media/alta: el aviso fertil si se planifica', () {
+      for (final confidence in [
+        PredictionConfidence.medium,
+        PredictionConfidence.high,
+      ]) {
+        final plan = planNotifications(
+          prediction: _prediction(confidence: confidence),
+          settings: _settingsBase,
+          today: '2026-04-01',
+          nowMinutesOfDay: 8 * 60,
+        );
+        expect(
+          plan.any((n) => n.kind == NotificationKind.fertileWindowReminder),
+          isTrue,
+          reason: 'confianza $confidence',
+        );
+      }
+    });
+  });
+
+  group('planNotifications - texto discreto vs detallado', () {
+    test('discreto por defecto: sin mencionar periodo ni fertilidad', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: _settingsBase, // showDetailsEnabled: false
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      for (final n in plan) {
+        expect(n.title, 'Aura: recordatorio');
+        expect(n.body.toLowerCase(), isNot(contains('período')));
+        expect(n.body.toLowerCase(), isNot(contains('fertil')));
+      }
+    });
+
+    test('con mostrar detalles activado, el texto incluye "estimación"', () {
+      final detailedSettings = const NotificationSettings(
+        notificationsEnabled: true,
+        periodReminderEnabled: true,
+        fertileWindowRemindersEnabled: true,
+        showDetailsEnabled: true,
+        reminderHour: 9,
+        reminderMinute: 0,
+      );
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: detailedSettings,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      for (final n in plan) {
+        expect(n.title, isNot('Aura: recordatorio'));
+        expect(n.body.toLowerCase(), contains('estimación'));
+      }
+    });
+  });
+
+  test('ids estables por tipo (reprogramar reemplaza, no acumula)', () {
+    final plan = planNotifications(
+      prediction: _prediction(),
+      settings: _settingsBase,
+      today: '2026-04-01',
+      nowMinutesOfDay: 8 * 60,
+    );
+    final period =
+        plan.firstWhere((n) => n.kind == NotificationKind.periodReminder);
+    final fertile = plan
+        .firstWhere((n) => n.kind == NotificationKind.fertileWindowReminder);
+    expect(period.id, 100);
+    expect(fertile.id, 101);
+  });
+}
