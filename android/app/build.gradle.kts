@@ -34,6 +34,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "Aura"
     }
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -54,6 +55,12 @@ android {
         getByName("debug") {
             isMinifyEnabled = false
             isShrinkResources = false
+            // Permite tener debug y release instaladas a la vez, cada
+            // una con su propio applicationId (y por lo tanto su propia
+            // base de datos local): no son la misma app para Android.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "Aura (debug)"
         }
         getByName("release") {
             isMinifyEnabled = true
