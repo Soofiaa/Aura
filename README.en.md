@@ -99,5 +99,4 @@ Aura provides estimates for informational purposes only. It does not replace adv
 
 ## License
 
-<!-- Pick a license (e.g. MIT) and add a LICENSE file, or leave "All rights reserved". -->
-To be decided.
+All rights reserved. The code is published for viewing and evaluation only; see [LICENSE](LICENSE).

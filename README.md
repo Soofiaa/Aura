@@ -99,5 +99,4 @@ Aura ofrece estimaciones con fines informativos. No sustituye la opinión de un 
 
 ## Licencia
 
-<!-- Elige una licencia (p. ej. MIT) y agrega el archivo LICENSE, o deja "Todos los derechos reservados". -->
-Pendiente de definir.
+Todos los derechos reservados. El código se publica para consulta y evaluación; ver [LICENSE](LICENSE).
