@@ -47,6 +47,21 @@ Sí/No; con un registro de 2 toques deja de estarlo. **La v1.1 debe resolverlo (
 - **Consecuencia:** el arreglo no se resuelve solo con marcar los períodos como cerrados; **el predictor debe filtrar** los períodos abiertos al calcular la duración promedio.
 - **Caso aparte:** con menos ciclos completos que `minCompleteCyclesForMedium`, el predictor usa directamente la duración del período más reciente (`cycle_predictor.dart`, línea 330) sin promedio. Si ese período está abierto, la duración usada también es la de un solo día. Hay que cubrir este caso en los tests de HU-03.
 
+### Hallazgo B-1 — el formulario "Registrar síntomas" marca sangrado por defecto
+
+En un día sin registro, el formulario abre con el interruptor "Día de sangrado" **encendido** (`add_cycle_screen.dart`, línea 22,
+y línea 50 al cambiar a una fecha sin registro) y con flujo "Ligero" (línea 23). Al guardar, `upsertDay` recibe
+`isPeriodDaySwitch: true` y `flow` (líneas 65-68) y escribe `is_period_day = 1` (`cycle_repository.dart`, líneas 67-70).
+
+**Verificación** (test de widget temporal sobre `main`, sin modificar el repositorio): con un período real de 5 días hace 20 días,
+registrar solo "Dolor de cabeza" hoy (abrir "Registrar día" → tocar el síntoma → "Guardar registro", **3 toques**) deja el día con
+`is_period_day = 1` y `flow = ligero`, y `deriveCycles` crea un **período nuevo de 1 día** que cierra un ciclo falso de 20 días.
+Para registrar un síntoma sin sangrado hacen falta **4 toques**, y uno de ellos (apagar el interruptor) depende de que la usuaria
+note que viene encendido.
+
+**Consecuencia:** un registro de síntomas fuera del período puede alterar la duración de los ciclos, la predicción, las
+notificaciones y el flujo promedio. Se corrige antes que todo lo demás (ver sección 9, paso 0).
+
 ## 3. Principios de diseño
 
 1. **Un dato estimado nunca se guarda como dato real.** Los días estimados se muestran, pero no se escriben en `daily_logs`.
@@ -59,7 +74,7 @@ Sí/No; con un registro de 2 toques deja de estarlo. **La v1.1 debe resolverlo (
 
 | Versión | Contenido |
 |---|---|
-| **1.1** | HU-01 a HU-06 + tarea T-01 (ícono) |
+| **1.1** | Arreglo del formulario "Registrar síntomas" (B-1) + HU-01 a HU-06 + tarea T-01 (ícono) |
 | **1.2** | HU-07 (historial de anticonceptivos) |
 | Fuera de alcance | Recordatorio de toma de pastilla, cuenta o sincronización en la nube, publicidad, pagos, exportar a PDF clínico |
 
@@ -75,8 +90,7 @@ Sí/No; con un registro de 2 toques deja de estarlo. **La v1.1 debe resolverlo (
 1. **Dado** que abro Ajustes → "Tu ciclo", **cuando** elijo una duración **entonces** se guarda y se usa en las estimaciones siguientes.
 2. El valor admitido está entre 1 y 15 días; por defecto 5.
 3. Cambiarlo **no modifica** ningún registro ya guardado (solo afecta estimaciones futuras).
-4. "Duración habitual del ciclo" es opcional y solo se usa en la primera predicción, antes de tener ciclos completos suficientes.
-5. Tras "Borrar todos los datos" el valor vuelve al predeterminado.
+4. Tras "Borrar todos los datos" el valor vuelve al predeterminado.
 
 **Datos:** nueva columna `typical_period_length` (int, default 5) en `app_settings`; **schema v4** con migración y test de migración v3→v4.
 
@@ -124,6 +138,7 @@ Sí/No; con un registro de 2 toques deja de estarlo. **La v1.1 debe resolverlo (
 4. "Confirmar días" equivale a HU-03 usando como día de término el último día estimado: los estimados pasan a registrados y el período queda cerrado, tras una confirmación explícita.
 5. La selección de rango existente conserva su confirmación para rangos largos (`longRangeConfirmationThreshold`).
 6. Los controles táctiles miden al menos 44 dp.
+7. Marcar un día y marcar un rango muestran "Deshacer", que restaura exactamente el estado previo de todos los días afectados (hoy ninguna de las dos acciones lo tiene).
 
 ---
 
@@ -196,12 +211,12 @@ y comprobar el resultado en un launcher claro y uno oscuro.
 
 Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de implementar.
 
-| ID | Pregunta | Recomendación |
-|---|---|---|
-| **D-1** | ¿Cómo se representa un período "cerrado"? Hoy `periodConfirmedEnded` exige un día explícito sin sangrado posterior, y el rango del calendario no lo genera. | Evaluar una marca de cierre dedicada (columna o fila de cierre) frente a reutilizar el día explícito. Debe cubrir **Terminó**, **rango del calendario** y **datos de la v1.0**. |
-| **D-2** | ¿Qué pasa con los períodos de la v1.0 que no tienen cierre explícito? | No descartarlos en bloque: tratar como cerrados los que tienen más de un día marcado (señal de que se registró un rango o varios días reales), y como abiertos los de un solo día. Documentar la regla y probarla con datos reales de la v1.0. |
-| **D-3** | ¿El respaldo va cifrado? Son datos de salud en un archivo que puede quedar en la nube. | Contraseña opcional pero recomendada, con el mismo enfoque que ya usa PetPal. Decidir si entra en la 1.1 o en la 1.2. |
-| **D-4** | ¿Qué pasa si la usuaria nunca toca "Terminó"? | El período queda abierto y fuera del promedio de duración, y el ciclo sigue contando para la regularidad (se deriva de los inicios). Evaluar un aviso suave tras la duración habitual. |
+| ID | Pregunta | Recomendación | Estado |
+|---|---|---|---|
+| **D-1** | ¿Cómo se representa un período "cerrado"? Hoy `periodConfirmedEnded` exige un día explícito sin sangrado posterior, y el rango del calendario no lo genera. | Evaluar una marca de cierre dedicada (columna o fila de cierre) frente a reutilizar el día explícito. Debe cubrir **Terminó**, **rango del calendario** y **datos de la v1.0**. | Resuelta: ver sección 10 |
+| **D-2** | ¿Qué pasa con los períodos de la v1.0 que no tienen cierre explícito? | No descartarlos en bloque: cerrar solo los que tienen al menos 2 días marcados, un hueco interno de 1 día como máximo y que ya no pueden seguir creciendo (si son el período más reciente, que su último día sea de hace más de 7 días). Los demás, incluidos los de un solo día, quedan abiertos. Documentar la regla y probarla con datos que reproduzcan los de la v1.0. | Resuelta: ver sección 10 |
+| **D-3** | ¿El respaldo va cifrado? Son datos de salud en un archivo que puede quedar en la nube. | Contraseña opcional pero recomendada, con el mismo enfoque que ya usa PetPal. Decidir si entra en la 1.1 o en la 1.2. | Abierta: se resuelve en la Etapa A de HU-06 |
+| **D-4** | ¿Qué pasa si la usuaria nunca toca "Terminó"? | El período queda abierto y fuera del promedio de duración, y el ciclo sigue contando para la regularidad (se deriva de los inicios). Evaluar un aviso suave tras la duración habitual. | Resuelta: ver sección 10 |
 
 ## 8. Definición de hecho (por historia)
 
@@ -214,10 +229,44 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 ## 9. Orden de implementación sugerido
 
-1. **D-1 y D-2** (modelo de "período cerrado") — es la base de todo lo demás.
-2. HU-01 → HU-02 → HU-03 → HU-04 (el flujo de registro, de adentro hacia afuera).
-3. HU-05 (estadísticas, que consume el modelo ya corregido).
-4. HU-06 (respaldo).
-5. T-01 (ícono) en cualquier momento, en su propia rama.
-6. Release v1.1.0.
-7. HU-07 como v1.2.0.
+0. **Formulario (B-1):** verificar y corregir el interruptor de sangrado del formulario "Registrar síntomas".
+1. **HU-06 (respaldo)**, con su propia Etapa A. Va antes de la migración v4 para poder respaldar los datos reales antes de actualizar.
+2. **Modelo de período cerrado** (D-1, D-2, P-1): columna `period_end`, migración v4 (incluye `typical_period_length`), cambio en el predictor y ajuste de duración habitual en el repositorio, **sin interfaz**.
+3. Interfaz de HU-01 a HU-04.
+4. HU-05 (estadísticas, que consume el modelo ya corregido).
+5. T-01 (ícono).
+6. Release v1.1.0 y, después, HU-07 como v1.2.0.
+
+## 10. Registro de decisiones
+
+Decisiones tomadas tras la Etapa A del modelo de período cerrado. Reemplazan las recomendaciones de la sección 7 donde difieran.
+
+| ID | Decisión | Motivo |
+|---|---|---|
+| **D-1** | Nueva columna `period_end` en `daily_logs`, de tipo `PeriodEndSource` (`declared` \| `inferred`), con `CHECK` en la columna: `period_end IS NULL OR is_period_day = 1`. Un período está **cerrado** si su último día de sangrado tiene `period_end`, o si se cumple la regla actual del "No" explícito (un día con `is_period_day = 0` y `period_day_explicit = 1` entre 1 y 7 días después del último día de sangrado). | Todo el estado queda en las filas de `daily_logs`: "Deshacer" y "Quitar marca" siguen funcionando con una foto de las filas afectadas, el respaldo exporta una columna más y `deriveCycles` sigue siendo pura. El origen (`declared` / `inferred`) separa las declaraciones reales de la inferencia de la migración y permite revertir esta última. Se descartaron: una tabla de cierres (dos fuentes de verdad), reutilizar `period_day_explicit` (obliga a guardar días futuros falsos) e inferir sin guardar nada (no distingue un período abierto de uno corto). El `CHECK` va en la columna, no en la tabla, para que una instalación nueva y una migrada tengan el mismo schema. |
+| **D-2** | Al migrar a v4, los períodos de la v1.0 se cierran con `period_end = inferred` en su último día **solo** si: no están ya cerrados por un "No", tienen al menos 2 días marcados, su hueco interno más grande es de 1 día como máximo, y no son el período más reciente con 7 días o menos desde su último día. En cualquier otro caso quedan abiertos y no se escribe nada (ver tabla de casos más abajo). | Regla conservadora: un período abierto solo queda fuera del promedio, mientras que un cierre equivocado lo distorsiona. La migración solo escribe `period_end`; no cambia ningún día de sangrado, flujo, ánimo, nota, síntoma ni negación explícita. |
+| **P-1** | El predictor filtra **solo la duración del período**; la duración del ciclo, el rango y la confianza no cambian. El promedio usa los períodos cerrados de la ventana más el período actual si está cerrado (aunque su ciclo no esté completo). Sin períodos cerrados usa la duración habitual (`typicalPeriodLengthDays` en `PredictionConfig`). Desaparece el caso especial de la línea 330. | Corrige el riesgo del hallazgo 5 (3,67 en vez de 5). Pasar la duración habitual en `PredictionConfig` mantiene `predictCycle` como función pura. |
+| **E-1** | Los días estimados se calculan con una función pura (período actual, duración habitual, hoy) y **no se guardan**. | Principio 1: un dato estimado nunca se guarda como dato real. |
+| **R-1** | Un rango marcado en el calendario cierra el período (`declared` en su último día) solo si termina hace 2 días o más. Si termina hoy o ayer, se pregunta "¿Ya terminó tu período?". | Un rango que termina hoy o ayer puede corresponder a un período que sigue. |
+| **R-2** | Se acepta que los períodos de 1 día de la v1.0 queden abiertos, y el límite de hueco interno de 1 día de D-2. | En los datos de la v1.0 no se puede distinguir un período real de 1 día de uno en que solo se marcó el inicio. |
+| **R-3** | El período actual cerrado entra al promedio de duración aunque su ciclo no esté completo. | Su duración ya es un dato real. |
+| **R-4** | Marcar un día a continuación de un fin declarado **reabre** el período, sin borrar la marca anterior (queda en un día interior y deja de contar). | Es la opción conservadora, y si después se quita ese día el fin declarado vuelve a valer. |
+| **R-5** | El respaldo (HU-06) se implementa **antes** de la migración v4. | `allowBackup="false"` y la build de release impiden copiar la base del teléfono; sin exportación no hay forma de respaldar los datos reales antes de migrar. |
+| **R-6** | No se agrega `typical_cycle_length`. | Decisión de producto; se quita el criterio correspondiente de HU-01 y la v4 solo agrega `typical_period_length`. |
+| **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |
+| **R-8** | El aviso suave de D-4 (cuando nunca se toca "Terminó") queda fuera de la v1.1. | Reducir el alcance; el período abierto ya queda fuera del promedio sin afectar la regularidad. |
+
+La decisión D-3 (cifrado del respaldo) sigue abierta y se resuelve en la Etapa A de HU-06.
+
+**Casos de la regla D-2** (datos de la v1.0 al migrar a v4):
+
+| Caso | Resultado | Duración que entra al promedio |
+|---|---|---|
+| 1 día marcado (ciclo completo) | Abierto | No entra |
+| 2 o más días seguidos (por ejemplo, 01-01 a 01-05) | Cerrado (`inferred`) | 5 |
+| Rango con 1 día sin marcar (por ejemplo, días 1, 2, 4 y 5) | Cerrado (`inferred`) | 5 (el hueco cuenta, igual que hoy) |
+| Rango con hueco de más de 1 día (por ejemplo, días 1 y 7) | Abierto | No entra |
+| Período que ya tiene un "No" explícito | Ya cerrado; no se escribe nada | Su duración real |
+| Período más reciente que terminó hace 7 días o menos | Abierto (puede seguir) | No entra |
+| Período más reciente que terminó hace más de 7 días, con 2 o más días | Cerrado (`inferred`) | Su duración |
+| Período más reciente de 1 solo día, de hace más de 7 días | Abierto | No entra |
