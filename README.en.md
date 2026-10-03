@@ -6,11 +6,6 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 
 > **Status:** v1.0 · Android only · personal portfolio project, in real daily use.
 
-<!-- Replace with your screenshots (docs/screenshots/ folder) -->
-| Home | Calendar | Statistics | Settings |
-|:--:|:--:|:--:|:--:|
-| ![Home](docs/screenshots/home.png) | ![Calendar](docs/screenshots/calendar.png) | ![Statistics](docs/screenshots/stats.png) | ![Settings](docs/screenshots/settings.png) |
-
 ## What it does
 
 - Logs bleeding days, flow intensity, mood, symptoms and notes.
