@@ -58,6 +58,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   drift_dev: ^2.20.0
   build_runner: ^2.4.9
+  flutter_launcher_icons: 0.14.4
+  flutter_native_splash: 2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -101,3 +103,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/aura_icon_1024.png"
+  adaptive_icon_background: "assets/icon/aura_background_1024.png"
+  adaptive_icon_foreground: "assets/icon/aura_foreground_1024.png"
+
+flutter_native_splash:
+  color: "#F8FAFB"
+  image: assets/icon/aura_splash_960.png
+
+  android_12:
+    color: "#F8FAFB"
+    image: assets/icon/aura_splash_960.png
