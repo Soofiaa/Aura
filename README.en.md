@@ -76,7 +76,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-120+ tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Testing on a real device found bugs the tests had missed (time zone defaulting to UTC, foreign keys not enforced in the test database, pending timers), and each one was fixed with a regression test.
+120+ tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 

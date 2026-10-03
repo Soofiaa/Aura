@@ -76,7 +76,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-Más de 120 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso). La verificación en dispositivo real encontró errores que los tests no detectaban (zona horaria inicial en UTC, claves foráneas no aplicadas en la base de pruebas, timers pendientes), y cada uno quedó corregido con su test.
+Más de 120 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 
