@@ -103,6 +103,25 @@ de 10.
 
 **Decisión:** se corrige dentro de HU-04 en la v1.1, con las opciones A y B (ver HU-04). No entra en la v1.0.1.
 
+### Hallazgo S-1 — los avisos con "Deshacer" no se cerraban solos
+
+**Síntoma:** en la rama de HU-06, los SnackBar con acción "Deshacer" ("Registrado: hoy no hubo sangrado." en Inicio y "Marca
+quitada" en el Calendario) quedaban en pantalla hasta que la usuaria los cerraba.
+
+**Causa:** desde Flutter 3.29, `SnackBar.persist` es `null` por defecto y, si hay `action`, se toma como `true`
+(`snack_bar.dart`: `persist = persist ?? action != null`). Al vencer la duración, `ScaffoldMessenger` no oculta un SnackBar
+persistente (`scaffold.dart`: `if (snackBar.persist) return;`). Comprobado en el SDK de Flutter 3.44.8.
+
+**Corrección** (commit `00cd5dc`): los avisos con "Deshacer" transitorio llevan `persist: false` explícito y `duration` de 8
+segundos (`undoSnackBarDuration` en `lib/utils/app_snackbar.dart`). El único persistente a propósito es el éxito de la
+importación. Tests de widget comprueban que siguen visibles a los 7 s y desaparecen a los 10 s; verificado también en el
+teléfono.
+
+**Relacionado** (commit `9960dff`): `ScaffoldMessenger` encola los SnackBar, así que el éxito persistente de la importación
+bloqueaba todos los mensajes siguientes. Toda la app muestra los SnackBar con `showAppSnackBar`, que descarta los anteriores
+antes de mostrar uno nuevo. No se limpian al cambiar de pestaña, para no borrar el "Deshacer" de la importación cuando la
+usuaria va al Calendario a revisar los días importados.
+
 ## 3. Principios de diseño
 
 1. **Un dato estimado nunca se guarda como dato real.** Los días estimados se muestran, pero no se escriben en `daily_logs`.
@@ -234,13 +253,27 @@ hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene 
 
 ### HU-06 · Respaldar y restaurar mis datos
 **Como** usuaria **quiero** exportar e importar mis datos **para** no perder mi historial si cambio o pierdo el teléfono.
-**Mockup:** 5 (Ajustes → "Copia de seguridad").
+**Mockup:** 5 (Ajustes → "Copia de seguridad"; en la app la sección se llama **"Tus datos"**).
+
+**Estado:**
+- **HU-06a (respaldo sin cifrado): implementada y probada en el teléfono.** Rama `feature/hu-06-respaldo`, commits `9f8666e`,
+  `9960dff`, `00cd5dc` y `0bc413c`. Cubre los criterios 1 a 6 y 8, y la advertencia de datos de salud del criterio 7.
+  - Prueba manual en el teléfono (2026-10-04, build debug con datos inventados): 9 de 10 pasos OK. Falló uno: al cerrar la hoja
+    de compartir sin elegir destino aparecía "Respaldo listo". Se corrigió en `0bc413c` y quedó cubierto por un test.
+  - En la misma prueba se comprobó con `run-as` que `cache/file_picker` queda vacía después de importar, que los temporales se
+    borran al volver a abrir la app y que "Borrar todos los datos" elimina `files/respaldos`.
+  - Release firmado (SHA-256 del certificado igual al de la app instalada): `aapt dump permissions` sin `INTERNET`. Se instaló
+    con `adb install -r` sobre la app real, conservando sus datos (`firstInstallTime` sin cambios).
+- **HU-06b (contraseña / cifrado del respaldo): pendiente.** Completa el criterio 7 (ver decisiones HU6-2 y HU6-3 en la sección
+  10). Bloquea la publicación de la v1.1.
 
 **Criterios de aceptación**
 1. **Exportar:** genera un archivo versionado (formato propio, con `schemaVersion`, fecha y app) con todos los datos: registros diarios, síntomas y ajustes.
 2. El archivo se comparte mediante la hoja de compartir del sistema; la app **no** requiere `INTERNET`.
 3. **Importar:** valida el archivo **antes** de tocar los datos; si es inválido o de una versión no soportada, no modifica nada y explica por qué.
-4. Importar **reemplaza** los datos actuales tras una confirmación que dice cuántos registros se sobrescriben.
+4. Importar **reemplaza** los datos actuales tras una confirmación que dice cuántos registros se sobrescriben. Se cuentan
+   **días con registro** y, entre paréntesis, cuántos son de período: "tiene N días con registro (M de período)" (ver
+   HU6-R4 en la sección 10).
 5. La importación es atómica (todo o nada, en una transacción).
 6. Un respaldo de una versión de schema anterior se puede importar; uno de una versión posterior se rechaza con un mensaje claro.
 7. Se advierte que el archivo contiene datos de salud y se ofrece protegerlo con contraseña (ver D-3).
@@ -327,7 +360,7 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 |---|---|---|---|
 | **D-1** | ¿Cómo se representa un período "cerrado"? Hoy `periodConfirmedEnded` exige un día explícito sin sangrado posterior, y el rango del calendario no lo genera. | Evaluar una marca de cierre dedicada (columna o fila de cierre) frente a reutilizar el día explícito. Debe cubrir **Terminó**, **rango del calendario** y **datos de la v1.0**. | Resuelta: ver sección 10 |
 | **D-2** | ¿Qué pasa con los períodos de la v1.0 que no tienen cierre explícito? | No descartarlos en bloque: cerrar solo los que tienen al menos 2 días marcados, un hueco interno de 1 día como máximo y que ya no pueden seguir creciendo (si son el período más reciente, que su último día sea de hace más de 7 días). Los demás, incluidos los de un solo día, quedan abiertos. Documentar la regla y probarla con datos que reproduzcan los de la v1.0. | Resuelta: ver sección 10 |
-| **D-3** | ¿El respaldo va cifrado? Son datos de salud en un archivo que puede quedar en la nube. | Contraseña opcional pero recomendada, con el mismo enfoque que ya usa PetPal. Decidir si entra en la 1.1 o en la 1.2. | Abierta: se resuelve en la Etapa A de HU-06 |
+| **D-3** | ¿El respaldo va cifrado? Son datos de salud en un archivo que puede quedar en la nube. | Contraseña opcional pero recomendada, con el mismo enfoque que ya usa PetPal. Decidir si entra en la 1.1 o en la 1.2. | Resuelta: ver sección 10 (HU6-2, HU6-3) |
 | **D-4** | ¿Qué pasa si la usuaria nunca toca "Terminó"? | El período queda abierto y fuera del promedio de duración, y el ciclo sigue contando para la regularidad (se deriva de los inicios). Evaluar un aviso suave tras la duración habitual. | Resuelta: ver sección 10 |
 | **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
@@ -357,7 +390,8 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 ## 10. Registro de decisiones
 
-Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8) y tras el parche v1.0.1 (U-1 y T-01 a T-03).
+Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03) y
+tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -378,8 +412,35 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **T-01** | Fondo del ícono adaptativo en blanco `#FFFFFF` y `adaptive_icon_foreground_inset: 8`. El foreground y el splash no cambian; el splash conserva `#F8FAFB`. | Medido sobre el foreground: con el 16 % por defecto de `flutter_launcher_icons` 0.14.4 la flor queda encogida en 37,6 dp de un círculo visible de 72 dp; con 0 % las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles); con 8 % mide unos 46,4 dp y cabe en un círculo de 58,3 dp, dentro de la zona segura. Se eligió 8 y no 4 (50,8 dp, que también cabía) porque, viéndolo instalado en el teléfono, Sofia prefirió la flor un poco más chica. `#F8FAFB` y `#FFFFFF` casi no se distinguen, por eso el splash no cambia. |
 | **T-01 (versión)** | T-01 entra en la v1.1 sin subir la versión antes. Para probarla en el teléfono se instala con `adb install -r` con el mismo `versionCode`, como instalación de prueba. | Un cambio solo de ícono no justifica una versión publicada aparte, y la misma firma con `-r` conserva los datos. |
 | **T-02 / T-03** | El ícono pequeño de notificación (T-02) y el ícono monocromo (T-03) son tareas separadas de T-01. T-02 debe estar antes de publicar la v1.1. | Son problemas distintos del fondo del ícono: cada uno necesita su propio asset y su propia prueba en el teléfono, y mezclarlos agrandaría T-01. T-02 va antes de la v1.1 porque las notificaciones ya están en uso y su ícono pequeño no muestra la flor: confirmado en el teléfono de Sofia (HyperOS), donde se ve como un disco oscuro liso. T-03 solo afecta a quien usa íconos temáticos: forma parte de la v1.1 pero no bloquea su publicación; si no queda lista, pasa a la v1.2. |
+| **HU6-1** | El respaldo es un **JSON propio** (`"format": "aura-backup"`, con `formatVersion`, `schemaVersion`, `appVersion` y `exportedAt`), no una copia del archivo `.sqlite`. | Se puede validar completo antes de tocar la base, no depende del formato interno de drift y un schema anterior se puede importar convirtiéndolo. |
+| **HU6-2** | El cifrado entra en la v1.1 como **HU-06b**, en una rama aparte. Bloquea la publicación de la v1.1, pero no la migración v4. | Son datos de salud en un archivo que puede terminar en la nube o en un chat, pero el respaldo sin cifrar ya permite proteger los datos reales antes de migrar (R-5). |
+| **HU6-3** | HU-06b usará un **envoltorio propio PBKDF2-SHA256 + AES-GCM**, no el ZIP AE-2 de PetPal. | El enfoque de PetPal usa 1000 iteraciones con SHA-1, un costo de derivación demasiado bajo para datos de salud. |
+| **HU6-4** | "Crear respaldo" ofrece la **hoja de compartir** del sistema y un botón **"Guardar en el teléfono"** (el "Guardar como" del sistema). | Guardar en el propio teléfono no debería obligar a pasar por otra app. |
+| **HU6-5** | **"Deshacer"** está en el mensaje de éxito de la importación, sin un botón permanente en Ajustes. | Deshacer sirve justo después de importar; un botón permanente invitaría a restaurar una copia vieja por error. |
+| **HU6-6** | Se importan los **ajustes de recordatorios**, salvo el **interruptor general** de notificaciones. | Ese interruptor depende del permiso de notificaciones del teléfono donde se importa, así que conserva su valor actual. |
 
-La decisión D-3 (cifrado del respaldo) sigue abierta y se resuelve en la Etapa A de HU-06.
+**Ajustes obligatorios de HU-06** (aprobados con la Etapa A):
+
+| ID | Ajuste |
+|---|---|
+| **A** | Los archivos temporales de exportación se borran al abrir la app y antes de la siguiente exportación, **no** al volver de la hoja de compartir: la app de destino puede seguir leyéndolos. |
+| **B** | "Borrar todos los datos" borra también `respaldos/antes_de_importar.json` y los temporales; intenta los tres pasos aunque uno falle. |
+| **C** | Si el respaldo trae **menos** días que los actuales, la confirmación lo avisa de forma destacada ("El respaldo tiene N días menos que los que tienes ahora; se perderán."). Se calcula con el total de días con registro. |
+| **D** | La versión sale de una **constante única** (`lib/utils/app_version.dart`), usada en Ajustes y en el respaldo, con un test que falla si no coincide con `pubspec.yaml`. |
+| **E** | La exportación es **determinista**: días ordenados por fecha, síntomas por nombre y claves siempre en el mismo orden; los mismos datos producen el mismo archivo, salvo `exportedAt`. |
+| **F** | "Deshacer" no se cierra solo y no reescribe la copia previa. El texto inicial ("…quedan guardados hasta la próxima importación") se cambió en la revisión del CP2 por **"Si te equivocaste, toca Deshacer."** |
+| **G** | Rango de fechas válido al importar y exportar: de `1970-01-01` a la mayor entre `2030-12-31` y la fecha de exportación + 2 días. |
+| **H** | Durante la importación la interfaz queda **bloqueada** con un diálogo de progreso que no se puede cerrar (ni con "atrás"). |
+
+**Riesgos, hallazgos y tareas de HU-06:**
+
+| ID | Tipo | Detalle |
+|---|---|---|
+| **HU6-R1** | Riesgo residual | Si un día guardado queda con una fecha fuera del rango de G, el respaldo no se puede crear y la importación tampoco, porque su copia previa falla. Pasa, por ejemplo, con un día posterior a 2030 guardado con el reloj adelantado. El mensaje nombra la fecha, pero la app no permite editar ese día, así que la única salida es "Borrar todos los datos". |
+| **HU6-R2** | Tarea aparte | Actualizar **AGP 8.7.3, Gradle 8.12 y Kotlin 2.1.0** antes de publicar la v1.1: Flutter 3.44.8 avisa que pronto dejará de soportarlos. |
+| **HU6-R3** | Dependencias fijadas | `share_plus` queda en **12.0.2** y `file_picker` en **11.0.3**, versiones exactas. `file_picker` 12/13 (federado, `android_file_picker` 2.0.0) no compila con AGP 8.7.3: `androidx.core` 1.18 exige AGP 8.9.1 o superior y falla el lint. `share_plus` 13 exige `win32` ^6, que choca con `file_picker` 11 (`win32` ^5). Se revisan junto con HU6-R2. |
+| **HU6-R4** | Aclaración | La confirmación de importar cuenta **días con registro**, no solo días de período: un día con la marca quitada o con "no hubo sangrado" sigue siendo una fila y se reemplaza igual. Por eso dice "N días con registro (M de período)". M sale de `isPeriodDay` en el respaldo y de `getPeriodDayDates()` en el teléfono. Antes decía "N días registrados" y confundía, porque el calendario solo muestra los de período. |
+| **HU6-R5** | Hallazgo | `share_plus` 12.0.2 en Android devuelve `dismissed` si la hoja de compartir se cierra sin elegir destino, `success` si se elige una app y `unavailable` si la plataforma no puede saberlo. `BackupFileGateway.shareFile` devuelve `false` solo con `dismissed`, y entonces la pantalla no muestra "Respaldo listo". |
 
 **Casos de la regla D-2** (datos de la v1.0 al migrar a v4):
 
