@@ -190,12 +190,16 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
   final Mood? mood;
   final String? notes;
 
-  /// true si el valor actual de is_period_day vino de una accion directa
-  /// y dedicada (la pregunta "Sigue tu periodo hoy?" o "Quitar marca" del
-  /// calendario), no del formulario general de sintomas. Sin esto no se
-  /// puede distinguir "explicitamente no sangro" de "no se declaro nada
-  /// sobre sangrado" cuando is_period_day=false (ver fase de registro
-  /// rapido de fin de periodo).
+  /// true si el valor actual de is_period_day vino de una declaracion
+  /// explicita: la pregunta "Sigue tu periodo hoy?" de Inicio o "Quitar
+  /// marca" del calendario (CycleRepository.setPeriodDayExplicitly), o el
+  /// formulario general unicamente al apagar el interruptor de sangrado
+  /// sobre un dia que ya estaba marcado (CycleRepository.upsertDay).
+  /// Registrar otros datos en el formulario o marcar dias en el
+  /// calendario no lo escribe. Sin esto no se puede distinguir
+  /// "explicitamente no sangro" de "no se declaro nada sobre sangrado"
+  /// cuando is_period_day=false (ver fase de registro rapido de fin de
+  /// periodo).
   final bool periodDayExplicit;
   const DailyLogRow({
     required this.date,

@@ -22,12 +22,16 @@ class DailyLogs extends Table {
   TextColumn get mood => textEnum<Mood>().nullable()();
   TextColumn get notes => text().nullable()();
 
-  /// true si el valor actual de is_period_day vino de una accion directa
-  /// y dedicada (la pregunta "Sigue tu periodo hoy?" o "Quitar marca" del
-  /// calendario), no del formulario general de sintomas. Sin esto no se
-  /// puede distinguir "explicitamente no sangro" de "no se declaro nada
-  /// sobre sangrado" cuando is_period_day=false (ver fase de registro
-  /// rapido de fin de periodo).
+  /// true si el valor actual de is_period_day vino de una declaracion
+  /// explicita: la pregunta "Sigue tu periodo hoy?" de Inicio o "Quitar
+  /// marca" del calendario (CycleRepository.setPeriodDayExplicitly), o el
+  /// formulario general unicamente al apagar el interruptor de sangrado
+  /// sobre un dia que ya estaba marcado (CycleRepository.upsertDay).
+  /// Registrar otros datos en el formulario o marcar dias en el
+  /// calendario no lo escribe. Sin esto no se puede distinguir
+  /// "explicitamente no sangro" de "no se declaro nada sobre sangrado"
+  /// cuando is_period_day=false (ver fase de registro rapido de fin de
+  /// periodo).
   BoolColumn get periodDayExplicit =>
       boolean().withDefault(const Constant(false))();
 
