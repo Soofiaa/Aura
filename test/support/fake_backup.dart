@@ -18,6 +18,10 @@ class FakeBackupFileGateway implements BackupFileGateway {
   final List<File> sharedFiles = [];
   Object? shareError;
 
+  /// Resultado de la hoja de compartir: false simula que la usuaria la
+  /// cierra sin elegir destino.
+  bool shareResult = true;
+
   /// Resultado del "Guardar como": false simula que la usuaria cancela.
   bool saveResult = true;
   Object? saveError;
@@ -31,9 +35,10 @@ class FakeBackupFileGateway implements BackupFileGateway {
   }
 
   @override
-  Future<void> shareFile(File file) async {
+  Future<bool> shareFile(File file) async {
     if (shareError != null) throw shareError!;
     sharedFiles.add(file);
+    return shareResult;
   }
 
   @override

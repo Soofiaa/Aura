@@ -152,6 +152,22 @@ void main() {
       await db.close();
     });
 
+    testWidgets('si se cierra la hoja de compartir sin elegir destino no '
+        'aparece ningun mensaje', (tester) async {
+      await seedDays(2);
+      gateway.shareResult = false;
+      await pumpSettings(tester);
+
+      await tester.tap(find.text('Crear respaldo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Compartir'));
+      await tester.pumpAndSettle();
+
+      expect(gateway.sharedFiles, hasLength(1));
+      expect(find.byType(SnackBar), findsNothing);
+      await db.close();
+    });
+
     testWidgets('Guardar en el teléfono escribe un respaldo valido y avisa '
         'sin mostrar la ruta', (tester) async {
       await seedDays(2);
@@ -300,9 +316,10 @@ void main() {
 
       expect(
         find.text('El respaldo es del 4 de octubre de 2026 y tiene 7 días '
-            'registrados. En este teléfono tienes 3 días registrados, que se '
-            'reemplazarán por los del respaldo. Antes, Aura guardará una '
-            'copia de tus datos actuales.'),
+            'con registro (5 de período). En este teléfono tienes 3 días con '
+            'registro (3 de período), que se reemplazarán por los del '
+            'respaldo. Antes, Aura guardará una copia de tus datos '
+            'actuales.'),
         findsOneWidget,
       );
       expect(find.textContaining('días menos'), findsNothing);
@@ -313,6 +330,32 @@ void main() {
       expect(backup.importCount, 0);
       expect(await repo.countDays(), 3);
       expect(find.byType(SnackBar), findsNothing);
+      await db.close();
+    });
+
+    testWidgets('los dias con la marca quitada cuentan como registro pero no '
+        'como periodo', (tester) async {
+      await repo.markPeriodDay('2026-05-01');
+      await repo.setPeriodDayExplicitly('2026-05-02', isPeriodDay: false);
+      await pumpSettings(tester);
+      await abrirConfirmacion(tester);
+
+      expect(
+          find.textContaining('En este teléfono tienes 2 días con registro '
+              '(1 de período), que'),
+          findsOneWidget);
+      await db.close();
+    });
+
+    testWidgets('un solo dia con registro va en singular', (tester) async {
+      await repo.setPeriodDayExplicitly('2026-05-02', isPeriodDay: false);
+      await pumpSettings(tester);
+      await abrirConfirmacion(tester);
+
+      expect(
+          find.textContaining('En este teléfono tienes 1 día con registro '
+              '(0 de período), que'),
+          findsOneWidget);
       await db.close();
     });
 

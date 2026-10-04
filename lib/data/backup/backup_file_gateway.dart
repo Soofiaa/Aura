@@ -8,10 +8,12 @@ import 'dart:typed_data';
 /// plataforma. La implementacion real esta en
 /// plugin_backup_file_gateway.dart.
 abstract class BackupFileGateway {
-  /// Abre la hoja de compartir del sistema con [file]. No borra el
-  /// archivo al volver: la app de destino puede seguir leyendolo (ver
+  /// Abre la hoja de compartir del sistema con [file]. Devuelve false si
+  /// la usuaria la cierra sin elegir destino, y true si eligio uno o si
+  /// la plataforma no puede informar que paso. No borra el archivo al
+  /// volver: la app de destino puede seguir leyendolo (ver
   /// BackupService.cleanTemporaryFiles).
-  Future<void> shareFile(File file);
+  Future<bool> shareFile(File file);
 
   /// Abre el "Guardar como" del sistema y escribe [bytes] donde la
   /// usuaria elija. Devuelve false si cancela; lanza si la escritura

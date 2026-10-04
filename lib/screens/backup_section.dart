@@ -73,8 +73,11 @@ class _BackupSectionState extends State<BackupSection> {
       switch (accion) {
         case _AccionRespaldo.compartir:
           final file = await widget.service.writeExportFile();
-          await _gateway.shareFile(file);
-          _aviso('Respaldo listo. Guárdalo en un lugar seguro.');
+          final compartido = await _gateway.shareFile(file);
+          // Cerrar la hoja sin elegir destino no es un error: sin mensaje.
+          if (compartido) {
+            _aviso('Respaldo listo. Guárdalo en un lugar seguro.');
+          }
         case _AccionRespaldo.guardar:
           final json = await widget.service.buildExportJson();
           final guardado = await _gateway.saveToDevice(
@@ -324,6 +327,10 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
     final preview = widget.preview;
     final fecha = _fechaRespaldo(preview.data.exportedAt);
     final perdidos = preview.daysLost;
+    final enRespaldo = _diasConRegistro(
+        preview.incomingDayCount, preview.incomingPeriodDayCount);
+    final enTelefono = _diasConRegistro(
+        preview.currentDayCount, preview.currentPeriodDayCount);
     return AlertDialog(
       title: const Text('¿Reemplazar tus datos?'),
       content: SingleChildScrollView(
@@ -332,11 +339,10 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'El respaldo es del $fecha y tiene '
-              '${_diasRegistrados(preview.incomingDayCount)}. En este '
-              'teléfono tienes ${_diasRegistrados(preview.currentDayCount)}, '
-              'que se reemplazarán por los del respaldo. Antes, Aura '
-              'guardará una copia de tus datos actuales.',
+              'El respaldo es del $fecha y tiene $enRespaldo. En este '
+              'teléfono tienes $enTelefono, que se reemplazarán por los '
+              'del respaldo. Antes, Aura guardará una copia de tus datos '
+              'actuales.',
             ),
             if (perdidos > 0) ...[
               const SizedBox(height: 16),
@@ -388,8 +394,11 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
   }
 }
 
-String _diasRegistrados(int n) =>
-    n == 1 ? '1 día registrado' : '$n días registrados';
+/// "7 días con registro (5 de período)". [total] cuenta tambien los dias
+/// de "no hubo sangrado", que el calendario no marca.
+String _diasConRegistro(int total, int periodo) =>
+    '${total == 1 ? '1 día' : '$total días'} con registro '
+    '($periodo de período)';
 
 final DateFormat _formatoFecha = DateFormat("d 'de' MMMM 'de' y", 'es');
 

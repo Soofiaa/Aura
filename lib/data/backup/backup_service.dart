@@ -10,17 +10,24 @@ import '../../utils/day_key.dart';
 import '../repositories/cycle_repository.dart';
 
 /// Lo que la confirmacion de importar necesita mostrar: cuantos dias hay
-/// hoy en el telefono y cuantos trae el respaldo.
+/// hoy en el telefono y cuantos trae el respaldo. "Dias" son todos los
+/// que tienen registro (tambien los de "no hubo sangrado"); los de
+/// periodo son los que el calendario marca.
 class ImportPreview {
   const ImportPreview({
     required this.data,
     required this.currentDayCount,
+    required this.currentPeriodDayCount,
   });
 
   final BackupData data;
   final int currentDayCount;
+  final int currentPeriodDayCount;
 
   int get incomingDayCount => data.days.length;
+
+  int get incomingPeriodDayCount =>
+      data.days.where((d) => d.isPeriodDay).length;
 
   /// Dias que se pierden al reemplazar (0 si el respaldo trae igual o
   /// mas dias). Es una diferencia de cantidades, no de fechas.
@@ -222,6 +229,7 @@ class BackupService {
     return ImportPreview(
       data: data,
       currentDayCount: await _repository.countDays(),
+      currentPeriodDayCount: (await _repository.getPeriodDayDates()).length,
     );
   }
 

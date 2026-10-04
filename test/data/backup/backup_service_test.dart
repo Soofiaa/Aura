@@ -237,6 +237,17 @@ void main() {
       expect(preview.daysLost, 0);
     });
 
+    test('cuenta aparte los dias de periodo (no los de "no hubo sangrado")',
+        () async {
+      await seedCurrentData();
+      await repo.setPeriodDayExplicitly('2026-05-04', isPeriodDay: false);
+      final preview = await service.previewImport(_fixture());
+      expect(preview.currentDayCount, 4);
+      expect(preview.currentPeriodDayCount, 3);
+      expect(preview.incomingDayCount, 7);
+      expect(preview.incomingPeriodDayCount, 5);
+    });
+
     test('daysLost cuando el respaldo trae menos dias que los actuales',
         () async {
       await repo.markPeriodDays(
