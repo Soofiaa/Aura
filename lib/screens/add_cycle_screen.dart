@@ -16,12 +16,15 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
   DateTime _selectedDate = DateTime.now();
 
-  // Por defecto activado: la mayoria de los registros son de dias de
-  // sangrado. Si se apaga, flow queda null y is_period_day no se fuerza
-  // a true (ver CycleRepository.upsertDay).
-  bool _esDiaDeSangrado = true;
-  FlowIntensity _flujo = FlowIntensity.ligero;
-  Mood _estadoAnimo = Mood.normal;
+  // En un dia sin registro todo arranca vacio: el interruptor apagado,
+  // flujo "Sin especificar" y animo "Sin registrar". Asi, registrar solo
+  // sintomas no marca el dia como sangrado ni crea un periodo, y no se
+  // guarda un flujo o animo que la usuaria no eligio (hallazgos B-1, B-2
+  // y B-3). Apagarlo en un dia que era de sangrado guarda un "no"
+  // explicito (ver CycleRepository.upsertDay).
+  bool _esDiaDeSangrado = false;
+  FlowIntensity? _flujo;
+  Mood? _estadoAnimo;
   final TextEditingController _notasController = TextEditingController();
   List<String> _selectedSymptoms = [];
 
@@ -42,14 +45,14 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
     setState(() {
       if (existing != null) {
         _esDiaDeSangrado = existing.isPeriodDay;
-        _flujo = existing.flow ?? FlowIntensity.ligero;
-        _estadoAnimo = existing.mood ?? Mood.normal;
+        _flujo = existing.flow;
+        _estadoAnimo = existing.mood;
         _notasController.text = existing.notes ?? '';
         _selectedSymptoms = symptoms.map((s) => s.label).toList();
       } else {
-        _esDiaDeSangrado = true;
-        _flujo = FlowIntensity.ligero;
-        _estadoAnimo = Mood.normal;
+        _esDiaDeSangrado = false;
+        _flujo = null;
+        _estadoAnimo = null;
         _notasController.text = '';
         _selectedSymptoms = [];
       }
@@ -106,7 +109,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                     context: context,
                     initialDate: _selectedDate,
                     firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
+                    lastDate: DateTime.now(),
                   );
                   if (pickedDate != null) {
                     setState(() => _selectedDate = pickedDate);
@@ -152,13 +155,16 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 5),
-                DropdownButtonFormField<FlowIntensity>(
+                DropdownButtonFormField<FlowIntensity?>(
                   initialValue: _flujo,
-                  items: FlowIntensity.values
-                      .map((f) =>
-                          DropdownMenuItem(value: f, child: Text(f.label)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _flujo = v!),
+                  hint: const Text("Sin especificar"),
+                  items: [
+                    const DropdownMenuItem(
+                        value: null, child: Text("Sin especificar")),
+                    ...FlowIntensity.values.map((f) =>
+                        DropdownMenuItem(value: f, child: Text(f.label))),
+                  ],
+                  onChanged: (v) => setState(() => _flujo = v),
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     filled: true,
@@ -173,13 +179,16 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 5),
-              DropdownButtonFormField<Mood>(
+              DropdownButtonFormField<Mood?>(
                 initialValue: _estadoAnimo,
-                items: Mood.values
-                    .map((a) =>
-                        DropdownMenuItem(value: a, child: Text(a.label)))
-                    .toList(),
-                onChanged: (v) => setState(() => _estadoAnimo = v!),
+                hint: const Text("Sin registrar"),
+                items: [
+                  const DropdownMenuItem(
+                      value: null, child: Text("Sin registrar")),
+                  ...Mood.values.map((a) =>
+                      DropdownMenuItem(value: a, child: Text(a.label))),
+                ],
+                onChanged: (v) => setState(() => _estadoAnimo = v),
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   filled: true,

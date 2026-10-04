@@ -51,7 +51,7 @@ void main() {
   });
 
   testWidgets(
-      'registrar un dia hace que el inicio deje de mostrar '
+      'registrar un dia de sangrado hace que el inicio deje de mostrar '
       '"Registra tu primer día"', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: MainNavigationScreen()));
     await tester.pumpAndSettle();
@@ -59,6 +59,11 @@ void main() {
     expect(find.textContaining('Registra tu primer día'), findsOneWidget);
 
     await tester.tap(find.text('Registrar día'));
+    await tester.pumpAndSettle();
+
+    // El interruptor "Día de sangrado" arranca apagado en un dia nuevo
+    // (hallazgo B-1): hay que encenderlo para registrar un periodo.
+    await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
     final guardarButton = find.text('Guardar registro');
