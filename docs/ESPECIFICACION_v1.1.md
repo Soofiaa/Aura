@@ -83,6 +83,26 @@ requiere migración.
 
 **Consecuencia:** el gráfico de estado de ánimo de Estadísticas suma un "Normal" por cada registro en que no se eligió ánimo.
 
+### Hallazgo U-1 — la selección de rango del calendario descarta un rango sin que se note
+
+Es un problema de usabilidad, no un defecto de código. En "Seleccionar varios días", el panel ya muestra el rango y el conteo desde
+el primer toque (`calendar_screen.dart`, línea 330), pero el único texto de ayuda es "Toca el primer y el último día del rango."
+(línea 320). Quien toca día por día no nota que, con el rango ya completo, el tercer toque empieza un rango nuevo y descarta el
+anterior: es la regla de `table_calendar` 3.1.3 (`table_calendar.dart`, líneas 364-374), que olvida el inicio al cerrar un rango.
+
+**Evidencia** (grabación de pantalla de Sofia, caso real del 10, 11 y 12 de julio de 2026):
+
+1. Toca el 10: el panel dice "10 julio 2026 - 10 julio 2026 (1 días)".
+2. Toca el 11: "10 julio 2026 - 11 julio 2026 (2 días)", con la franja azul del rango.
+3. Toca el 12: el rango se descarta y el panel dice "12 julio 2026 - 12 julio 2026 (1 días)".
+4. "Marcar período" deja marcado **solo el 12**.
+
+Además, dos textos usan "días" sin plural: el panel (línea 330, "1 días") y el aviso tras marcar el rango (línea 150, "1 días
+registrados como menstruación"). El diálogo de rango largo (línea 110) nunca puede salir con 1 día, porque solo aparece con más
+de 10.
+
+**Decisión:** se corrige dentro de HU-04 en la v1.1, con las opciones A y B (ver HU-04). No entra en la v1.0.1.
+
 ## 3. Principios de diseño
 
 1. **Un dato estimado nunca se guarda como dato real.** Los días estimados se muestran, pero no se escriben en `daily_logs`.
@@ -96,7 +116,7 @@ requiere migración.
 | Versión | Contenido |
 |---|---|
 | **1.0.1** | Parche del formulario "Registrar síntomas": hallazgos B-1, B-2 y B-3 (sección 2) |
-| **1.1** | HU-01 a HU-06 + tarea T-01 (ícono) |
+| **1.1** | HU-01 a HU-06 (HU-04 incluye la mejora U-1) + tareas T-01, T-02 y T-03 (íconos) |
 | **1.2** | HU-07 (historial de anticonceptivos) |
 | Fuera de alcance | Recordatorio de toma de pastilla, cuenta o sincronización en la nube, publicidad, pagos, exportar a PDF clínico |
 
@@ -162,6 +182,38 @@ requiere migración.
 6. Los controles táctiles miden al menos 44 dp.
 7. Marcar un día y marcar un rango muestran "Deshacer", que restaura exactamente el estado previo de todos los días afectados (hoy ninguna de las dos acciones lo tiene).
 
+**Mejora U-1: selección de rango (decidida, opciones A + B).** Hace más visible el resumen que ya existe y evita que un rango ya
+fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
+
+- **B (tolerante):** con el rango ya completo, tocar un día **posterior** al final lo alarga; un día **anterior** al inicio mueve
+  el inicio; un día **dentro** del rango acorta el final. "Cancelar selección" vuelve a cero. Se permite extender el rango entre
+  meses. Se implementa en el estado propio de la pantalla (`_rangeStart` / `_rangeEnd`, vía `onRangeSelected`), **sin modificar
+  `table_calendar`**. La confirmación de rango largo (más de `longRangeConfirmationThreshold` = 10 días) sigue protegiendo contra
+  extensiones accidentales.
+- **A (guía):** el panel indica el paso en cada estado: sin selección, "Toca el primer día"; con inicio, "Ahora toca el último
+  día"; con el rango listo, el resumen en formato corto ("10 jul → 12 jul · 3 días") y la indicación de que tocar otro día cambia
+  el final. Si el rango supera los 10 días, el resumen lo advierte de inmediato, no solo al pulsar "Marcar período". Corrige el
+  plural: "1 día" en el panel y "1 día registrado como menstruación" en el aviso.
+
+**Criterios de aceptación de U-1** (tests de widget):
+
+8. Tocar 10, 11 y 12 → rango 10–12, "3 días".
+9. Tocar 10 y 12 → rango 10–12, "3 días".
+10. Con 10–12 listo, tocar el 8 → rango 8–12.
+11. Con 10–12 listo, tocar el 11 → el final pasa a 11.
+12. Un rango de un solo día muestra "1 día" en el panel y, al marcarlo, el aviso dice "1 día registrado como menstruación".
+13. Marcar el rango deja exactamente esos días en la base de datos.
+14. "Cancelar selección" vuelve a cero.
+15. Un rango de más de 10 días, alcanzado por extensión, sigue pidiendo confirmación al marcarlo.
+16. Con un rango ya completo, el aviso `onRangeSelected(día, null)` de `table_calendar` se trata como un **tercer toque**: alarga,
+    mueve o acorta el rango, y nunca lo reinicia (requisito explícito de implementación; sin esto, B no funciona).
+17. Con 10–12 listo, tocar el 10 (el inicio) deja un rango de 1 día (10–10); tocar el 12 (el final) no cambia nada.
+18. Un rango puede cruzar de mes; si supera los 10 días, el resumen del panel lo advierte en ese momento.
+
+**Etapa A de HU-04:** ya no decide qué hacer, solo cómo: los textos exactos del panel; el SnackBar "Marca quitada · Deshacer", que
+hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene fijo, y qué conviene); y los casos límite
+(rango que cruza de mes, tocar el mismo día dos veces, fechas futuras).
+
 ---
 
 ### HU-05 · Entender mis ciclos en Estadísticas
@@ -212,9 +264,37 @@ requiere migración.
 
 ---
 
-### T-01 · Ícono con fondo claro (técnica)
-Cambiar el fondo del ícono adaptativo a `#F8FAFB` (color de fondo de la app y del splash), mantener la flor de cuatro pétalos, regenerar con `flutter_launcher_icons`
-y comprobar el resultado en un launcher claro y uno oscuro.
+### T-01 · Ícono con fondo blanco (técnica)
+Fondo del círculo del ícono adaptativo en blanco `#FFFFFF`, con la misma flor de cuatro pétalos.
+
+- Se reemplazan `assets/icon/aura_icon_1024.png` y `assets/icon/aura_background_1024.png`. El foreground y el splash no cambian, y
+  el splash conserva su color `#F8FAFB`.
+- Se agrega `adaptive_icon_foreground_inset: 4` a la configuración de `flutter_launcher_icons` y se regenera con
+  `dart run flutter_launcher_icons`.
+- **Fundamento medido:** con el 16 % por defecto de `flutter_launcher_icons` 0.14.4, la flor mide 37,6 dp de ancho en un círculo
+  visible de 72 dp (queda encogida). Con 0 %, las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles).
+  Con 4 % mide 50,8 dp y queda dentro de la zona segura, con 1,1 dp de margen.
+- Entra en la v1.1, sin subir la versión antes. Se comprueba en un build de release instalado (RNF-6).
+
+---
+
+### T-02 · Ícono pequeño de notificación (técnica)
+Hoy `notifications.dart` (línea 62) usa `@mipmap/ic_launcher` como ícono pequeño. Su fondo es opaco y Android dibuja ese ícono
+usando solo la transparencia, así que en la barra de estado sale como un cuadrado blanco (pendiente de confirmar en el teléfono).
+
+- **Solución:** un ícono `ic_stat_*` blanco sobre transparente, referenciado por nombre, con su `res/raw/keep.xml` para que
+  R8 / `shrinkResources` no lo elimine en el release.
+- **Criterio de aceptación:** una notificación real en el teléfono muestra la silueta de la flor y no un cuadrado.
+- Debe estar antes de publicar la v1.1.
+
+---
+
+### T-03 · Ícono monocromo (técnica)
+Íconos temáticos de Android 13 o superior. Hoy no existe `<monochrome>` en `ic_launcher.xml` ni `adaptive_icon_monochrome` en la
+configuración: con los íconos temáticos activos, Aura se ve a color entre íconos teñidos.
+
+- Requiere una silueta de la flor como asset.
+- **Criterio de aceptación:** con los íconos temáticos activos, el ícono de Aura se tiñe como los demás.
 
 ---
 
@@ -239,6 +319,8 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **D-2** | ¿Qué pasa con los períodos de la v1.0 que no tienen cierre explícito? | No descartarlos en bloque: cerrar solo los que tienen al menos 2 días marcados, un hueco interno de 1 día como máximo y que ya no pueden seguir creciendo (si son el período más reciente, que su último día sea de hace más de 7 días). Los demás, incluidos los de un solo día, quedan abiertos. Documentar la regla y probarla con datos que reproduzcan los de la v1.0. | Resuelta: ver sección 10 |
 | **D-3** | ¿El respaldo va cifrado? Son datos de salud en un archivo que puede quedar en la nube. | Contraseña opcional pero recomendada, con el mismo enfoque que ya usa PetPal. Decidir si entra en la 1.1 o en la 1.2. | Abierta: se resuelve en la Etapa A de HU-06 |
 | **D-4** | ¿Qué pasa si la usuaria nunca toca "Terminó"? | El período queda abierto y fuera del promedio de duración, y el ciclo sigue contando para la regularidad (se deriva de los inicios). Evaluar un aviso suave tras la duración habitual. | Resuelta: ver sección 10 |
+| **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
+| **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
 
 ## 8. Definición de hecho (por historia)
 
@@ -255,16 +337,18 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
    queda "Sin especificar" y el ánimo "Sin registrar" salvo que la usuaria los elija. El selector de fecha del formulario deja de
    permitir días futuros. No cambia el esquema ni modifica los datos ya guardados. Apagar el interruptor en un día marcado sigue
    guardando un "no" explícito, sin confirmación ni "Deshacer" en este parche.
-1. **HU-06 (respaldo)**, con su propia Etapa A. Va antes de la migración v4 para poder respaldar los datos reales antes de actualizar.
-2. **Modelo de período cerrado** (D-1, D-2, P-1): columna `period_end`, migración v4 (incluye `typical_period_length`), cambio en el predictor y ajuste de duración habitual en el repositorio, **sin interfaz**.
-3. Interfaz de HU-01 a HU-04.
-4. HU-05 (estadísticas, que consume el modelo ya corregido).
-5. T-01 (ícono).
+1. **T-01 (ícono con fondo blanco), adelantada:** se hace justo después de la rama de documentación de los hallazgos, porque es
+   independiente del resto. Sin subir la versión (ver sección 10).
+2. **HU-06 (respaldo)**, con su propia Etapa A. Va antes de la migración v4 para poder respaldar los datos reales antes de actualizar.
+3. **Modelo de período cerrado** (D-1, D-2, P-1): columna `period_end`, migración v4 (incluye `typical_period_length`), cambio en el predictor y ajuste de duración habitual en el repositorio, **sin interfaz**.
+4. Interfaz de HU-01 a HU-04 (HU-04 incluye la mejora U-1).
+5. HU-05 (estadísticas, que consume el modelo ya corregido) y los íconos T-02 (ícono de notificación, obligatorio antes de publicar la v1.1) y T-03 (ícono monocromo).
 6. Release v1.1.0 y, después, HU-07 como v1.2.0.
 
 ## 10. Registro de decisiones
 
-Decisiones tomadas tras la Etapa A del modelo de período cerrado. Reemplazan las recomendaciones de la sección 7 donde difieran.
+Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8) y tras el parche v1.0.1 (U-1 y T-01 a T-03).
+Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
 |---|---|---|
@@ -280,6 +364,10 @@ Decisiones tomadas tras la Etapa A del modelo de período cerrado. Reemplazan la
 | **R-6** | No se agrega `typical_cycle_length`. | Decisión de producto; se quita el criterio correspondiente de HU-01 y la v4 solo agrega `typical_period_length`. |
 | **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |
 | **R-8** | El aviso suave de D-4 (cuando nunca se toca "Terminó") queda fuera de la v1.1. | Reducir el alcance; el período abierto ya queda fuera del promedio sin afectar la regularidad. |
+| **U-1** | La selección de rango del calendario aplica las opciones **A + B** (ver HU-04): el panel guía cada paso y muestra el resumen corto, y con un rango ya completo otro toque alarga, mueve o acorta el rango en vez de descartarlo. Se implementa en el estado de la pantalla, sin modificar `table_calendar`. Entra en HU-04, en la v1.1. | Ataca la causa del caso real del 10 al 12 de julio (el tercer toque descartaba el rango sin que se notara) sin agregar pasos. Se descartaron: C, marcar día por día, porque revive la queja de fricción que HU-04 busca resolver; y D, apoyarse en "Me llegó hoy", porque no sirve para registrar un período pasado. La confirmación de rango largo sigue protegiendo contra extensiones accidentales. |
+| **T-01** | Fondo del ícono adaptativo en blanco `#FFFFFF` y `adaptive_icon_foreground_inset: 4`. El foreground y el splash no cambian; el splash conserva `#F8FAFB`. | Medido sobre el foreground: con el 16 % por defecto de `flutter_launcher_icons` 0.14.4 la flor queda encogida en 37,6 dp de un círculo visible de 72 dp; con 0 % las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles); con 4 % mide 50,8 dp y queda dentro con 1,1 dp de margen. `#F8FAFB` y `#FFFFFF` casi no se distinguen, por eso el splash no cambia. |
+| **T-01 (versión)** | T-01 entra en la v1.1 sin subir la versión antes. Para probarla en el teléfono se instala con `adb install -r` con el mismo `versionCode`, como instalación de prueba. | Un cambio solo de ícono no justifica una versión publicada aparte, y la misma firma con `-r` conserva los datos. |
+| **T-02 / T-03** | El ícono pequeño de notificación (T-02) y el ícono monocromo (T-03) son tareas separadas de T-01. T-02 debe estar antes de publicar la v1.1. | Son problemas distintos del fondo del ícono: cada uno necesita su propio asset y su propia prueba en el teléfono, y mezclarlos agrandaría T-01. T-02 va antes de la v1.1 porque las notificaciones ya están en uso y casi seguro se ven como un cuadrado blanco en la barra de estado (pendiente de confirmar en el teléfono). T-03 solo afecta a quien usa íconos temáticos: forma parte de la v1.1 pero no bloquea su publicación; si no queda lista, pasa a la v1.2. |
 
 La decisión D-3 (cifrado del respaldo) sigue abierta y se resuelve en la Etapa A de HU-06.
 
