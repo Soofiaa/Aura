@@ -62,6 +62,27 @@ note que viene encendido.
 **Consecuencia:** un registro de síntomas fuera del período puede alterar la duración de los ciclos, la predicción, las
 notificaciones y el flujo promedio. Se corrige antes que todo lo demás (ver sección 9, paso 0).
 
+### Hallazgo B-2 — el formulario guarda flujo "Ligero" sin que se elija
+
+El flujo del formulario arranca en "Ligero" en un día sin registro (`add_cycle_screen.dart`, líneas 23 y 51, antes del parche
+v1.0.1), y un día de sangrado sin flujo guardado se abre con "Ligero" (línea 45, `existing.flow ?? FlowIntensity.ligero`). Con el
+interruptor encendido, ese valor se guarda aunque la usuaria nunca lo elija. A diferencia de B-1, afecta también a días de
+sangrado reales.
+
+**Verificación** (test de widget temporal sobre `main`): agregar un síntoma desde el formulario a un día marcado en el calendario
+(sin flujo) le guarda `flow = ligero`; con un historial de 3 días "Abundante", registrar solo un síntoma hoy baja
+`getAverageFlow` de 3,00 a 2,50.
+
+**Consecuencia:** el "Promedio de flujo" de Estadísticas promedia valores que nadie eligió.
+
+### Hallazgo B-3 — el formulario guarda ánimo "Normal" sin que se elija
+
+El estado de ánimo arranca en "Normal" (`add_cycle_screen.dart`, líneas 24, 46 y 52, antes del parche v1.0.1) y se guarda en todo
+registro del formulario, incluso con el interruptor de sangrado apagado. La columna `mood` ya admite `null`, así que corregirlo no
+requiere migración.
+
+**Consecuencia:** el gráfico de estado de ánimo de Estadísticas suma un "Normal" por cada registro en que no se eligió ánimo.
+
 ## 3. Principios de diseño
 
 1. **Un dato estimado nunca se guarda como dato real.** Los días estimados se muestran, pero no se escriben en `daily_logs`.
@@ -74,7 +95,8 @@ notificaciones y el flujo promedio. Se corrige antes que todo lo demás (ver sec
 
 | Versión | Contenido |
 |---|---|
-| **1.1** | Arreglo del formulario "Registrar síntomas" (B-1) + HU-01 a HU-06 + tarea T-01 (ícono) |
+| **1.0.1** | Parche del formulario "Registrar síntomas": hallazgos B-1, B-2 y B-3 (sección 2) |
+| **1.1** | HU-01 a HU-06 + tarea T-01 (ícono) |
 | **1.2** | HU-07 (historial de anticonceptivos) |
 | Fuera de alcance | Recordatorio de toma de pastilla, cuenta o sincronización en la nube, publicidad, pagos, exportar a PDF clínico |
 
@@ -229,7 +251,10 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 ## 9. Orden de implementación sugerido
 
-0. **Formulario (B-1):** verificar y corregir el interruptor de sangrado del formulario "Registrar síntomas".
+0. **Formulario (B-1, B-2, B-3), parche v1.0.1:** en un día sin registro, el interruptor de sangrado arranca apagado; el flujo
+   queda "Sin especificar" y el ánimo "Sin registrar" salvo que la usuaria los elija. El selector de fecha del formulario deja de
+   permitir días futuros. No cambia el esquema ni modifica los datos ya guardados. Apagar el interruptor en un día marcado sigue
+   guardando un "no" explícito, sin confirmación ni "Deshacer" en este parche.
 1. **HU-06 (respaldo)**, con su propia Etapa A. Va antes de la migración v4 para poder respaldar los datos reales antes de actualizar.
 2. **Modelo de período cerrado** (D-1, D-2, P-1): columna `period_end`, migración v4 (incluye `typical_period_length`), cambio en el predictor y ajuste de duración habitual en el repositorio, **sin interfaz**.
 3. Interfaz de HU-01 a HU-04.
