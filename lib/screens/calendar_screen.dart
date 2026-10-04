@@ -94,6 +94,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context,
       SnackBar(
         content: const Text('Marca quitada'),
+        persist: false,
+        duration: undoSnackBarDuration,
         action: SnackBarAction(
           label: 'Deshacer',
           onPressed: () => cycleRepository.restoreDaySnapshot(key, previo),

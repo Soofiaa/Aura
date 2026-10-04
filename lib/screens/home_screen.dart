@@ -113,6 +113,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? 'Día marcado como sangrado.'
               : 'Registrado: hoy no hubo sangrado.',
         ),
+        persist: false,
+        duration: undoSnackBarDuration,
         action: SnackBarAction(
           label: 'Deshacer',
           onPressed: () => _repository.restoreDaySnapshot(date, previous),

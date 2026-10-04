@@ -128,4 +128,28 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('el aviso de "No" con Deshacer se cierra solo a los 8 '
+      'segundos', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
+    final repo = await _seedMenstrualPhaseToday(db);
+
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(repository: repo, clock: () => DateTime(2026, 2, 27)),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('No'));
+    await tester.pumpAndSettle();
+    expect(find.text('Registrado: hoy no hubo sangrado.'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 7));
+    expect(find.text('Registrado: hoy no hubo sangrado.'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Registrado: hoy no hubo sangrado.'), findsNothing);
+
+    await db.close();
+  });
 }
