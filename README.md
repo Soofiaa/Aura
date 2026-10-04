@@ -15,12 +15,14 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 - Calendario con marcas por fase y estadísticas de duración de ciclos.
 - Recordatorios locales (opcionales) con texto discreto por defecto.
 - Permite marcar el fin del período y quitar marcas.
+- Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con "Deshacer" tras importar.
 - Borrado total de datos desde Ajustes.
 
 ## Privacidad por diseño
 
-- Los datos viven solo en una base SQLite dentro del almacenamiento privado de la app.
+- Los datos viven en una base SQLite dentro del almacenamiento privado de la app.
 - `allowBackup="false"`: Android no los copia a la nube.
+- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo. El archivo contiene datos de salud y, por ahora, va sin contraseña: cualquiera que lo abra puede leerlo. Aura no recibe ni guarda una copia, y la app sigue sin el permiso `INTERNET`.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
 
@@ -46,6 +48,7 @@ lib/
 │   ├── cycle_predictor.dart
 │   └── notification_planner.dart
 ├── data/
+│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
 │   ├── database/        # drift (esquema v3)
 │   ├── repositories/    # CycleRepository
 │   └── notifications/   # reconciler + scheduler
@@ -88,7 +91,7 @@ Build de release firmado: ver [`android/RELEASE.md`](android/RELEASE.md). La cla
 
 ## Qué no tiene (todavía)
 
-- Exportar / importar copia de seguridad
+- Contraseña para el respaldo (llega con HU-06b)
 - Modo oscuro
 - iOS
 - Idioma inglés en la interfaz
