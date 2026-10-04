@@ -77,6 +77,54 @@ void main() {
     expect(_resumen(await repo.getDerivedCycles()), ciclosAntes);
   });
 
+  // Un "no" explicito cierra el periodo previo (periodConfirmedEnded en
+  // cycle_deriver): solo debe escribirse al apagar el interruptor sobre
+  // un dia que ya era de sangrado, nunca al registrar otra cosa.
+  final soloOtroDato = <String, Future<void> Function(WidgetTester)>{
+    'un sintoma': (tester) => _tocar(tester, find.text('Dolor de cabeza')),
+    'un estado de animo': (tester) async {
+      await _tocar(tester, find.text('Sin registrar'));
+      await _tocar(tester, find.text('Feliz').last);
+    },
+    'una nota': (tester) async {
+      await tester.enterText(find.byType(TextFormField), 'Solo una nota');
+      await tester.pumpAndSettle();
+    },
+  };
+  soloOtroDato.forEach((que, registrar) {
+    testWidgets(
+        'registrar solo $que en un dia nuevo con el interruptor apagado no '
+        'guarda un "no" explicito', (tester) async {
+      await repo.markPeriodDays([DayKey.addDays(hoy, -3)]);
+
+      await _abrirFormulario(tester);
+      expect(_interruptorEncendido(tester), isFalse);
+      await registrar(tester);
+      await _guardar(tester);
+
+      final row = await repo.getDay(hoy);
+      expect(row!.isPeriodDay, isFalse);
+      expect(row.periodDayExplicit, isFalse);
+      final ciclos = await repo.getDerivedCycles();
+      expect(ciclos.last.periodConfirmedEnded, isFalse);
+    });
+  });
+
+  testWidgets(
+      'agregar un sintoma a un dia marcado sin tocar el interruptor lo deja '
+      'como sangrado y sin "no" explicito', (tester) async {
+    await repo.markPeriodDay(hoy);
+
+    await _abrirFormulario(tester);
+    await _tocar(tester, find.text('Dolor de cabeza'));
+    await _guardar(tester);
+
+    final row = await repo.getDay(hoy);
+    expect(row!.isPeriodDay, isTrue);
+    expect(row.periodDayExplicit, isFalse);
+    expect(await repo.getPeriodDayDates(), [hoy]);
+  });
+
   testWidgets(
       'B-2: encender el sangrado sin elegir flujo guarda flujo null y no '
       'altera el promedio', (tester) async {
