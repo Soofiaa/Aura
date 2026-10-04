@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../domain/backup_codec.dart';
 import '../../domain/cycle_deriver.dart';
 import '../../domain/notification_planner.dart';
 import '../database/app_database.dart';
@@ -404,10 +405,118 @@ class CycleRepository {
             _toNotificationSettings(row ?? await _ensureSettingsRow()));
   }
 
+  // --- Respaldo (HU-06) ---
+
+  /// Lee todas las tablas para exportarlas. Los dias salen ordenados por
+  /// fecha y los sintomas por nombre (exportacion determinista).
+  Future<BackupData> readBackupData({
+    required String appVersion,
+    required String exportedAt,
+  }) async {
+    return _db.transaction(() async {
+      final logs = await (_db.select(_db.dailyLogs)
+            ..orderBy([(t) => OrderingTerm.asc(t.date)]))
+          .get();
+      final symptomRows = await _db.select(_db.dailyLogSymptoms).get();
+      final symptomsByDate = <String, List<Symptom>>{};
+      for (final row in symptomRows) {
+        symptomsByDate.putIfAbsent(row.logDate, () => []).add(row.symptom);
+      }
+      final settings = await _ensureSettingsRow();
+      return BackupData(
+        schemaVersion: _db.schemaVersion,
+        appVersion: appVersion,
+        exportedAt: exportedAt,
+        days: [
+          for (final log in logs)
+            BackupDay(
+              date: log.date,
+              isPeriodDay: log.isPeriodDay,
+              periodDayExplicit: log.periodDayExplicit,
+              flow: log.flow,
+              mood: log.mood,
+              notes: log.notes,
+              symptoms: (symptomsByDate[log.date] ?? [])
+                ..sort((a, b) => a.name.compareTo(b.name)),
+            ),
+        ],
+        settings: BackupSettings(
+          onboardingSeen: settings.onboardingSeen,
+          notificationsEnabled: settings.notificationsEnabled,
+          periodReminderEnabled: settings.periodReminderEnabled,
+          fertileWindowRemindersEnabled:
+              settings.fertileWindowRemindersEnabled,
+          showDetailsEnabled: settings.showDetailsEnabled,
+          reminderHour: settings.reminderHour,
+          reminderMinute: settings.reminderMinute,
+        ),
+      );
+    });
+  }
+
+  Future<int> countDays() async {
+    final countExp = _db.dailyLogs.date.count();
+    final query = _db.selectOnly(_db.dailyLogs)..addColumns([countExp]);
+    return (await query.getSingle()).read(countExp) ?? 0;
+  }
+
+  /// Reemplaza TODOS los datos por los de [data] en una unica
+  /// transaccion: si cualquier escritura falla (ej. un CHECK), drift
+  /// revierte y los datos anteriores quedan intactos. Nunca borrar y
+  /// luego insertar fuera de una transaccion.
+  ///
+  /// El interruptor general de notificaciones NO se importa: depende del
+  /// permiso de ESTE telefono, asi que conserva su valor actual. El resto
+  /// de los ajustes de recordatorios si se importa. onboardingSeen queda
+  /// en true: quien importa ya esta usando la app.
+  Future<void> replaceAllWithBackup(BackupData data) async {
+    await _db.transaction(() async {
+      final current = await _ensureSettingsRow();
+      await _db.delete(_db.dailyLogSymptoms).go();
+      await _db.delete(_db.dailyLogs).go();
+      await _db.delete(_db.appSettings).go();
+
+      final s = data.settings;
+      await _db.batch((batch) {
+        batch.insertAll(_db.dailyLogs, [
+          for (final day in data.days)
+            DailyLogsCompanion.insert(
+              date: day.date,
+              isPeriodDay: Value(day.isPeriodDay),
+              flow: Value(day.flow),
+              mood: Value(day.mood),
+              notes: Value(day.notes),
+              periodDayExplicit: Value(day.periodDayExplicit),
+            ),
+        ]);
+        batch.insertAll(_db.dailyLogSymptoms, [
+          for (final day in data.days)
+            for (final symptom in day.symptoms)
+              DailyLogSymptomsCompanion.insert(
+                  logDate: day.date, symptom: symptom),
+        ]);
+        batch.insert(
+          _db.appSettings,
+          AppSettingsCompanion.insert(
+            id: const Value(0),
+            onboardingSeen: const Value(true),
+            notificationsEnabled: Value(current.notificationsEnabled),
+            periodReminderEnabled: Value(s.periodReminderEnabled),
+            fertileWindowRemindersEnabled:
+                Value(s.fertileWindowRemindersEnabled),
+            showDetailsEnabled: Value(s.showDetailsEnabled),
+            reminderHour: Value(s.reminderHour),
+            reminderMinute: Value(s.reminderMinute),
+          ),
+        );
+      });
+    });
+  }
+
   /// Borra TODAS las tablas (daily_logs, daily_log_symptoms,
   /// app_settings), incluidos los ajustes. Usado por
-  /// settings_screen._borrarDatos() tras confirmacion explicita del
-  /// usuario.
+  /// BackupService.deleteAllData() (que ademas borra los archivos de
+  /// respaldo) tras confirmacion explicita del usuario.
   Future<void> deleteAllData() async {
     await _db.transaction(() async {
       await _db.delete(_db.dailyLogSymptoms).go();

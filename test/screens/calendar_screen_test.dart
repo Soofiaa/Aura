@@ -6,6 +6,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
+import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/screens/calendar_screen.dart';
 
 Future<void> _tapDay(WidgetTester tester, int day) async {
@@ -149,6 +150,43 @@ void main() {
     final calendar = tester.widget<TableCalendar>(find.byType(TableCalendar));
     final manana = DateTime.now().add(const Duration(days: 1));
     expect(calendar.enabledDayPredicate!(manana), isFalse);
+
+    await db.close();
+  });
+
+  testWidgets(
+      'un cambio hecho fuera del calendario (importar un respaldo) se ve sin '
+      'volver a abrir la pantalla', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await tester.pumpAndSettle();
+    await _irAMesAnterior(tester, 2);
+    await _tapDay(tester, 10);
+    expect(find.text('Registrar día de menstruación'), findsOneWidget);
+
+    await repo.replaceAllWithBackup(BackupData(
+      schemaVersion: 3,
+      appVersion: '1.0.1',
+      exportedAt: '2026-10-04T10:15:00-03:00',
+      days: [
+        BackupDay(
+          date: _clave(mesPasado, 10),
+          isPeriodDay: true,
+          periodDayExplicit: false,
+        ),
+      ],
+      settings: const BackupSettings(
+        onboardingSeen: true,
+        notificationsEnabled: false,
+        periodReminderEnabled: true,
+        fertileWindowRemindersEnabled: false,
+        showDetailsEnabled: false,
+        reminderHour: 9,
+        reminderMinute: 0,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Quitar marca'), findsOneWidget);
 
     await db.close();
   });

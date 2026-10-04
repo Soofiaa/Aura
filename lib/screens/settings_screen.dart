@@ -1,15 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../data/backup/backup_service.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/notification_planner.dart';
+import '../utils/app_version.dart';
 import '../utils/notifications.dart';
 
 class SettingsScreen extends StatefulWidget {
-  /// Inyectables para tests (base en memoria / scheduler falso). En la
-  /// app real se usan los singletons globales.
+  /// Inyectables para tests (base en memoria / scheduler falso /
+  /// directorios temporales). En la app real se usan los singletons
+  /// globales.
   final CycleRepository? repository;
   final NotificationScheduler? scheduler;
+  final BackupService? backupService;
 
-  const SettingsScreen({super.key, this.repository, this.scheduler});
+  const SettingsScreen({
+    super.key,
+    this.repository,
+    this.scheduler,
+    this.backupService,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,6 +32,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   late final CycleRepository _repository = widget.repository ?? cycleRepository;
   late final NotificationScheduler _scheduler =
       widget.scheduler ?? notificationScheduler;
+  late final BackupService _backupService =
+      widget.backupService ?? backupService;
+
+  // Los interruptores siguen a app_settings en vivo: importar un
+  // respaldo (o deshacerlo) cambia los ajustes por fuera de esta
+  // pantalla, que dentro del IndexedStack nunca se reconstruye.
+  StreamSubscription<NotificationSettings>? _settingsSub;
 
   bool _notificaciones = false;
   bool _recordatorioPeriodo = true;
@@ -32,11 +51,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _cargarPreferencias();
+    _settingsSub =
+        _repository.watchNotificationSettings().listen(_aplicarPreferencias);
   }
 
   @override
   void dispose() {
+    _settingsSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -70,8 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Future<void> _cargarPreferencias() async {
-    final settings = await _repository.getNotificationSettings();
+  void _aplicarPreferencias(NotificationSettings settings) {
     if (!mounted) return;
     setState(() {
       _notificaciones = settings.notificationsEnabled;
@@ -153,8 +173,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         title: const Text("¿Borrar todos los datos?"),
         content: const Text(
-          "Se eliminaran todos los dias registrados, sintomas y ajustes. "
-          "Esta accion no se puede deshacer.",
+          "Se eliminarán todos los días registrados, síntomas y ajustes, "
+          "y la copia guardada antes de la última importación. "
+          "Esta acción no se puede deshacer.",
         ),
         actions: [
           TextButton(
@@ -174,17 +195,19 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     if (confirmado != true) return;
 
-    await _repository.deleteAllData();
+    try {
+      await _backupService.deleteAllData();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No se pudieron borrar todos los datos. Inténtalo de nuevo."),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
-    setState(() {
-      _notificaciones = false;
-      _recordatorioPeriodo = true;
-      _recordatorioFertil = false;
-      _mostrarDetalles = false;
-      _horaRecordatorio = 9;
-      _minutoRecordatorio = 0;
-    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Datos borrados correctamente 💧")),
     );
@@ -297,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
           const SizedBox(height: 20),
           const Text(
-            "Versión 1.0.0 • Aura 🌸",
+            "Versión $appVersionName • Aura 🌸",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),

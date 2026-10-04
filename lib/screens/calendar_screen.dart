@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -28,16 +30,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Claves 'yyyy-MM-dd' de los dias marcados como dia de sangrado.
   List<String> _periodDayKeys = [];
 
+  // Suscripcion en vez de cargar una vez: la pantalla vive dentro de un
+  // IndexedStack y nunca se reconstruye desde cero, asi que sin esto no
+  // se enteraria de cambios hechos en otra pestana (importar un
+  // respaldo, borrar todos los datos, la pregunta de Inicio).
+  StreamSubscription<List<String>>? _periodDaysSub;
+
   @override
   void initState() {
     super.initState();
-    _cargarDiasMenstruacion();
+    _periodDaysSub = cycleRepository.watchPeriodDayDates().listen((keys) {
+      if (!mounted) return;
+      setState(() => _periodDayKeys = keys);
+    });
   }
 
-  Future<void> _cargarDiasMenstruacion() async {
-    final keys = await cycleRepository.getPeriodDayDates();
-    if (!mounted) return;
-    setState(() => _periodDayKeys = keys);
+  @override
+  void dispose() {
+    _periodDaysSub?.cancel();
+    super.dispose();
   }
 
   bool _esDiaFuturo(DateTime day) {
@@ -60,8 +71,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (!mounted) return;
     if (wasNew) {
-      await _cargarDiasMenstruacion();
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Día registrado como menstruación')),
       );
@@ -78,17 +87,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     await cycleRepository.setPeriodDayExplicitly(key, isPeriodDay: false);
 
     if (!mounted) return;
-    await _cargarDiasMenstruacion();
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Marca quitada'),
         action: SnackBarAction(
           label: 'Deshacer',
-          onPressed: () async {
-            await cycleRepository.restoreDaySnapshot(key, previo);
-            await _cargarDiasMenstruacion();
-          },
+          onPressed: () => cycleRepository.restoreDaySnapshot(key, previo),
         ),
       ),
     );
@@ -143,8 +147,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _rangeEnd = null;
       _rangeMode = false;
     });
-    await _cargarDiasMenstruacion();
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${claves.length} días registrados como menstruación'),

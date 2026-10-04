@@ -1,0 +1,102 @@
+{
+  "format": "aura-backup",
+  "formatVersion": 1,
+  "schemaVersion": 3,
+  "app": "Aura",
+  "appVersion": "1.1.0",
+  "exportedAt": "2026-10-04T10:15:00-03:00",
+  "encryption": null,
+  "data": {
+    "dailyLogs": [
+      {
+        "date": "2026-08-28",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "flow": "moderado",
+        "mood": "cansada",
+        "notes": null,
+        "symptoms": [
+          "cansancio",
+          "dolorAbdominal"
+        ]
+      },
+      {
+        "date": "2026-08-29",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "flow": "abundante",
+        "mood": null,
+        "notes": "Día difícil 😣\nTomé \"ibuprofeno\"",
+        "symptoms": [
+          "dolorAbdominal",
+          "dolorDeEspalda"
+        ]
+      },
+      {
+        "date": "2026-08-30",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "flow": null,
+        "mood": null,
+        "notes": null,
+        "symptoms": []
+      },
+      {
+        "date": "2026-08-31",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "flow": "ligero",
+        "mood": "feliz",
+        "notes": "",
+        "symptoms": []
+      },
+      {
+        "date": "2026-09-01",
+        "isPeriodDay": false,
+        "periodDayExplicit": true,
+        "flow": null,
+        "mood": "normal",
+        "notes": null,
+        "symptoms": []
+      },
+      {
+        "date": "2026-09-15",
+        "isPeriodDay": false,
+        "periodDayExplicit": false,
+        "flow": null,
+        "mood": "irritable",
+        "notes": "Antojo de chocolate",
+        "symptoms": [
+          "antojos",
+          "cambiosDeHumor",
+          "hinchazon"
+        ]
+      },
+      {
+        "date": "2026-09-25",
+        "isPeriodDay": true,
+        "periodDayExplicit": true,
+        "flow": "ligero",
+        "mood": "triste",
+        "notes": null,
+        "symptoms": [
+          "acne",
+          "dolorDeCabeza"
+        ]
+      }
+    ],
+    "settings": {
+      "onboardingSeen": true,
+      "notificationsEnabled": true,
+      "periodReminderEnabled": false,
+      "fertileWindowRemindersEnabled": true,
+      "showDetailsEnabled": true,
+      "reminderHour": 21,
+      "reminderMinute": 30
+    }
+  },
+  "counts": {
+    "dailyLogs": 7,
+    "symptoms": 9
+  }
+}
