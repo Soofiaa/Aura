@@ -200,6 +200,49 @@ void main() {
     expect(find.text('Flujo menstrual'), findsNothing);
   });
 
+  testWidgets(
+      'cambiar la fecha a un dia sin registro no arrastra el animo ni el '
+      'flujo del dia anterior', (tester) async {
+    await repo.upsertDay(
+      date: hoy,
+      isPeriodDaySwitch: true,
+      flow: FlowIntensity.moderado,
+      mood: Mood.feliz,
+    );
+
+    await _abrirFormulario(tester);
+    expect(find.text('Feliz'), findsOneWidget);
+    expect(find.text('Moderado'), findsOneWidget);
+
+    // Dia 15 del mes anterior: siempre pasado y sin registro.
+    await _tocar(tester, find.byIcon(Icons.calendar_today));
+    await tester.tap(find.byTooltip('Previous month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<DropdownButton<Mood?>>(find.byType(DropdownButton<Mood?>))
+          .value,
+      isNull,
+    );
+    expect(find.text('Sin registrar'), findsOneWidget);
+    expect(find.text('Feliz'), findsNothing);
+    expect(_interruptorEncendido(tester), isFalse);
+
+    await _tocar(tester, find.byType(Switch));
+    expect(
+      tester
+          .widget<DropdownButton<FlowIntensity?>>(
+              find.byType(DropdownButton<FlowIntensity?>))
+          .value,
+      isNull,
+    );
+    expect(find.text('Sin especificar'), findsOneWidget);
+    expect(find.text('Moderado'), findsNothing);
+  });
+
   testWidgets('apagar el interruptor en un dia marcado lo guarda como un "no" '
       'explicito', (tester) async {
     await repo.markPeriodDay(hoy);
