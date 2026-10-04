@@ -269,22 +269,32 @@ Fondo del círculo del ícono adaptativo en blanco `#FFFFFF`, con la misma flor 
 
 - Se reemplazan `assets/icon/aura_icon_1024.png` y `assets/icon/aura_background_1024.png`. El foreground y el splash no cambian, y
   el splash conserva su color `#F8FAFB`.
-- Se agrega `adaptive_icon_foreground_inset: 4` a la configuración de `flutter_launcher_icons` y se regenera con
+- Se agrega `adaptive_icon_foreground_inset: 8` a la configuración de `flutter_launcher_icons` y se regenera con
   `dart run flutter_launcher_icons`.
 - **Fundamento medido:** con el 16 % por defecto de `flutter_launcher_icons` 0.14.4, la flor mide 37,6 dp de ancho en un círculo
   visible de 72 dp (queda encogida). Con 0 %, las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles).
-  Con 4 % mide 50,8 dp y queda dentro de la zona segura, con 1,1 dp de margen.
+  Con 8 % la flor mide unos 46,4 dp de ancho y cabe en un círculo de 58,3 dp, dentro de la zona segura de 66 dp.
+- **Por qué 8 y no 4:** con 4 % (50,8 dp) también cabía en la zona segura, pero viéndolo instalado en el teléfono, Sofia prefirió
+  la flor un poco más chica.
 - Entra en la v1.1, sin subir la versión antes. Se comprueba en un build de release instalado (RNF-6).
 
 ---
 
 ### T-02 · Ícono pequeño de notificación (técnica)
 Hoy `notifications.dart` (línea 62) usa `@mipmap/ic_launcher` como ícono pequeño. Su fondo es opaco y Android dibuja ese ícono
-usando solo la transparencia, así que en la barra de estado sale como un cuadrado blanco (pendiente de confirmar en el teléfono).
+usando solo la transparencia, así que la notificación no muestra la flor.
+
+**Confirmado** en el teléfono de Sofia (HyperOS) con el botón "Enviar notificación de prueba" de Ajustes: el ícono pequeño se ve
+como un disco oscuro liso dentro del círculo del sistema, sin forma de flor. Es la misma causa: un ícono opaco usado como ícono
+pequeño.
 
 - **Solución:** un ícono `ic_stat_*` blanco sobre transparente, referenciado por nombre, con su `res/raw/keep.xml` para que
   R8 / `shrinkResources` no lo elimine en el release.
-- **Criterio de aceptación:** una notificación real en el teléfono muestra la silueta de la flor y no un cuadrado.
+- **Criterio de aceptación:** una notificación real en el teléfono muestra la silueta de la flor y no una forma lisa (un cuadrado o
+  un disco).
+- **Mejora menor:** el texto de la notificación de prueba dice "Notificación de prueba (debug), programada hace 10s"
+  (`notifications.dart`, línea 173) y se ve en la versión de release, porque el botón de Ajustes no está limitado a debug
+  (`settings_screen.dart`, líneas 270-274). Conviene un texto pensado para quien usa la app, o esconder el botón en release.
 - Debe estar antes de publicar la v1.1.
 
 ---
@@ -365,9 +375,9 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |
 | **R-8** | El aviso suave de D-4 (cuando nunca se toca "Terminó") queda fuera de la v1.1. | Reducir el alcance; el período abierto ya queda fuera del promedio sin afectar la regularidad. |
 | **U-1** | La selección de rango del calendario aplica las opciones **A + B** (ver HU-04): el panel guía cada paso y muestra el resumen corto, y con un rango ya completo otro toque alarga, mueve o acorta el rango en vez de descartarlo. Se implementa en el estado de la pantalla, sin modificar `table_calendar`. Entra en HU-04, en la v1.1. | Ataca la causa del caso real del 10 al 12 de julio (el tercer toque descartaba el rango sin que se notara) sin agregar pasos. Se descartaron: C, marcar día por día, porque revive la queja de fricción que HU-04 busca resolver; y D, apoyarse en "Me llegó hoy", porque no sirve para registrar un período pasado. La confirmación de rango largo sigue protegiendo contra extensiones accidentales. |
-| **T-01** | Fondo del ícono adaptativo en blanco `#FFFFFF` y `adaptive_icon_foreground_inset: 4`. El foreground y el splash no cambian; el splash conserva `#F8FAFB`. | Medido sobre el foreground: con el 16 % por defecto de `flutter_launcher_icons` 0.14.4 la flor queda encogida en 37,6 dp de un círculo visible de 72 dp; con 0 % las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles); con 4 % mide 50,8 dp y queda dentro con 1,1 dp de margen. `#F8FAFB` y `#FFFFFF` casi no se distinguen, por eso el splash no cambia. |
+| **T-01** | Fondo del ícono adaptativo en blanco `#FFFFFF` y `adaptive_icon_foreground_inset: 8`. El foreground y el splash no cambian; el splash conserva `#F8FAFB`. | Medido sobre el foreground: con el 16 % por defecto de `flutter_launcher_icons` 0.14.4 la flor queda encogida en 37,6 dp de un círculo visible de 72 dp; con 0 % las puntas de los pétalos salen de la zona segura de 66 dp (2,35 % de los píxeles); con 8 % mide unos 46,4 dp y cabe en un círculo de 58,3 dp, dentro de la zona segura. Se eligió 8 y no 4 (50,8 dp, que también cabía) porque, viéndolo instalado en el teléfono, Sofia prefirió la flor un poco más chica. `#F8FAFB` y `#FFFFFF` casi no se distinguen, por eso el splash no cambia. |
 | **T-01 (versión)** | T-01 entra en la v1.1 sin subir la versión antes. Para probarla en el teléfono se instala con `adb install -r` con el mismo `versionCode`, como instalación de prueba. | Un cambio solo de ícono no justifica una versión publicada aparte, y la misma firma con `-r` conserva los datos. |
-| **T-02 / T-03** | El ícono pequeño de notificación (T-02) y el ícono monocromo (T-03) son tareas separadas de T-01. T-02 debe estar antes de publicar la v1.1. | Son problemas distintos del fondo del ícono: cada uno necesita su propio asset y su propia prueba en el teléfono, y mezclarlos agrandaría T-01. T-02 va antes de la v1.1 porque las notificaciones ya están en uso y casi seguro se ven como un cuadrado blanco en la barra de estado (pendiente de confirmar en el teléfono). T-03 solo afecta a quien usa íconos temáticos: forma parte de la v1.1 pero no bloquea su publicación; si no queda lista, pasa a la v1.2. |
+| **T-02 / T-03** | El ícono pequeño de notificación (T-02) y el ícono monocromo (T-03) son tareas separadas de T-01. T-02 debe estar antes de publicar la v1.1. | Son problemas distintos del fondo del ícono: cada uno necesita su propio asset y su propia prueba en el teléfono, y mezclarlos agrandaría T-01. T-02 va antes de la v1.1 porque las notificaciones ya están en uso y su ícono pequeño no muestra la flor: confirmado en el teléfono de Sofia (HyperOS), donde se ve como un disco oscuro liso. T-03 solo afecta a quien usa íconos temáticos: forma parte de la v1.1 pero no bloquea su publicación; si no queda lista, pasa a la v1.2. |
 
 La decisión D-3 (cifrado del respaldo) sigue abierta y se resuelve en la Etapa A de HU-06.
 
