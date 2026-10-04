@@ -256,7 +256,7 @@ hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene 
 **Mockup:** 5 (Ajustes → "Copia de seguridad"; en la app la sección se llama **"Tus datos"**).
 
 **Estado:**
-- **HU-06a (respaldo sin cifrado): implementada y probada en el teléfono.** Rama `feature/hu-06-respaldo`, commits `9f8666e`,
+- **HU-06a (respaldo sin cifrado): implementada, probada en la app debug (automatizada por adb) y release verificado; comparación con datos reales pendiente.** Rama `feature/hu-06-respaldo`, commits `9f8666e`,
   `9960dff`, `00cd5dc` y `0bc413c`. Cubre los criterios 1 a 6 y 8, y la advertencia de datos de salud del criterio 7.
   - Prueba manual en el teléfono (2026-10-04, build debug con datos inventados): 9 de 10 pasos OK. Falló uno: al cerrar la hoja
     de compartir sin elegir destino aparecía "Respaldo listo". Se corrigió en `0bc413c` y quedó cubierto por un test.
@@ -415,7 +415,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **HU6-1** | El respaldo es un **JSON propio** (`"format": "aura-backup"`, con `formatVersion`, `schemaVersion`, `appVersion` y `exportedAt`), no una copia del archivo `.sqlite`. | Se puede validar completo antes de tocar la base, no depende del formato interno de drift y un schema anterior se puede importar convirtiéndolo. |
 | **HU6-2** | El cifrado entra en la v1.1 como **HU-06b**, en una rama aparte. Bloquea la publicación de la v1.1, pero no la migración v4. | Son datos de salud en un archivo que puede terminar en la nube o en un chat, pero el respaldo sin cifrar ya permite proteger los datos reales antes de migrar (R-5). |
 | **HU6-3** | HU-06b usará un **envoltorio propio PBKDF2-SHA256 + AES-GCM**, no el ZIP AE-2 de PetPal. | El enfoque de PetPal usa 1000 iteraciones con SHA-1, un costo de derivación demasiado bajo para datos de salud. |
-| **HU6-4** | "Crear respaldo" ofrece la **hoja de compartir** del sistema y un botón **"Guardar en el teléfono"** (el "Guardar como" del sistema). | Guardar en el propio teléfono no debería obligar a pasar por otra app. |
+| **HU6-4** | "Crear respaldo" ofrece la **hoja de compartir** del sistema y un botón **"Guardar en el teléfono"** (el "Guardar como" del sistema). | Guardar en el propio teléfono no debería obligar a pasar por otra app. Además, en el teléfono real (Xiaomi, HyperOS) `share_plus` puede devolver `unavailable` en lugar de `dismissed`, así que no se puede confiar en detectar siempre que la hoja de compartir se cerró sin elegir destino; "Guardar en el teléfono" sí informa con certeza si se guardó o se canceló. |
 | **HU6-5** | **"Deshacer"** está en el mensaje de éxito de la importación, sin un botón permanente en Ajustes. | Deshacer sirve justo después de importar; un botón permanente invitaría a restaurar una copia vieja por error. |
 | **HU6-6** | Se importan los **ajustes de recordatorios**, salvo el **interruptor general** de notificaciones. | Ese interruptor depende del permiso de notificaciones del teléfono donde se importa, así que conserva su valor actual. |
 
