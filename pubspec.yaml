@@ -110,6 +110,7 @@ flutter_launcher_icons:
   image_path: "assets/icon/aura_icon_1024.png"
   adaptive_icon_background: "assets/icon/aura_background_1024.png"
   adaptive_icon_foreground: "assets/icon/aura_foreground_1024.png"
+  adaptive_icon_foreground_inset: 8
 
 flutter_native_splash:
   color: "#F8FAFB"
