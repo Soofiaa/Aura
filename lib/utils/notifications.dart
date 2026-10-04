@@ -59,7 +59,10 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     tzdata.initializeTimeZones();
     await _syncTimeZoneLocation();
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Icono pequeno de notificacion: silueta blanca sobre transparente
+    // (Android solo usa su transparencia). Se busca por nombre, asi que
+    // res/raw/keep.xml evita que shrinkResources lo elimine en release.
+    const androidSettings = AndroidInitializationSettings('ic_stat_aura');
     const initializationSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(initializationSettings);
   }
