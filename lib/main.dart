@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'data/backup/backup_file_gateway.dart';
 import 'data/backup/backup_service.dart';
+import 'data/backup/plugin_backup_file_gateway.dart';
 import 'data/notifications/notification_reconciler.dart';
 import 'data/repositories/cycle_repository.dart';
 import 'utils/colors.dart';
@@ -21,6 +23,8 @@ Future<void> main() async {
   // Suscripcion viva por el resto de la vida de la app: no se dispose()
   // nunca aca a proposito, igual que cycleRepository.
   notificationReconciler.start();
+
+  backupFileGateway = const PluginBackupFileGateway();
 
   // Las copias temporales de un respaldo exportado se borran al abrir la
   // app (no al volver de la hoja de compartir: la app de destino puede

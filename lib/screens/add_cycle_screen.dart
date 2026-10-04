@@ -3,6 +3,7 @@ import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../utils/day_key.dart';
 import '../widgets/symptom_selector.dart';
+import '../utils/app_snackbar.dart';
 
 class AddCycleScreen extends StatefulWidget {
   const AddCycleScreen({super.key});
@@ -75,7 +76,8 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(content: Text("Registro guardado correctamente ✅")),
       );
 

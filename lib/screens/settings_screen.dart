@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
 import '../data/backup/backup_service.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/notification_planner.dart';
 import '../utils/app_version.dart';
 import '../utils/notifications.dart';
+import 'backup_section.dart';
+import '../utils/app_snackbar.dart';
 
 class SettingsScreen extends StatefulWidget {
   /// Inyectables para tests (base en memoria / scheduler falso /
@@ -15,12 +18,14 @@ class SettingsScreen extends StatefulWidget {
   final CycleRepository? repository;
   final NotificationScheduler? scheduler;
   final BackupService? backupService;
+  final BackupFileGateway? fileGateway;
 
   const SettingsScreen({
     super.key,
     this.repository,
     this.scheduler,
     this.backupService,
+    this.fileGateway,
   });
 
   @override
@@ -81,7 +86,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() => _notificaciones = false);
     await _repository.setNotificationsEnabled(false);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       const SnackBar(
         content: Text(
           'El permiso de notificaciones fue revocado desde Ajustes del '
@@ -110,7 +116,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         await _repository.setNotificationsEnabled(false);
         if (!mounted) return;
         setState(() => _notificaciones = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           const SnackBar(
             content: Text(
               'No se activaron las notificaciones: permiso denegado.',
@@ -160,7 +167,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _probarNotificacion() async {
     await _scheduler.scheduleTestNotification(delay: const Duration(seconds: 10));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       const SnackBar(
         content: Text('Notificación de prueba programada en 10 segundos.'),
       ),
@@ -199,7 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       await _backupService.deleteAllData();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(
           content: Text("No se pudieron borrar todos los datos. Inténtalo de nuevo."),
         ),
@@ -208,7 +217,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       const SnackBar(content: Text("Datos borrados correctamente 💧")),
     );
   }
@@ -301,10 +311,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 20),
 
           const Text(
-            "Gestión de datos",
+            "Tus datos",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
+          BackupSection(service: _backupService, gateway: widget.fileGateway),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _confirmarYBorrarDatos,
             icon: const Icon(Icons.delete_forever),

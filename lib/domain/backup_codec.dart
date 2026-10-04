@@ -165,6 +165,9 @@ enum BackupError {
 
   /// Supera [maxBackupSizeBytes].
   tooLarge,
+
+  /// El archivo elegido no se pudo leer del disco.
+  unreadable,
 }
 
 sealed class BackupParseResult {

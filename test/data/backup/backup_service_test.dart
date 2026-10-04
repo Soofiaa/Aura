@@ -153,6 +153,77 @@ void main() {
     expect(ajeno.existsSync(), isTrue);
   });
 
+  test('cleanTemporaryFiles tambien borra las copias de file_picker',
+      () async {
+    final copia = File(p.join(temp.path, 'file_picker', '1700000000000',
+        'respaldo.json'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('datos de salud');
+
+    await service.cleanTemporaryFiles();
+
+    expect(copia.existsSync(), isFalse);
+    expect(Directory(p.join(temp.path, 'file_picker')).existsSync(), isFalse);
+  });
+
+  group('readBackupFile (archivo elegido para importar)', () {
+    File copiaDelSelector(List<int> bytes) => File(p.join(
+        temp.path, BackupService.pickerDirName, '1700000000000', 'r.json'))
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(bytes);
+
+    test('un respaldo valido se decodifica y la copia se borra al leerla',
+        () async {
+      final copia = copiaDelSelector(
+          File('test/fixtures/backup_v3.json').readAsBytesSync());
+
+      final result = await service.readBackupFile(copia.path);
+
+      expect(result, isA<BackupParseSuccess>());
+      expect(copia.existsSync(), isFalse);
+      expect(copia.parent.existsSync(), isFalse,
+          reason: 'tambien la carpeta <instante> vacia');
+    });
+
+    test('un archivo invalido tambien se borra', () async {
+      final copia = copiaDelSelector(utf8.encode('no es un respaldo'));
+
+      final result = await service.readBackupFile(copia.path);
+
+      expect((result as BackupParseFailure).error, BackupError.notABackup);
+      expect(copia.existsSync(), isFalse);
+    });
+
+    test('mas de 5 MB se rechaza por tamano (sin decodificar) y se borra',
+        () async {
+      final copia = copiaDelSelector(List.filled(maxBackupSizeBytes + 1, 0x20));
+
+      final result = await service.readBackupFile(copia.path);
+
+      expect((result as BackupParseFailure).error, BackupError.tooLarge);
+      expect(result.detail, '${maxBackupSizeBytes + 1} bytes');
+      expect(copia.existsSync(), isFalse);
+    });
+
+    test('un archivo que no se puede leer devuelve unreadable', () async {
+      final result = await service.readBackupFile(p.join(
+          temp.path, BackupService.pickerDirName, 'no_existe.json'));
+      expect((result as BackupParseFailure).error, BackupError.unreadable);
+    });
+
+    test('nunca borra un archivo fuera de cache/file_picker', () async {
+      final ajeno = File(p.join(root.path, 'mis_documentos', 'respaldo.json'))
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(
+            File('test/fixtures/backup_v3.json').readAsBytesSync());
+
+      final result = await service.readBackupFile(ajeno.path);
+
+      expect(result, isA<BackupParseSuccess>());
+      expect(ajeno.existsSync(), isTrue);
+    });
+  });
+
   test('cleanTemporaryFiles sin nada que borrar no falla', () async {
     await service.cleanTemporaryFiles();
   });

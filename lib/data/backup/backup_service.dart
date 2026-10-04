@@ -111,10 +111,19 @@ class BackupService {
   /// se comparte.
   static const String exportDirName = 'aura_respaldo';
 
-  /// Carpetas del directorio temporal que pueden contener una copia del
-  /// respaldo exportado: la nuestra y la que share_plus usa para pasarle
-  /// el archivo a la app de destino (ver su FileProvider).
-  static const List<String> temporaryDirNames = [exportDirName, 'share_plus'];
+  /// Carpeta donde file_picker copia el archivo elegido para importar
+  /// (`cache/file_picker/<instante>/<nombre>`), antes de que Dart pueda
+  /// revisar su tamano.
+  static const String pickerDirName = 'file_picker';
+
+  /// Carpetas del directorio temporal que pueden contener una copia de un
+  /// respaldo: la nuestra, la que share_plus usa para pasarle el archivo
+  /// a la app de destino (ver su FileProvider) y la de file_picker.
+  static const List<String> temporaryDirNames = [
+    exportDirName,
+    'share_plus',
+    pickerDirName,
+  ];
 
   /// Respaldo de los datos actuales como JSON. Se valida a si mismo antes
   /// de devolverse: nunca se entrega un archivo que esta misma version no
@@ -170,6 +179,42 @@ class BackupService {
     for (final name in temporaryDirNames) {
       final dir = Directory(p.join(temp.path, name));
       if (await dir.exists()) await dir.delete(recursive: true);
+    }
+  }
+
+  /// Lee y valida el archivo elegido para importar. Revisa el tamano
+  /// antes de cargarlo en memoria, y si es la copia que file_picker dejo
+  /// en la cache la borra apenas termina, sea valido o no. No lanza.
+  Future<BackupParseResult> readBackupFile(String path) async {
+    final file = File(path);
+    try {
+      final length = await file.length();
+      if (length > maxBackupSizeBytes) {
+        return BackupParseFailure(BackupError.tooLarge, '$length bytes');
+      }
+      return decodeBackup(await file.readAsBytes());
+    } on FileSystemException catch (e) {
+      return BackupParseFailure(BackupError.unreadable, '$e');
+    } finally {
+      await _deletePickerCopy(file);
+    }
+  }
+
+  /// Solo borra dentro de cache/file_picker/: nunca un archivo de la
+  /// usuaria fuera de la cache de la app.
+  Future<void> _deletePickerCopy(File file) async {
+    try {
+      final pickerDir =
+          p.join((await _temporaryDirectory()).path, pickerDirName);
+      if (!p.isWithin(pickerDir, file.path)) return;
+      if (await file.exists()) await file.delete();
+      final parent = file.parent;
+      if (p.isWithin(pickerDir, parent.path) &&
+          (await parent.list().isEmpty)) {
+        await parent.delete();
+      }
+    } on FileSystemException {
+      // Se reintenta al abrir la app (cleanTemporaryFiles).
     }
   }
 

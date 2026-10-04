@@ -2,49 +2,26 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/screens/settings_screen.dart';
 import 'package:aura/utils/app_version.dart';
 
+import '../support/fake_backup.dart';
 import '../support/fake_notification_scheduler.dart';
-
-/// Espia de BackupService: registra la llamada sin tocar el disco (la E/S
-/// real de archivos no avanza dentro del reloj falso de testWidgets; los
-/// archivos se prueban en test/data/backup/backup_service_test.dart).
-class _SpyBackupService extends BackupService {
-  _SpyBackupService(this._repo)
-      : super(
-          _repo,
-          supportDirectory: () => throw UnimplementedError(),
-          temporaryDirectory: () => throw UnimplementedError(),
-        );
-
-  final CycleRepository _repo;
-  int deleteAllDataCallCount = 0;
-  bool failOnDelete = false;
-
-  @override
-  Future<void> deleteAllData() async {
-    deleteAllDataCallCount++;
-    if (failOnDelete) throw StateError('detalle interno que no se muestra');
-    await _repo.deleteAllData();
-  }
-}
 
 void main() {
   late AppDatabase db;
   late CycleRepository repo;
   late FakeNotificationScheduler scheduler;
-  late _SpyBackupService backup;
+  late FakeBackupService backup;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
     repo = CycleRepository(db);
     scheduler = FakeNotificationScheduler();
-    backup = _SpyBackupService(repo);
+    backup = FakeBackupService(repo);
   });
 
   Future<void> pumpScreen(WidgetTester tester) async {
@@ -53,6 +30,7 @@ void main() {
         repository: repo,
         scheduler: scheduler,
         backupService: backup,
+        fileGateway: FakeBackupFileGateway(),
       ),
     ));
     await tester.pumpAndSettle();

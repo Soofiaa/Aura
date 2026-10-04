@@ -41,6 +41,11 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   sqlite3: ^2.4.0
   path: ^1.9.0
+  # Respaldo (HU-06). Versiones exactas: share_plus 13 y file_picker 12/13
+  # no compilan con AGP 8.7.3 (androidx.core 1.18 exige AGP >= 8.9.1) o
+  # chocan en win32. Revisar al actualizar AGP/Gradle/Kotlin.
+  share_plus: 12.0.2
+  file_picker: 11.0.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

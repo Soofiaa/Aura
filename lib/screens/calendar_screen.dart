@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../data/database/app_database.dart' show DailyLogRow;
 import '../utils/day_key.dart';
+import '../utils/app_snackbar.dart';
 
 /// Rangos mas largos que esto piden confirmacion extra antes de marcar
 /// todos los dias como menstruacion (evita que un arrastre accidental
@@ -71,11 +72,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (!mounted) return;
     if (wasNew) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(content: Text('Día registrado como menstruación')),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(content: Text('Ese día ya estaba registrado')),
       );
     }
@@ -87,7 +90,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     await cycleRepository.setPeriodDayExplicitly(key, isPeriodDay: false);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       SnackBar(
         content: const Text('Marca quitada'),
         action: SnackBarAction(
@@ -147,7 +151,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _rangeEnd = null;
       _rangeMode = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       SnackBar(
         content: Text('${claves.length} días registrados como menstruación'),
       ),

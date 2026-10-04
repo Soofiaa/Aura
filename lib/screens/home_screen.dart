@@ -9,6 +9,7 @@ import '../domain/cycle_predictor.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
 import 'add_cycle_screen.dart';
+import '../utils/app_snackbar.dart';
 
 class HomeScreen extends StatefulWidget {
   /// Permite inyectar un repositorio (ej. con base en memoria) en tests.
@@ -104,7 +105,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _repository.setPeriodDayExplicitly(date, isPeriodDay: isPeriodDay);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       SnackBar(
         content: Text(
           isPeriodDay
