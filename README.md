@@ -23,6 +23,7 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 - Los datos viven en una base SQLite dentro del almacenamiento privado de la app.
 - `allowBackup="false"`: Android no los copia a la nube.
 - Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo. El archivo contiene datos de salud y, por ahora, va sin contraseña: cualquiera que lo abra puede leerlo. Aura no recibe ni guarda una copia, y la app sigue sin el permiso `INTERNET`.
+- Antes de migrar la base al esquema v4, la app guarda una copia de seguridad en su almacenamiento privado; "Borrar todos los datos" también la elimina.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
 
@@ -46,10 +47,11 @@ lib/
 ├── domain/        # lógica pura, sin Flutter ni base de datos
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── legacy_period_ends.dart
 │   └── notification_planner.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
-│   ├── database/        # drift (esquema v3)
+│   ├── database/        # drift (esquema v4)
 │   ├── repositories/    # CycleRepository
 │   └── notifications/   # reconciler + scheduler
 ├── screens/       # home, calendario, registro, estadísticas, ajustes, onboarding

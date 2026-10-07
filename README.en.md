@@ -23,6 +23,7 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Data lives in a SQLite database inside the app's private storage.
 - `allowBackup="false"`: Android does not copy it to the cloud.
 - Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with. The file contains health data and, for now, has no password: anyone who opens it can read it. Aura does not receive or keep a copy, and the app still has no `INTERNET` permission.
+- Before migrating the database to schema v4, the app saves a safety copy in its private storage; "Delete all data" also removes it.
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
 - Privacy policy: [`docs/privacy.html`](docs/privacy.html).
 
@@ -46,10 +47,11 @@ lib/
 ├── domain/        # pure logic, no Flutter or database
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── legacy_period_ends.dart
 │   └── notification_planner.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
-│   ├── database/        # drift (schema v3)
+│   ├── database/        # drift (schema v4)
 │   ├── repositories/    # CycleRepository
 │   └── notifications/   # reconciler + scheduler
 ├── screens/       # home, calendar, add entry, stats, settings, onboarding
