@@ -131,13 +131,13 @@ void main() {
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
-    await tester.tap(find.text('Seleccionar varios días'));
+    await tester.tap(find.text('Elegir varios días'));
     await tester.pumpAndSettle();
 
     await _tapDay(tester, 5);
     await _tapDay(tester, 8);
 
-    expect(find.textContaining('(4 días)'), findsOneWidget);
+    expect(find.textContaining('· 4 días'), findsOneWidget);
 
     await tester.tap(find.text('Marcar período'));
     await tester.pumpAndSettle();
@@ -156,7 +156,7 @@ void main() {
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
-    await tester.tap(find.text('Seleccionar varios días'));
+    await tester.tap(find.text('Elegir varios días'));
     await tester.pumpAndSettle();
 
     await _tapDay(tester, 1);

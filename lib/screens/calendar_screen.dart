@@ -7,6 +7,7 @@ import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_deriver.dart';
 import '../domain/cycle_predictor.dart';
+import '../domain/range_selection.dart';
 import '../utils/colors.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
@@ -14,11 +15,6 @@ import '../utils/period_end_messages.dart';
 import '../widgets/period_day_marks.dart';
 import '../widgets/period_start_sheet.dart';
 import '../widgets/single_day_period_dialog.dart';
-
-/// Rangos mas largos que esto piden confirmacion extra antes de marcar
-/// todos los dias como menstruacion (evita que un arrastre accidental
-/// marque semanas enteras sin querer).
-const int longRangeConfirmationThreshold = 10;
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key, this.repository, this.clock});
@@ -42,9 +38,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _focusedDay = _clock();
   DateTime? _selectedDay;
 
+  // "Elegir varios dias" (U-1): la seleccion vive aqui, no en
+  // table_calendar (su modo de rango queda desactivado).
   bool _rangeMode = false;
-  DateTime? _rangeStart;
-  DateTime? _rangeEnd;
+  RangeSelection _selection = RangeSelection.empty;
 
   // Claves 'yyyy-MM-dd' de los dias marcados como dia de sangrado.
   List<String> _periodDayKeys = [];
@@ -99,11 +96,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return DateTime(day.year, day.month, day.day).isAfter(hoySinHora);
   }
 
+  /// "Elegir varios dias" / "Cancelar seleccion" (crit. 14: la
+  /// seleccion queda vacia).
   void _alternarModoRango() {
     setState(() {
       _rangeMode = !_rangeMode;
-      _rangeStart = null;
-      _rangeEnd = null;
+      _selection = RangeSelection.empty;
       _selectedDay = null;
     });
   }
@@ -266,13 +264,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _showUndo(periodEndedMessage(dia, _today), snapshot);
   }
 
-  List<String> _clavesEnRango(DateTime start, DateTime end) {
-    final startKey = DayKey.fromDate(start);
-    final endKey = DayKey.fromDate(end);
-    final dias = DayKey.diffInDays(startKey, endKey);
-    return [for (var i = 0; i <= dias; i++) DayKey.addDays(startKey, i)];
-  }
-
   Future<bool> _confirmarRangoLargo(int cantidadDias) async {
     final resultado = await showDialog<bool>(
       context: context,
@@ -296,46 +287,110 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return resultado ?? false;
   }
 
-  Future<void> _confirmarRango() async {
-    final start = _rangeStart;
-    if (start == null) return;
-    final end = _rangeEnd ?? start;
+  /// R-1 cuando el rango termina hoy o ayer. Null si se cierra el
+  /// dialogo sin elegir.
+  Future<bool?> _preguntarSiTermino() => showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('¿Ya terminó tu período?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Todavía no'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sí, terminó'),
+            ),
+          ],
+        ),
+      );
 
-    final claves = _clavesEnRango(start, end);
-    if (claves.length > longRangeConfirmationThreshold) {
-      final confirmado = await _confirmarRangoLargo(claves.length);
-      if (!confirmado) return;
+  /// "Marcar periodo" (U-1 con R-1): marca todos los dias del rango con
+  /// markPeriodRangeWithSnapshot (un rango nunca se bloquea) y, segun
+  /// rangeEndAction, guarda el fin en el ultimo dia: si termina hace 2
+  /// dias o mas se cierra; si termina hoy o ayer se pregunta; si despues
+  /// quedan dias marcados del mismo periodo, solo se marca. Un periodo que
+  /// quedaria de 1 dia se confirma antes de cerrarlo (decision 14).
+  Future<void> _confirmarRango() async {
+    final seleccion = _selection;
+    if (seleccion.isEmpty) return;
+    final dias = seleccion.days;
+    final inicio = dias.first;
+    final fin = dias.last;
+
+    if (seleccion.isLong) {
+      final confirmado = await _confirmarRangoLargo(seleccion.dayCount);
+      if (!confirmado || !mounted) return;
     }
 
-    await _repository.markPeriodDays(claves);
+    final bool cerrar;
+    switch (rangeEndAction(
+        rangeDays: dias, existingPeriodDays: _periodDayKeys, today: _today)) {
+      case RangeEndAction.close:
+        cerrar = true;
+      case RangeEndAction.markOnly:
+        cerrar = false;
+      case RangeEndAction.ask:
+        final respuesta = await _preguntarSiTermino();
+        if (respuesta == null || !mounted) return;
+        cerrar = respuesta;
+    }
+
+    if (cerrar) {
+      final periodo = groupPeriodRuns([..._periodDayKeys, ...dias])
+          .firstWhere((r) => r.contains(fin));
+      if (needsSingleDayConfirmation(
+          periodStart: periodo.first, endDate: fin)) {
+        final confirmado = await confirmSingleDayPeriod(context);
+        if (!confirmado || !mounted) return;
+      }
+    }
+
+    final result = await _repository.markPeriodRangeWithSnapshot(inicio, fin,
+        closeAtEnd: cerrar, today: _today);
 
     if (!mounted) return;
     setState(() {
-      _rangeStart = null;
-      _rangeEnd = null;
+      _selection = RangeSelection.empty;
       _rangeMode = false;
     });
-    showAppSnackBar(
-      context,
-      SnackBar(
-        content: Text('${claves.length} días registrados como menstruación'),
-      ),
+    if (!result.changedAnything) {
+      showAppSnackBar(
+        context,
+        SnackBar(
+          content: Text(dias.length == 1
+              ? 'Ese día ya estaba registrado'
+              : 'Esos días ya estaban registrados'),
+        ),
+      );
+      return;
+    }
+    // Todos los dias ya estaban marcados y solo se guardo el fin.
+    final n = result.newlyMarked;
+    _showUndo(
+      n == 0
+          ? periodEndedMessage(fin, _today)
+          : n == 1
+              ? '1 día registrado como menstruación.'
+              : '$n días registrados como menstruación.',
+      result.snapshot,
     );
   }
 
-  /// Borde punteado y etiqueta "estimado" de un dia estimado. Va en
+  /// Marca de fondo de cada dia: el rango elegido (U-1) o, si no esta en
+  /// el rango, el borde punteado de un dia estimado. Va en
   /// rangeHighlightBuilder porque table_calendar envuelve el contenido de
   /// cada celda en un Semantics que excluye las etiquetas de adentro, y
   /// este builder queda fuera de ese Semantics; ademas se llama para
-  /// todos los dias, incluidos los futuros (deshabilitados) y hoy. En el
-  /// modo de varios dias, el resaltado del rango tiene prioridad: con
-  /// null, table_calendar dibuja su resaltado por defecto en los dias
-  /// dentro del rango.
-  Widget? _estimatedMark(
-      DateTime day, bool isWithinRange, Set<String> estimated) {
-    if (isWithinRange || !estimated.contains(DayKey.fromDate(day))) {
-      return null;
-    }
+  /// todos los dias, incluidos los futuros (deshabilitados) y hoy. Como
+  /// table_calendar no recibe rangeStartDay/rangeEndDay, nunca dibuja su
+  /// propio resaltado.
+  Widget? _dayMark(DateTime day, Set<String> estimated) {
+    final clave = DayKey.fromDate(day);
+    final rango = _rangeMark(clave);
+    if (rango != null) return rango;
+    if (!estimated.contains(clave)) return null;
     return Positioned.fill(
       child: Padding(
         padding: const EdgeInsets.all(6),
@@ -343,6 +398,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
           container: true,
           label: 'estimado',
           child: const CustomPaint(painter: DashedBorderPainter()),
+        ),
+      ),
+    );
+  }
+
+  /// Dia dentro de la seleccion de varios dias: franja AppColors.accent
+  /// suave en todo el rango y el primer y el ultimo dia con borde grueso
+  /// AppColors.accent (no depende solo del color: el lector de pantalla
+  /// anuncia "inicio del rango", "fin del rango" o "dentro del rango").
+  /// Con solo el inicio elegido se pinta solo ese dia.
+  Widget? _rangeMark(String clave) {
+    final seleccion = _selection;
+    if (!_rangeMode || seleccion.isEmpty) return null;
+    final inicio = seleccion.start!;
+    final fin = seleccion.end ?? inicio;
+    if (DayKey.isBefore(clave, inicio) || DayKey.isBefore(fin, clave)) {
+      return null;
+    }
+    final esInicio = clave == inicio;
+    final esFin = clave == fin && seleccion.isComplete;
+    final etiqueta = esInicio && esFin
+        ? 'inicio y fin del rango'
+        : esInicio
+            ? 'inicio del rango'
+            : esFin
+                ? 'fin del rango'
+                : 'dentro del rango';
+    final extremo = esInicio || esFin;
+    return Positioned.fill(
+      child: Semantics(
+        container: true,
+        label: etiqueta,
+        child: Container(
+          margin: EdgeInsets.all(extremo ? 2 : 6),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: extremo ? 0.35 : 0.2),
+            border: extremo
+                ? Border.all(color: AppColors.accent, width: 3)
+                : null,
+            borderRadius: BorderRadius.circular(periodDayMarkRadius),
+          ),
         ),
       ),
     );
@@ -375,37 +471,49 @@ class _CalendarScreenState extends State<CalendarScreen> {
         title: const Text("Calendario menstrual",
             style: TextStyle(fontWeight: FontWeight.w600)),
         centerTitle: true,
-        backgroundColor: const Color(0xFFA8D8EA),
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // HU-04 crit. 1: siempre visible.
-            ElevatedButton.icon(
-              onPressed: () => showPeriodStartSheet(context,
-                  repository: _repository, today: _today),
-              icon: const Icon(Icons.water_drop_outlined),
-              label: const Text('Me llegó hoy'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.textPrimary,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
+            // HU-04 crit. 1 y 6: los dos botones siempre visibles.
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => showPeriodStartSheet(context,
+                        repository: _repository, today: _today),
+                    icon: const Icon(Icons.water_drop_outlined),
+                    label: const Text('Me llegó hoy'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.textPrimary,
+                      minimumSize: const Size(48, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _alternarModoRango,
+                    icon: Icon(_rangeMode ? Icons.close : Icons.date_range),
+                    label: Text(
+                      _rangeMode ? 'Cancelar selección' : 'Elegir varios días',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      minimumSize: const Size(48, 48),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _alternarModoRango,
-                icon: Icon(_rangeMode ? Icons.close : Icons.date_range),
-                label: Text(
-                  _rangeMode ? 'Cancelar selección' : 'Seleccionar varios días',
-                ),
-              ),
-            ),
             TableCalendar(
               locale: 'es_ES',
               firstDay: DateTime.utc(2020, 1, 1),
@@ -415,11 +523,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               enabledDayPredicate: (day) => !_esDiaFuturo(day),
               selectedDayPredicate: (day) =>
                   !_rangeMode && isSameDay(_selectedDay, day),
-              rangeStartDay: _rangeStart,
-              rangeEndDay: _rangeEnd,
-              rangeSelectionMode: _rangeMode
-                  ? RangeSelectionMode.toggledOn
-                  : RangeSelectionMode.toggledOff,
+              // U-1: todos los toques llegan por onDaySelected.
+              rangeSelectionMode: RangeSelectionMode.disabled,
               calendarFormat: CalendarFormat.month,
               startingDayOfWeek: StartingDayOfWeek.monday,
               headerStyle: const HeaderStyle(
@@ -447,36 +552,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
-                selectedDecoration: BoxDecoration(
-                  color: Colors.pinkAccent,
+                selectedDecoration: const BoxDecoration(
+                  color: AppColors.accent,
                   shape: BoxShape.circle,
                 ),
-                rangeStartDecoration: const BoxDecoration(
-                  color: Colors.pinkAccent,
-                  shape: BoxShape.circle,
-                ),
-                rangeEndDecoration: const BoxDecoration(
-                  color: Colors.pinkAccent,
-                  shape: BoxShape.circle,
-                ),
-                withinRangeDecoration: BoxDecoration(
-                  color: Colors.pinkAccent.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
+                selectedTextStyle: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               onDaySelected: (selectedDay, focusedDay) {
-                if (_rangeMode) return;
                 setState(() {
-                  _selectedDay = selectedDay;
                   _focusedDay = focusedDay;
-                });
-              },
-              onRangeSelected: (start, end, focusedDay) {
-                if (!_rangeMode) return;
-                setState(() {
-                  _rangeStart = start;
-                  _rangeEnd = end;
-                  _focusedDay = focusedDay;
+                  if (_rangeMode) {
+                    _selection =
+                        _selection.tap(DayKey.fromDate(selectedDay));
+                  } else {
+                    _selectedDay = selectedDay;
+                  }
                 });
               },
               // Sin esto, _focusedDay (el de este State) nunca se entera
@@ -493,7 +586,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 outsideBuilder: (context, day, focusedDay) =>
                     const SizedBox.shrink(),
                 rangeHighlightBuilder: (context, day, isWithinRange) =>
-                    _estimatedMark(day, isWithinRange, estimated),
+                    _dayMark(day, estimated),
                 defaultBuilder: (context, day, focusedDay) =>
                     _registeredCell(day),
                 todayBuilder: (context, day, focusedDay) =>
@@ -564,8 +657,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           icon: const Icon(Icons.favorite),
           label: const Text("Registrar día de menstruación"),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFA8D8EA),
-            foregroundColor: Colors.black,
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.textPrimary,
           ),
         ),
       if (ofrecerTermino) ...[
@@ -583,32 +676,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ];
   }
 
+  static String _diaCorto(String clave) =>
+      DateFormat('d MMM', 'es').format(DateTime.parse(clave));
+
+  /// Panel de "Elegir varios dias" con los textos de la Etapa A (U-1, A).
+  /// El resumen es una liveRegion: el lector de pantalla anuncia cada
+  /// cambio del rango.
   List<Widget> _buildPanelRango() {
-    final start = _rangeStart;
-    if (start == null) {
-      return const [
-        Text(
-          'Toca el primer y el último día del rango.',
-          style: TextStyle(fontSize: 14),
+    final seleccion = _selection;
+    const estilo = TextStyle(fontSize: 16, color: AppColors.textPrimary);
+    const ayuda = TextStyle(fontSize: 14, color: AppColors.textSecondary);
+    if (seleccion.isEmpty) {
+      return [
+        Semantics(
+          liveRegion: true,
+          child: const Text('Toca el primer día.', style: estilo),
         ),
       ];
     }
-    final end = _rangeEnd ?? start;
-    final cantidad = _clavesEnRango(start, end).length;
-    final formato = DateFormat('d MMMM yyyy', 'es');
+    final n = seleccion.dayCount;
+    final dias = n == 1 ? '1 día' : '$n días';
+    final inicio = _diaCorto(seleccion.start!);
+    final resumen = seleccion.isComplete
+        ? '$inicio → ${_diaCorto(seleccion.end!)} · $dias'
+        : '$inicio · $dias';
     return [
-      Text(
-        '${formato.format(start)} - ${formato.format(end)} ($cantidad días)',
-        style: const TextStyle(fontSize: 16),
+      Semantics(
+        liveRegion: true,
+        child: Text(resumen, style: estilo),
       ),
+      const SizedBox(height: 6),
+      Text(
+        seleccion.isComplete
+            ? 'Toca otro día para cambiar el final.'
+            : 'Ahora toca el último día.',
+        style: ayuda,
+      ),
+      if (seleccion.isLong) ...[
+        const SizedBox(height: 6),
+        const Text(
+          'Son más de $longRangeConfirmationThreshold días: revisa que sea '
+          'correcto.',
+          style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+        ),
+      ],
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: _confirmarRango,
         icon: const Icon(Icons.favorite),
         label: const Text("Marcar período"),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFA8D8EA),
-          foregroundColor: Colors.black,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.textPrimary,
+          minimumSize: const Size(48, 48),
         ),
       ),
     ];

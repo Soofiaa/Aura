@@ -25,13 +25,13 @@ class CycleSummary {
   /// true si hay un dia confirmado explicitamente como "sin sangrado"
   /// (is_period_day=false con period_day_explicit=true) dentro de los
   /// dias de tolerancia despues del ultimo dia de sangrado de este
-  /// periodo. Ese "no" explicito lo escriben el "No" de la pregunta de
-  /// Inicio y "Quitar marca" del calendario
-  /// (CycleRepository.setPeriodDayExplicitly), y el formulario general
-  /// unicamente cuando se apaga el interruptor sobre un dia que ya era
-  /// de sangrado (CycleRepository.upsertDay); "Deshacer" puede
-  /// restaurarlo (restoreDaySnapshot). Marcar dias o rangos en el
-  /// calendario (markPeriodDay/markPeriodDays) no lo escribe. Permite
+  /// periodo. Ese "no" explicito lo escribe "Quitar marca" del
+  /// calendario (CycleRepository.setPeriodDayExplicitly; antes tambien el
+  /// "No" de Inicio), y el formulario general unicamente cuando se apaga
+  /// el interruptor sobre un dia que ya era de sangrado
+  /// (CycleRepository.upsertDay); "Deshacer" puede restaurarlo
+  /// (restoreDaysSnapshot). Marcar dias o rangos en el calendario
+  /// (markPeriodRangeWithSnapshot) no lo escribe. Permite
   /// que predictCycle deje de alargar la fase menstrual por el promedio
   /// historico cuando la usuaria ya confirmo que termino.
   final bool periodConfirmedEnded;

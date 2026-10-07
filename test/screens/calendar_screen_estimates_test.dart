@@ -10,7 +10,6 @@ import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/calendar_screen.dart';
 import 'package:aura/utils/colors.dart';
 import 'package:aura/utils/day_key.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 /// Calendario, CP4a: dias estimados (E-1), leyenda, "Me llego hoy",
 /// "Confirmar dias" y Deshacer al tocar un dia. Datos inventados en
@@ -296,44 +295,6 @@ void main() {
       await tester.tap(find.text('Deshacer'));
       await tester.pumpAndSettle();
       expect(await dump(), antes);
-    });
-  });
-
-  group('modo varios dias: el rango se pinta', () {
-    // Resaltado por defecto de table_calendar: un Container con
-    // calendarStyle.rangeHighlightColor en cada dia dentro del rango.
-    Finder highlights(WidgetTester tester) {
-      final color = tester
-          .widget<TableCalendar>(find.byType(TableCalendar))
-          .calendarStyle
-          .rangeHighlightColor;
-      return find.byWidgetPredicate((w) => w is Container && w.color == color);
-    }
-
-    Future<void> elegirRango(WidgetTester tester, int desde, int hasta) async {
-      await tapText(tester, 'Seleccionar varios días');
-      await tapDay(tester, desde);
-      await tapDay(tester, hasta);
-    }
-
-    testCalendar('con un periodo abierto con estimados: el rango que cubre '
-        'un estimado se resalta y el estimado de fuera sigue punteado',
-        (tester) async {
-      await seedRange('2026-07-12', 3);
-      await pumpCalendar(tester, '2026-07-15');
-      expect(estimado(), findsNWidgets(2)); // 15 y 16
-
-      await elegirRango(tester, 13, 15);
-      expect(highlights(tester), findsNWidgets(3));
-      // El 15 queda dentro del rango (resaltado); el 16 sigue estimado.
-      expect(estimado(), findsOneWidget);
-    });
-
-    testCalendar('sin estimados: el rango se resalta igual', (tester) async {
-      await pumpCalendar(tester, '2026-07-15');
-      await elegirRango(tester, 3, 6);
-      expect(highlights(tester), findsNWidgets(4));
-      expect(estimado(), findsNothing);
     });
   });
 

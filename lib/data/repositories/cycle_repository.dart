@@ -115,7 +115,9 @@ class CycleRepository {
     });
   }
 
-  /// Marca [date] como dia de sangrado (calendar_screen). No toca flow,
+  /// Marca [date] como dia de sangrado. La app ya no lo usa (marca con
+  /// [markPeriodDayWithSnapshot]); lo usan los tests para sembrar datos.
+  /// No toca flow,
   /// mood, notes, sintomas ni period_end de un dia existente (marcar el
   /// dia siguiente a un fin reabre el periodo sin borrar la marca, R-4). Devuelve false si el
   /// dia ya estaba marcado (para mostrar "ya estaba registrado" como
@@ -131,8 +133,8 @@ class CycleRepository {
   }
 
   /// Confirma explicitamente si [date] fue o no un dia de sangrado,
-  /// desde una accion directa y dedicada (la pregunta "Sigue tu periodo
-  /// hoy?" en Inicio, o "Quitar marca" en el calendario) -- NUNCA desde
+  /// desde una accion directa y dedicada ("Quitar marca" en el
+  /// calendario; antes tambien el "Si"/"No" de Inicio) -- NUNCA desde
   /// el formulario general (ese usa [upsertDay]). Siempre marca
   /// period_day_explicit=true, sea que [isPeriodDay] confirme true o
   /// false. No toca mood, notes ni sintomas. Con [isPeriodDay] false
@@ -157,8 +159,9 @@ class CycleRepository {
         );
   }
 
-  /// Igual que [markPeriodDay], para varios dias a la vez (confirmar una
-  /// seleccion de rango en el calendario). No toca periodDayExplicit,
+  /// Igual que [markPeriodDay], para varios dias a la vez. La app ya no
+  /// lo usa (el rango del calendario usa [markPeriodRangeWithSnapshot]);
+  /// lo usan los tests para sembrar datos. No toca periodDayExplicit,
   /// igual que markPeriodDay: si alguno de estos dias ya era explicito
   /// en false, el flag se mantiene pero deja de tener efecto porque
   /// deriveCycles solo lo consulta cuando isPeriodDay es false.
@@ -178,8 +181,8 @@ class CycleRepository {
   }
 
   /// Deshace una escritura anterior restaurando exactamente la fila que
-  /// habia antes (o borrandola si no existia ninguna). Pensado para el
-  /// "Deshacer" que acompaña a [setPeriodDayExplicitly].
+  /// habia antes (o borrandola si no existia ninguna). La app ya no lo
+  /// usa: los "Deshacer" restauran con [restoreDaysSnapshot].
   Future<void> restoreDaySnapshot(String date, DailyLogRow? snapshot) =>
       _writeSnapshotRow(date, snapshot);
 
