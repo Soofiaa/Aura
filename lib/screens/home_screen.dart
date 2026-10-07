@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import '../data/database/app_database.dart' show DailyLogRow;
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
+import '../utils/colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
+import '../utils/period_end_messages.dart';
+import '../widgets/period_start_sheet.dart';
 import 'add_cycle_screen.dart';
 import '../utils/app_snackbar.dart';
 
@@ -96,31 +100,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _formatDate(String dayKey) =>
       DateUtilsAura.formatFechaCorta(DayKey.toUtcAnchor(dayKey));
 
-  /// "Si"/"No" de la pregunta rapida. Usa setPeriodDayExplicitly (no
-  /// upsertDay): esta SI es una declaracion directa y dedicada, a
-  /// diferencia del interruptor del formulario general.
-  Future<void> _responderPeriodoHoy(bool isPeriodDay) async {
-    final date = _today;
-    final previous = await _repository.getDay(date);
-    await _repository.setPeriodDayExplicitly(date, isPeriodDay: isPeriodDay);
-
-    if (!mounted) return;
+  void _showUndo(String message, DaysSnapshot snapshot) {
     showAppSnackBar(
       context,
       SnackBar(
-        content: Text(
-          isPeriodDay
-              ? 'Día marcado como sangrado.'
-              : 'Registrado: hoy no hubo sangrado.',
-        ),
+        content: Text(message),
         persist: false,
         duration: undoSnackBarDuration,
         action: SnackBarAction(
           label: 'Deshacer',
-          onPressed: () => _repository.restoreDaySnapshot(date, previous),
+          onPressed: () => _repository.restoreDaysSnapshot(snapshot),
         ),
       ),
     );
+  }
+
+  /// "Sigue": marca hoy como dia de sangrado. La tarjeta vuelve a
+  /// preguntar manana.
+  Future<void> _sigue() async {
+    final result = await _repository.markPeriodDayWithSnapshot(_today,
+        closeAtEnd: false, today: _today);
+    if (!mounted || !result.changedAnything) return;
+    _showUndo('Día marcado como sangrado.', result.snapshot);
+  }
+
+  /// "Termino hoy" y "Ya termino antes" (HU-03): cierra el periodo en
+  /// [endDate] con closePeriod, que completa los dias sin registro
+  /// (decision 3) y bloquea si hay dias marcados despues (decision 5).
+  Future<void> _terminar(CurrentPeriod current, String endDate) async {
+    // Decision 14: un periodo de 1 dia se confirma. Solo se pregunta si
+    // ese dia es el unico marcado; si hay mas, closePeriod lo bloquea.
+    if (needsSingleDayConfirmation(
+            periodStart: current.startDate, endDate: endDate) &&
+        current.lastMarkedDate == endDate) {
+      final confirmado = await _confirmarPeriodoDeUnDia();
+      if (!confirmado || !mounted) return;
+    }
+
+    final DaysSnapshot snapshot;
+    try {
+      snapshot = await _repository.closePeriod(current.startDate, endDate,
+          today: _today);
+    } on PeriodEndException catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        SnackBar(
+            content:
+                Text(periodEndProblemMessage(e.check, current.startDate))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    _showUndo(periodEndedMessage(endDate, _today), snapshot);
+  }
+
+  Future<bool> _confirmarPeriodoDeUnDia() async {
+    final resultado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Tu período duró solo 1 día?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, duró 1 día'),
+          ),
+        ],
+      ),
+    );
+    return resultado ?? false;
+  }
+
+  /// "Ya termino antes": selector entre el inicio del periodo y hoy,
+  /// abierto en el ultimo dia marcado (decision 2).
+  Future<void> _yaTermino(CurrentPeriod current) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.parse(current.lastMarkedDate),
+      firstDate: DateTime.parse(current.startDate),
+      lastDate: DateTime.parse(_today),
+      currentDate: DateTime.parse(_today),
+    );
+    if (picked == null || !mounted) return;
+    await _terminar(current, DayKey.fromDate(picked));
   }
 
   @override
@@ -146,6 +212,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             today: _today,
             config: inputs?.config ?? const PredictionConfig(),
           );
+          final current = findCurrentPeriod(
+              cycles: inputs?.cycles ?? const [], today: _today);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -164,6 +232,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     final card = _buildPeriodCheckCard(
                       prediction,
                       todaySnapshot.data,
+                      current,
+                      inputs?.typicalPeriodLengthDays ??
+                          const PredictionConfig().typicalPeriodLengthDays,
                     );
                     if (card == null) return const SizedBox.shrink();
                     return Column(children: [
@@ -175,6 +246,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 12),
                 _buildDisclaimer(),
                 const SizedBox(height: 30),
+
+                // Decision 1: "Me llego hoy" en Inicio solo cuando no hay
+                // un periodo abierto en curso.
+                if (current == null || current.isClosed) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => showPeriodStartSheet(context,
+                        repository: _repository, today: _today),
+                    icon: const Icon(Icons.water_drop_outlined),
+                    label: const Text('Me llegó hoy'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.textPrimary,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
                 ElevatedButton.icon(
                   onPressed: () {
@@ -245,17 +335,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     };
   }
 
-  /// Null si no corresponde mostrarla: solo aplica en fase menstrual y
-  /// cuando hoy todavia no tiene una respuesta (ni is_period_day=true, ni
-  /// una negacion explicita ya registrada) -- si no, se preguntaria lo
-  /// mismo una y otra vez el mismo dia.
-  Widget? _buildPeriodCheckCard(CyclePrediction? prediction, DailyLogRow? today) {
+  /// Null si no corresponde mostrarla. Se muestra solo con un periodo
+  /// actual abierto (findCurrentPeriod), cuando hoy todavia no tiene una
+  /// respuesta (ni is_period_day=true, ni una negacion explicita ya
+  /// registrada; si no, se preguntaria lo mismo una y otra vez el mismo
+  /// dia) y ademas en fase menstrual O con el ultimo dia marcado del
+  /// periodo en ayer. La fase menstrual dura el promedio de P-1, no lo
+  /// que dura este periodo; la regla de ayer mantiene la pregunta en un
+  /// periodo mas largo que el promedio mientras se siga marcando. Un
+  /// periodo cerrado no muestra la tarjeta.
+  Widget? _buildPeriodCheckCard(
+    CyclePrediction? prediction,
+    DailyLogRow? today,
+    CurrentPeriod? current,
+    int typicalPeriodLength,
+  ) {
     if (prediction is! ActivePrediction) return null;
-    if (prediction.currentPhase != CyclePhase.menstrual) return null;
+    if (current == null || current.isClosed) return null;
+    final ultimoMarcadoAyer =
+        current.lastMarkedDate == DayKey.addDays(_today, -1);
+    if (prediction.currentPhase != CyclePhase.menstrual &&
+        !ultimoMarcadoAyer) {
+      return null;
+    }
 
     final yaRespondida = today != null &&
         (today.isPeriodDay || (!today.isPeriodDay && today.periodDayExplicit));
     if (yaRespondida) return null;
+
+    final dias =
+        typicalPeriodLength == 1 ? '1 día' : '$typicalPeriodLength días';
+    const minimo = Size(48, 48);
 
     return _buildCardShell(children: [
       const Text(
@@ -263,23 +373,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         textAlign: TextAlign.center,
       ),
+      const SizedBox(height: 4),
+      Text(
+        'Día ${current.dayNumber} de tu período · duración habitual: $dias',
+        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        textAlign: TextAlign.center,
+      ),
       const SizedBox(height: 12),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           ElevatedButton(
-            onPressed: () => _responderPeriodoHoy(true),
+            onPressed: _sigue,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFA8D8EA),
-              foregroundColor: Colors.black,
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.textPrimary,
+              minimumSize: minimo,
             ),
-            child: const Text("Sí"),
+            child: const Text("Sigue"),
           ),
           OutlinedButton(
-            onPressed: () => _responderPeriodoHoy(false),
-            child: const Text("No"),
+            onPressed: () => _terminar(current, _today),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              minimumSize: minimo,
+            ),
+            child: const Text("Terminó hoy"),
           ),
         ],
+      ),
+      const SizedBox(height: 4),
+      TextButton(
+        onPressed: () => _yaTermino(current),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          minimumSize: minimo,
+        ),
+        child: const Text(
+          "Ya terminó antes",
+          style: TextStyle(decoration: TextDecoration.underline),
+        ),
       ),
     ]);
   }
