@@ -153,6 +153,45 @@ PeriodEndCheck checkPeriodEnd({
   return const PeriodEndCheck();
 }
 
+/// "Termino este dia" en el Calendario (decision 11B): el periodo abierto
+/// que podria terminar en [day], o null si no hay ninguno. No depende de
+/// [findCurrentPeriod]: sirve tambien para un periodo que dejo de ser el
+/// actual por llevar mas de [maxGap] dias sin marcar, y para uno pasado
+/// que quedo abierto.
+///
+/// Se ofrece si [day] no es futuro, no es anterior al inicio del periodo
+/// y queda a [maxGap] dias o menos de su ultimo dia marcado. Un dia
+/// marcado solo si es el ultimo marcado (en uno interior el cierre se
+/// bloquearia siempre por la decision 5). Si despues hay otro periodo,
+/// [day] tiene que quedar a mas de [maxGap] dias de su inicio: completar
+/// hasta [day] los uniria en uno solo y el fin quedaria en un dia
+/// interior (R-4), sin cerrar nada. Los bloqueos de checkPeriodEnd
+/// (dias marcados despues, "No" explicito) no se revisan aqui: el boton
+/// se ofrece y closePeriod los explica con su mensaje.
+CycleSummary? periodThatCanEndOn({
+  required List<CycleSummary> cycles,
+  required List<String> periodDays,
+  required String day,
+  required String today,
+  int maxGap = maxGapWithinPeriod,
+}) {
+  if (DayKey.isBefore(today, day)) return null;
+  for (final c in cycles) {
+    final lastMarked = DayKey.addDays(c.startDate, c.periodLengthDays - 1);
+    if (DayKey.isBefore(day, c.startDate)) continue;
+    if (DayKey.diffInDays(lastMarked, day) > maxGap) continue;
+    if (c.isClosed) return null;
+    if (periodDays.contains(day) && day != lastMarked) return null;
+    final cycleLength = c.cycleLengthDays;
+    if (cycleLength != null) {
+      final nextStart = DayKey.addDays(c.startDate, cycleLength);
+      if (DayKey.diffInDays(day, nextStart) <= maxGap) return null;
+    }
+    return c;
+  }
+  return null;
+}
+
 /// Dias que se marcan como sangrado al terminar un periodo en [endDate]
 /// (HU-03, crit. 2, con la decision 3): los dias de [periodStart] a
 /// [endDate] que no estan marcados y no tienen un "No" explicito. Un "No"

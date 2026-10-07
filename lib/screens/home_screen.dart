@@ -11,6 +11,7 @@ import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
 import '../utils/period_end_messages.dart';
 import '../widgets/period_start_sheet.dart';
+import '../widgets/single_day_period_dialog.dart';
 import 'add_cycle_screen.dart';
 import '../utils/app_snackbar.dart';
 
@@ -133,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (needsSingleDayConfirmation(
             periodStart: current.startDate, endDate: endDate) &&
         current.lastMarkedDate == endDate) {
-      final confirmado = await _confirmarPeriodoDeUnDia();
+      final confirmado = await confirmSingleDayPeriod(context);
       if (!confirmado || !mounted) return;
     }
 
@@ -153,26 +154,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (!mounted) return;
     _showUndo(periodEndedMessage(endDate, _today), snapshot);
-  }
-
-  Future<bool> _confirmarPeriodoDeUnDia() async {
-    final resultado = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Tu período duró solo 1 día?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sí, duró 1 día'),
-          ),
-        ],
-      ),
-    );
-    return resultado ?? false;
   }
 
   /// "Ya termino antes": selector entre el inicio del periodo y hoy,

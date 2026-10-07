@@ -433,4 +433,68 @@ void main() {
           isNull);
     });
   });
+
+  group('periodThatCanEndOn (decision 11B: "Termino este dia")', () {
+    String? start(List<String> marked, String day,
+            {String today = _today, List<String> explicitNo = const []}) =>
+        periodThatCanEndOn(
+          cycles: _cycles(marked, explicitNo: explicitNo),
+          periodDays: marked,
+          day: day,
+          today: today,
+        )?.startDate;
+
+    test('caso 6: marcados 1 y 2, hoy el 10 (ya no es el actual): el 5 si',
+        () {
+      final marked = _julRange(1, 2);
+      expect(findCurrentPeriod(cycles: _cycles(marked), today: _jul(10)),
+          isNull);
+      expect(start(marked, _jul(5), today: _jul(10)), _jul(1));
+    });
+
+    test('hasta 7 dias despues del ultimo marcado; el 8.o no', () {
+      final marked = _julRange(1, 2);
+      expect(start(marked, _jul(9)), _jul(1));
+      expect(start(marked, _jul(10)), isNull);
+    });
+
+    test('no antes del inicio ni en un dia futuro', () {
+      expect(start(_julRange(5, 6), _jul(4)), isNull);
+      expect(start(_julRange(12, 14), _jul(16)), isNull);
+      expect(start(_julRange(12, 14), _today), _jul(12));
+    });
+
+    test('periodo cerrado: no', () {
+      expect(start(_julRange(1, 3), _jul(5), explicitNo: [_jul(4)]), isNull);
+      final cerrado = periodThatCanEndOn(
+        cycles: _cycles(_julRange(1, 3),
+            ends: {_jul(3): PeriodEndSource.declared}),
+        periodDays: _julRange(1, 3),
+        day: _jul(5),
+        today: _today,
+      );
+      expect(cerrado, isNull);
+    });
+
+    test('un dia marcado solo si es el ultimo marcado', () {
+      final marked = _julRange(1, 4);
+      expect(start(marked, _jul(4)), _jul(1));
+      expect(start(marked, _jul(2)), isNull);
+    });
+
+    test('un hueco sin marcar antes del ultimo marcado si se ofrece (el '
+        'cierre lo bloquea la decision 5)', () {
+      expect(start([_jul(1), _jul(2), _jul(4)], _jul(3)), _jul(1));
+    });
+
+    test('periodo pasado abierto: si, salvo que lo uniera con el siguiente',
+        () {
+      // Periodos 1-2 y 10-11 de julio (abiertos).
+      final marked = [..._julRange(1, 2), ..._julRange(10, 11)];
+      expect(start(marked, _jul(2)), _jul(1));
+      // El 2 queda a 8 dias del 10; el 3, a 7: se unirian.
+      expect(start(marked, _jul(3)), isNull);
+      expect(start(marked, _jul(13)), _jul(10));
+    });
+  });
 }

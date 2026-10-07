@@ -13,6 +13,7 @@ import '../utils/app_snackbar.dart';
 import '../utils/period_end_messages.dart';
 import '../widgets/period_day_marks.dart';
 import '../widgets/period_start_sheet.dart';
+import '../widgets/single_day_period_dialog.dart';
 
 /// Rangos mas largos que esto piden confirmacion extra antes de marcar
 /// todos los dias como menstruacion (evita que un arrastre accidental
@@ -231,6 +232,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   static String _dias(int n) => n == 1 ? '1 día' : '$n días';
+
+  /// "Termino este dia" (decision 11B): cierra [periodo] en [dia] con
+  /// closePeriod, que completa los dias sin registro hasta [dia] y
+  /// respeta los "No" explicitos (decision 3B) y bloquea si hay dias
+  /// marcados despues (decision 5A). Un periodo de 1 dia se confirma
+  /// antes (decision 14, misma condicion que en Inicio).
+  Future<void> _terminarEsteDia(CycleSummary periodo, String dia) async {
+    final ultimoMarcado =
+        DayKey.addDays(periodo.startDate, periodo.periodLengthDays - 1);
+    if (needsSingleDayConfirmation(
+            periodStart: periodo.startDate, endDate: dia) &&
+        ultimoMarcado == dia) {
+      final confirmado = await confirmSingleDayPeriod(context);
+      if (!confirmado || !mounted) return;
+    }
+
+    final DaysSnapshot snapshot;
+    try {
+      snapshot =
+          await _repository.closePeriod(periodo.startDate, dia, today: _today);
+    } on PeriodEndException catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        SnackBar(
+            content:
+                Text(periodEndProblemMessage(e.check, periodo.startDate))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    _showUndo(periodEndedMessage(dia, _today), snapshot);
+  }
 
   List<String> _clavesEnRango(DateTime start, DateTime end) {
     final startKey = DayKey.fromDate(start);
@@ -489,6 +523,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // ultimo estimado es hoy o ya paso; si no, es un dia sin marcar.
     final confirmable = estimated.contains(clave) &&
         canConfirmEstimates(estimatedDays: _estimatedDays, today: _today);
+    // Decision 11B: "Termino este dia" si hay un periodo abierto que
+    // pueda terminar en este dia. En el ultimo estimado confirmable no se
+    // ofrece: "Confirmar dias" hace lo mismo.
+    final periodo = periodThatCanEndOn(
+      cycles: _cycles,
+      periodDays: _periodDayKeys,
+      day: clave,
+      today: _today,
+    );
+    final esUltimoEstimado =
+        confirmable && clave == _estimatedDays.last;
+    final ofrecerTermino = periodo != null && !esUltimoEstimado;
     return [
       Text(
         "Día seleccionado: ${DateFormat('d MMMM yyyy', 'es').format(seleccionado)}",
@@ -522,6 +568,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
             foregroundColor: Colors.black,
           ),
         ),
+      if (ofrecerTermino) ...[
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _terminarEsteDia(periodo, clave),
+          icon: const Icon(Icons.flag_outlined),
+          label: const Text('Terminó este día'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textPrimary,
+            minimumSize: const Size(48, 48),
+          ),
+        ),
+      ],
     ];
   }
 
