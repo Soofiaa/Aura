@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/backup_codec.dart';
+import '../../domain/current_period.dart';
 import '../../domain/cycle_deriver.dart';
 import '../../domain/cycle_predictor.dart';
 import '../../domain/notification_planner.dart';
+import '../../utils/day_key.dart';
 import '../database/app_database.dart';
 import '../models/day_enums.dart';
 
@@ -178,7 +180,10 @@ class CycleRepository {
   /// Deshace una escritura anterior restaurando exactamente la fila que
   /// habia antes (o borrandola si no existia ninguna). Pensado para el
   /// "Deshacer" que acompaña a [setPeriodDayExplicitly].
-  Future<void> restoreDaySnapshot(String date, DailyLogRow? snapshot) async {
+  Future<void> restoreDaySnapshot(String date, DailyLogRow? snapshot) =>
+      _writeSnapshotRow(date, snapshot);
+
+  Future<void> _writeSnapshotRow(String date, DailyLogRow? snapshot) async {
     if (snapshot == null) {
       await (_db.delete(_db.dailyLogs)..where((t) => t.date.equals(date)))
           .go();
@@ -195,6 +200,163 @@ class CycleRepository {
             periodEnd: Value(snapshot.periodEnd),
           ),
         );
+  }
+
+  // --- Acciones del periodo con foto para "Deshacer" (HU-03, HU-04) ---
+
+  /// Foto de las filas completas de daily_logs de [dates] (null para las
+  /// que no existen), incluido period_end. Los sintomas no entran: estas
+  /// acciones nunca los tocan.
+  Future<DaysSnapshot> takeDaysSnapshot(Iterable<String> dates) async {
+    final wanted = dates.toSet();
+    if (wanted.isEmpty) return DaysSnapshot(const {});
+    final rows = await (_db.select(_db.dailyLogs)
+          ..where((t) => t.date.isIn(wanted)))
+        .get();
+    final byDate = {for (final r in rows) r.date: r};
+    return DaysSnapshot({for (final d in wanted) d: byDate[d]});
+  }
+
+  /// Deshace una accion de varios dias: deja cada dia de [snapshot]
+  /// exactamente como estaba (o lo borra si no existia) en una sola
+  /// transaccion. Si una escritura falla, no cambia ningun dia.
+  Future<void> restoreDaysSnapshot(DaysSnapshot snapshot) async {
+    if (snapshot.rows.isEmpty) return;
+    await _db.transaction(() async {
+      for (final date in snapshot.dates) {
+        await _writeSnapshotRow(date, snapshot.rows[date]);
+      }
+    });
+  }
+
+  /// Marca como sangrado sin tocar flow, mood, notes, sintomas,
+  /// period_day_explicit ni period_end (como [markPeriodDay]).
+  Future<void> _markRows(Iterable<String> dates) async {
+    for (final date in dates) {
+      await _db.into(_db.dailyLogs).insertOnConflictUpdate(
+            DailyLogsCompanion(
+                date: Value(date), isPeriodDay: const Value(true)),
+          );
+    }
+  }
+
+  Future<void> _writeDeclaredEnd(String date) async {
+    await _db.into(_db.dailyLogs).insertOnConflictUpdate(
+          DailyLogsCompanion(
+            date: Value(date),
+            isPeriodDay: const Value(true),
+            periodEnd: const Value(PeriodEndSource.declared),
+          ),
+        );
+  }
+
+  /// "Termino hoy" / "Termino otro dia" (HU-03): en una transaccion,
+  /// valida con checkPeriodEnd, marca los dias de daysToMarkWhenClosing
+  /// (los "No" explicitos se respetan, decision 3) sin pisar mood, notes
+  /// ni sintomas, y guarda period_end = declared en [endDate]. Devuelve la
+  /// foto de los dias tocados para "Deshacer".
+  ///
+  /// Lanza [PeriodEndException] si checkPeriodEnd encuentra un problema
+  /// (incluido un "No" explicito en [endDate]), y [ArgumentError] si
+  /// [periodStart] no es el primer dia de un periodo. En ambos casos no
+  /// cambia nada. [today] es solo para tests.
+  Future<DaysSnapshot> closePeriod(
+    String periodStart,
+    String endDate, {
+    String? today,
+  }) {
+    final now = today ?? DayKey.today();
+    return _db.transaction(() async {
+      final days = _splitRows(await _db.select(_db.dailyLogs).get());
+      final isStart = groupPeriodRuns(days.periodDays)
+          .any((run) => run.first == periodStart);
+      if (!isStart) {
+        throw ArgumentError.value(
+            periodStart, 'periodStart', 'no es el primer dia de un periodo');
+      }
+      final check = checkPeriodEnd(
+        periodStart: periodStart,
+        endDate: endDate,
+        today: now,
+        periodDays: days.periodDays,
+        explicitNonPeriodDays: days.explicitNonPeriodDays,
+      );
+      if (!check.isValid) throw PeriodEndException(check);
+
+      final toMark = daysToMarkWhenClosing(
+        periodStart: periodStart,
+        endDate: endDate,
+        periodDays: days.periodDays,
+        explicitNonPeriodDays: days.explicitNonPeriodDays,
+      );
+      final snapshot = await takeDaysSnapshot([...toMark, endDate]);
+      await _markRows(toMark.where((d) => d != endDate));
+      await _writeDeclaredEnd(endDate);
+      return snapshot;
+    });
+  }
+
+  /// Marca [date] como sangrado con foto para "Deshacer" (HU-04 crit. 7).
+  /// Igual que [markPeriodRangeWithSnapshot] con un rango de un dia.
+  Future<MarkDaysResult> markPeriodDayWithSnapshot(
+    String date, {
+    required bool closeAtEnd,
+    String? today,
+  }) =>
+      markPeriodRangeWithSnapshot(date, date,
+          closeAtEnd: closeAtEnd, today: today);
+
+  /// Marca como sangrado todos los dias de [start] a [end] (U-1), sin
+  /// pisar flow, mood, notes, sintomas ni period_end, en una transaccion.
+  /// Marcar el dia siguiente a un fin lo reabre sin borrar la marca (R-4).
+  ///
+  /// Con [closeAtEnd] (R-1, "Si, termino") guarda period_end = declared en
+  /// [end] solo si, ya marcado el rango, [end] es el ultimo dia de su
+  /// periodo y checkPeriodEnd no encuentra problema: los rangos no se
+  /// bloquean (decision 5), solo no se cierran. Se revalida aqui con la
+  /// base, no con lo que vio la pantalla. La foto cubre todo el rango.
+  Future<MarkDaysResult> markPeriodRangeWithSnapshot(
+    String start,
+    String end, {
+    required bool closeAtEnd,
+    String? today,
+  }) async {
+    if (DayKey.isBefore(end, start)) {
+      throw ArgumentError.value(end, 'end', 'es anterior a $start');
+    }
+    final now = today ?? DayKey.today();
+    final range = [
+      for (var d = start; !DayKey.isBefore(end, d); d = DayKey.addDays(d, 1))
+        d,
+    ];
+    return _db.transaction(() async {
+      final snapshot = await takeDaysSnapshot(range);
+      final toMark = [
+        for (final d in range)
+          if (snapshot.rows[d]?.isPeriodDay != true) d,
+      ];
+      await _markRows(toMark);
+
+      var closed = false;
+      if (closeAtEnd) {
+        final days = _splitRows(await _db.select(_db.dailyLogs).get());
+        final run = groupPeriodRuns(days.periodDays)
+            .firstWhere((r) => r.contains(end));
+        final check = checkPeriodEnd(
+          periodStart: run.first,
+          endDate: end,
+          today: now,
+          periodDays: days.periodDays,
+          explicitNonPeriodDays: days.explicitNonPeriodDays,
+        );
+        if (check.isValid) {
+          await _writeDeclaredEnd(end);
+          closed = true;
+        }
+      }
+      return MarkDaysResult(
+          snapshot: snapshot, newlyMarked: toMark.length, closed: closed);
+    });
   }
 
   Future<List<String>> getPeriodDayDates() async {
@@ -216,17 +378,25 @@ class CycleRepository {
   /// listas salen de la MISMA lectura, para que nunca queden
   /// inconsistentes entre si.
   List<CycleSummary> _deriveFromRows(List<DailyLogRow> rows) {
-    final periodDays = [for (final r in rows) if (r.isPeriodDay) r.date];
-    final explicitNonPeriodDays = [
-      for (final r in rows) if (!r.isPeriodDay && r.periodDayExplicit) r.date,
-    ];
+    final days = _splitRows(rows);
     final periodEnds = {
       for (final r in rows)
         if (r.periodEnd != null) r.date: r.periodEnd!,
     };
-    return deriveCycles(periodDays,
-        explicitNonPeriodDays: explicitNonPeriodDays, periodEnds: periodEnds);
+    return deriveCycles(days.periodDays,
+        explicitNonPeriodDays: days.explicitNonPeriodDays,
+        periodEnds: periodEnds);
   }
+
+  ({List<String> periodDays, List<String> explicitNonPeriodDays}) _splitRows(
+          List<DailyLogRow> rows) =>
+      (
+        periodDays: [for (final r in rows) if (r.isPeriodDay) r.date],
+        explicitNonPeriodDays: [
+          for (final r in rows)
+            if (!r.isPeriodDay && r.periodDayExplicit) r.date,
+        ],
+      );
 
   Future<List<CycleSummary>> getDerivedCycles() async {
     final rows = await _db.select(_db.dailyLogs).get();
@@ -619,6 +789,52 @@ class PredictionInputs {
 
   PredictionConfig get config =>
       PredictionConfig(typicalPeriodLengthDays: typicalPeriodLengthDays);
+}
+
+/// Foto de varios dias de daily_logs para "Deshacer" (ver
+/// [CycleRepository.takeDaysSnapshot]): fila completa por fecha, o null
+/// si ese dia no tenia fila.
+class DaysSnapshot {
+  DaysSnapshot(Map<String, DailyLogRow?> rows) : rows = Map.unmodifiable(rows);
+
+  final Map<String, DailyLogRow?> rows;
+
+  /// Fechas de la foto, en orden.
+  List<String> get dates => rows.keys.toList()..sort(DayKey.compare);
+}
+
+/// Resultado de marcar un dia o un rango con foto.
+class MarkDaysResult {
+  const MarkDaysResult({
+    required this.snapshot,
+    required this.newlyMarked,
+    required this.closed,
+  });
+
+  /// Foto de todos los dias del rango, para "Deshacer".
+  final DaysSnapshot snapshot;
+
+  /// Dias que no estaban marcados y ahora si.
+  final int newlyMarked;
+
+  /// Si se guardo period_end = declared en el ultimo dia del rango.
+  final bool closed;
+
+  /// false si no se escribio nada (un dia que ya estaba marcado, sin
+  /// cierre): la pantalla muestra "Ese dia ya esta registrado".
+  bool get changedAnything => newlyMarked > 0 || closed;
+}
+
+/// [CycleRepository.closePeriod] no puede terminar el periodo en ese dia.
+class PeriodEndException implements Exception {
+  const PeriodEndException(this.check);
+
+  final PeriodEndCheck check;
+
+  PeriodEndProblem get problem => check.problem!;
+
+  @override
+  String toString() => 'PeriodEndException($problem)';
 }
 
 /// Resultado combinado de [CycleRepository.watchStats] (y equivalente a
