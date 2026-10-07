@@ -158,9 +158,13 @@ usuaria va al Calendario a revisar los días importados.
 
 **Datos:** nueva columna `typical_period_length` (int, default 5) en `app_settings`; **schema v4** con migración y test de migración v3→v4.
 
-**Estado (v4):** implementado en la base y en el respaldo: columna `typical_period_length` con valor 5 por defecto y `CHECK` de 1 a
-15, migración v3→v4 con tests, y "Borrar todos los datos" la vuelve a 5. Todavía **sin interfaz**: el valor solo cambia al importar
-un respaldo v4 que traiga otro. Tarea pendiente: actualizar `privacy.html` (es/en) cuando exista la interfaz del ajuste.
+**Estado:** implementado. En la base y en el respaldo (v4): columna `typical_period_length` con valor 5 por defecto y `CHECK` de 1
+a 15, migración v3→v4 con tests, y "Borrar todos los datos" la vuelve a 5. En la interfaz: sección **"Tu ciclo"** en Ajustes, arriba
+de Notificaciones, con "Duración habitual del período" y botones − / + de 48 dp (deshabilitados en 1 y 15) que guardan al instante.
+La app usa **una sola duración estimada** (`estimatePeriodLength`, P-1): el promedio ponderado de los períodos terminados y, si no
+hay ninguno, este ajuste. Esa misma duración usan la fase menstrual, la hoja "Me llegó hoy", la tarjeta de Inicio y los días
+estimados del Calendario, así que el ajuste solo cambia las estimaciones mientras no hay períodos terminados (lo dice el texto de
+ayuda de Ajustes). `privacy.html` (es/en) ya menciona la duración habitual entre los datos que maneja la app.
 
 ---
 
@@ -175,7 +179,7 @@ un respaldo v4 que traiga otro. Tarea pendiente: actualizar `privacy.html` (es/e
 4. No puedo elegir una fecha futura.
 5. Si la fecha elegida ya está marcada, la app lo informa y no duplica el registro.
 6. Aparece "Deshacer" tras confirmar.
-7. Cambiar la duración en la hoja afecta solo la vista previa de ese registro, no el ajuste global.
+7. La hoja muestra la duración estimada solo como texto, sin botones − / + (decisión 13 de la Etapa A): "Duración estimada: N días", con "(puedes cambiarla en Ajustes)" si sale del ajuste o "(según tus últimos períodos)" si sale del promedio de tus períodos terminados. La hoja no cambia el ajuste.
 
 ---
 
@@ -193,8 +197,11 @@ un respaldo v4 que traiga otro. Tarea pendiente: actualizar `privacy.html` (es/e
 
 **Datos:** hay que representar "período cerrado" de forma que también lo estén los rangos marcados en el calendario (ver D-1).
 
-**Estado (v4):** implementados la representación del período cerrado (D-1) y el criterio 5 en el predictor (P-1), con el test de
-regresión. La interfaz ("Sigue", "Terminó hoy", elegir otro día de término) sigue pendiente.
+**Estado:** implementado. La representación del período cerrado (D-1) y el criterio 5 en el predictor (P-1) llegaron en la v4.
+La interfaz está en Inicio: la tarjeta "¿Sigue tu período hoy?" con "Sigue", "Terminó hoy" y el enlace "Ya terminó antes" (selector
+entre el inicio del período y hoy). Aparece con un período abierto, hoy sin respuesta y la fase menstrual o el último día marcado
+ayer. Al cerrar se completan los días sin registro y se respetan los "No" explícitos; si hay días marcados después del elegido, se
+bloquea con un mensaje. Un período de 1 día pide confirmación. Todas las acciones tienen "Deshacer".
 
 ---
 
@@ -204,21 +211,24 @@ regresión. La interfaz ("Sigue", "Terminó hoy", elegir otro día de término) 
 
 **Criterios de aceptación**
 1. El calendario muestra los dos botones sin necesidad de abrir menús.
-2. La leyenda distingue: período registrado, **estimado sin confirmar**, ventana fértil, ovulación.
+2. La leyenda distingue **período registrado** (relleno) y **estimado sin confirmar** (borde punteado). El calendario no muestra
+   ventana fértil ni ovulación, así que la leyenda no las incluye (decisión 9B de la Etapa A); siguen en la tarjeta de Inicio.
 3. Los días estimados no se pueden confundir con los registrados (borde punteado vs. relleno).
 4. "Confirmar días" equivale a HU-03 usando como día de término el último día estimado: los estimados pasan a registrados y el período queda cerrado, tras una confirmación explícita.
 5. La selección de rango existente conserva su confirmación para rangos largos (`longRangeConfirmationThreshold`).
-6. Los controles táctiles miden al menos 44 dp.
-7. Marcar un día y marcar un rango muestran "Deshacer", que restaura exactamente el estado previo de todos los días afectados (hoy ninguna de las dos acciones lo tiene).
+6. Los controles táctiles miden al menos 48 dp.
+7. Marcar un día, quitar una marca, marcar un rango, "Confirmar días" y "Terminó este día" muestran "Deshacer" (8 segundos), que
+   restaura exactamente el estado previo de todos los días afectados, incluido el fin del período, en una sola transacción.
 
 **Mejora U-1: selección de rango (decidida, opciones A + B).** Hace más visible el resumen que ya existe y evita que un rango ya
 fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 
 - **B (tolerante):** con el rango ya completo, tocar un día **posterior** al final lo alarga; un día **anterior** al inicio mueve
   el inicio; un día **dentro** del rango acorta el final. "Cancelar selección" vuelve a cero. Se permite extender el rango entre
-  meses. Se implementa en el estado propio de la pantalla (`_rangeStart` / `_rangeEnd`, vía `onRangeSelected`), **sin modificar
-  `table_calendar`**. La confirmación de rango largo (más de `longRangeConfirmationThreshold` = 10 días) sigue protegiendo contra
-  extensiones accidentales.
+  meses. Se implementa en el estado propio de la pantalla (`RangeSelection`, en `lib/domain/range_selection.dart`), con el modo de
+  rango de `table_calendar` desactivado y todos los toques por `onDaySelected`, **sin modificar `table_calendar`**. La
+  confirmación de rango largo (más de `longRangeConfirmationThreshold` = 10 días) sigue protegiendo contra extensiones
+  accidentales.
 - **A (guía):** el panel indica el paso en cada estado: sin selección, "Toca el primer día"; con inicio, "Ahora toca el último
   día"; con el rango listo, el resumen en formato corto ("10 jul → 12 jul · 3 días") y la indicación de que tocar otro día cambia
   el final. Si el rango supera los 10 días, el resumen lo advierte de inmediato, no solo al pulsar "Marcar período". Corrige el
@@ -234,8 +244,9 @@ fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 13. Marcar el rango deja exactamente esos días en la base de datos.
 14. "Cancelar selección" vuelve a cero.
 15. Un rango de más de 10 días, alcanzado por extensión, sigue pidiendo confirmación al marcarlo.
-16. Con un rango ya completo, el aviso `onRangeSelected(día, null)` de `table_calendar` se trata como un **tercer toque**: alarga,
-    mueve o acorta el rango, y nunca lo reinicia (requisito explícito de implementación; sin esto, B no funciona).
+16. Con un rango ya completo, un tercer toque alarga, mueve o acorta el rango, y nunca lo reinicia. Como el modo de rango de
+    `table_calendar` está desactivado, cada toque llega como un día por `onDaySelected` y `RangeSelection.tap` decide el rango
+    nuevo; la librería nunca recibe un rango, así que no puede reiniciarlo.
 17. Con 10–12 listo, tocar el 10 (el inicio) deja un rango de 1 día (10–10); tocar el 12 (el final) no cambia nada.
 18. Un rango puede cruzar de mes; si supera los 10 días, el resumen del panel lo advierte en ese momento.
 
@@ -418,7 +429,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **R-1** | Un rango marcado en el calendario cierra el período (`declared` en su último día) solo si termina hace 2 días o más. Si termina hoy o ayer, se pregunta "¿Ya terminó tu período?". | Un rango que termina hoy o ayer puede corresponder a un período que sigue. |
 | **R-2** | Se acepta que los períodos de 1 día de la v1.0 queden abiertos, y el límite de hueco interno de 1 día de D-2. | En los datos de la v1.0 no se puede distinguir un período real de 1 día de uno en que solo se marcó el inicio. |
 | **R-3** | El período actual cerrado entra al promedio de duración aunque su ciclo no esté completo. **Implementada en la v4.** | Su duración ya es un dato real. |
-| **R-4** | Marcar un día a continuación de un fin declarado **reabre** el período, sin borrar la marca anterior (queda en un día interior y deja de contar). | Es la opción conservadora, y si después se quita ese día el fin declarado vuelve a valer. |
+| **R-4** | Marcar un día a continuación de un fin declarado **reabre** el período, sin borrar la marca anterior (queda en un día interior y deja de contar). | Es la opción conservadora, y si después se quita ese día el fin declarado vuelve a valer. **Nota (por diseño):** un `period_end` que quedó en un día interior es un dato obsoleto que se conserva a propósito: `deriveCycles` solo lee el `period_end` del último día de cada período, así que el interior se ignora; no se borra al marcar (Inicio, Calendario, rangos o formulario), el respaldo lo exporta tal cual y "Deshacer" lo restaura. Si el período vuelve a cerrarse en otro día, ese nuevo fin es el que cuenta. |
 | **R-5** | El respaldo (HU-06) se implementa **antes** de la migración v4. | `allowBackup="false"` y la build de release impiden copiar la base del teléfono; sin exportación no hay forma de respaldar los datos reales antes de migrar. |
 | **R-6** | No se agrega `typical_cycle_length`. | Decisión de producto; se quita el criterio correspondiente de HU-01 y la v4 solo agrega `typical_period_length`. |
 | **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |

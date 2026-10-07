@@ -12,7 +12,7 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Derives cycles from those logs (cycles are never created by hand).
 - Predicts next period, ovulation and fertile window, with a **range** and a confidence level (low / medium / high).
 - Shows the current phase: menstrual, follicular, ovulatory and luteal.
-- Calendar with phase markers and cycle-length statistics.
+- Calendar showing logged days, the estimated days of the current period (dotted border) and multi-day selection; cycle-length statistics.
 - Optional local reminders, with discreet text by default.
 - Lets you mark the end of a period and remove marks.
 - Backup and restore to a JSON file from Settings → "Your data", with "Undo" after importing.
