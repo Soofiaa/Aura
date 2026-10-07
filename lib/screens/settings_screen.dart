@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
 import '../data/backup/backup_service.dart';
+import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/notification_planner.dart';
 import '../utils/app_version.dart';
+import '../utils/colors.dart';
 import '../utils/notifications.dart';
 import 'backup_section.dart';
 import '../utils/app_snackbar.dart';
@@ -44,6 +46,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   // respaldo (o deshacerlo) cambia los ajustes por fuera de esta
   // pantalla, que dentro del IndexedStack nunca se reconstruye.
   StreamSubscription<NotificationSettings>? _settingsSub;
+  // Duracion habitual (HU-01): tambien en vivo, por el mismo motivo
+  // (importar un respaldo v4 trae su propio valor). Null hasta la
+  // primera lectura.
+  StreamSubscription<PredictionInputs>? _duracionSub;
+  int? _duracionHabitual;
 
   bool _notificaciones = false;
   bool _recordatorioPeriodo = true;
@@ -58,11 +65,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     WidgetsBinding.instance.addObserver(this);
     _settingsSub =
         _repository.watchNotificationSettings().listen(_aplicarPreferencias);
+    _duracionSub = _repository.watchPredictionInputs().listen((inputs) {
+      if (!mounted) return;
+      setState(() => _duracionHabitual = inputs.typicalPeriodLengthDays);
+    });
   }
 
   @override
   void dispose() {
     _settingsSub?.cancel();
+    _duracionSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -150,6 +162,97 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() => _mostrarDetalles = value);
   }
 
+  /// Suma [delta] a la duracion habitual. Los botones se deshabilitan en
+  /// los limites, asi que nunca se pide un valor fuera de 1 a 15.
+  Future<void> _cambiarDuracion(int delta) async {
+    final actual = _duracionHabitual;
+    if (actual == null) return;
+    final nueva = actual + delta;
+    if (nueva < minTypicalPeriodLength || nueva > maxTypicalPeriodLength) {
+      return;
+    }
+    setState(() => _duracionHabitual = nueva);
+    await _repository.setTypicalPeriodLength(nueva);
+  }
+
+  Widget _seccionTuCiclo() {
+    final duracion = _duracionHabitual;
+    final textoDias = duracion == null
+        ? ''
+        : (duracion == 1 ? '1 día' : '$duracion días');
+    final puedeBajar =
+        duracion != null && duracion > minTypicalPeriodLength;
+    final puedeSubir =
+        duracion != null && duracion < maxTypicalPeriodLength;
+    const tamanoMinimo = BoxConstraints(minWidth: 48, minHeight: 48);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Tu ciclo",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          "Duración habitual del período",
+          style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            IconButton(
+              key: const Key('duracion_menos'),
+              constraints: tamanoMinimo,
+              color: AppColors.accent,
+              disabledColor: AppColors.textSecondary,
+              icon: const Icon(Icons.remove_circle_outline,
+                  semanticLabel: "Disminuir duración"),
+              onPressed: puedeBajar ? () => _cambiarDuracion(-1) : null,
+            ),
+            Expanded(
+              child: Semantics(
+                container: true,
+                label: duracion == null
+                    ? null
+                    : "Duración habitual del período: $textoDias",
+                liveRegion: true,
+                excludeSemantics: true,
+                child: Text(
+                  textoDias,
+                  key: const Key('duracion_valor'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              key: const Key('duracion_mas'),
+              constraints: tamanoMinimo,
+              color: AppColors.accent,
+              disabledColor: AppColors.textSecondary,
+              icon: const Icon(Icons.add_circle_outline,
+                  semanticLabel: "Aumentar duración"),
+              onPressed: puedeSubir ? () => _cambiarDuracion(1) : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          "Aura la usa para estimar cuántos días suele durar tu período "
+          "mientras todavía no tienes períodos terminados registrados; "
+          "después usa el promedio de los tuyos. Cambiarla no modifica "
+          "tus registros.",
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+
   Future<void> _elegirHora() async {
     final elegido = await showTimePicker(
       context: context,
@@ -234,6 +337,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          _seccionTuCiclo(),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
           const Text(
             "Notificaciones",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

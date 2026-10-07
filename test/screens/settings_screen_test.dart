@@ -113,6 +113,8 @@ void main() {
       'el subtitulo de mostrar detalles advierte sobre dispositivos '
       'conectados', (tester) async {
     await pumpScreen(tester);
+    await tester.scrollUntilVisible(
+        find.textContaining('relojes u otros dispositivos'), 200);
     expect(
       find.textContaining('relojes u otros dispositivos'),
       findsOneWidget,
@@ -126,6 +128,7 @@ void main() {
     await pumpScreen(tester);
 
     final testButton = find.text('Enviar notificación de prueba');
+    await tester.scrollUntilVisible(testButton, 200);
     expect(testButton, findsOneWidget); // visible siempre, no solo en debug
 
     await tester.tap(testButton);
@@ -152,6 +155,10 @@ void main() {
       'los interruptores se actualizan solos cuando los ajustes cambian por '
       'fuera de la pantalla (importar un respaldo)', (tester) async {
     await repo.setNotificationsEnabled(true);
+    // Pantalla alta: el test mira todos los interruptores a la vez.
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await pumpScreen(tester);
     SwitchListTile switchDe(String titulo) => tester
         .widget<SwitchListTile>(find.widgetWithText(SwitchListTile, titulo));
@@ -238,5 +245,167 @@ void main() {
     expect(find.text('Datos borrados correctamente 💧'), findsNothing);
 
     await db.close();
+  });
+
+  group('Tu ciclo: duracion habitual del periodo (HU-01)', () {
+    final menos = find.byKey(const Key('duracion_menos'));
+    final mas = find.byKey(const Key('duracion_mas'));
+    final valor = find.byKey(const Key('duracion_valor'));
+
+    String valorEnPantalla(WidgetTester tester) =>
+        tester.widget<Text>(valor).data!;
+    bool habilitado(WidgetTester tester, Finder boton) =>
+        tester.widget<IconButton>(boton).onPressed != null;
+
+    testWidgets('muestra la seccion arriba de Notificaciones con 5 dias por '
+        'defecto y el texto que explica para que sirve', (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.text('Tu ciclo'), findsOneWidget);
+      expect(find.text('Duración habitual del período'), findsOneWidget);
+      expect(valorEnPantalla(tester), '5 días');
+      expect(find.textContaining('estimar cuántos días suele durar'),
+          findsOneWidget);
+      expect(tester.getTopLeft(find.text('Tu ciclo')).dy,
+          lessThan(tester.getTopLeft(find.text('Notificaciones').first).dy));
+      await db.close();
+    });
+
+    testWidgets('muestra el valor guardado', (tester) async {
+      await repo.setTypicalPeriodLength(7);
+      await pumpScreen(tester);
+      expect(valorEnPantalla(tester), '7 días');
+      await db.close();
+    });
+
+    testWidgets('+ y - cambian el valor y lo guardan al instante',
+        (tester) async {
+      await pumpScreen(tester);
+
+      await tester.tap(mas);
+      await tester.pumpAndSettle();
+      await tester.tap(mas);
+      await tester.pumpAndSettle();
+      expect(valorEnPantalla(tester), '7 días');
+      expect(await repo.getTypicalPeriodLength(), 7);
+
+      await tester.tap(menos);
+      await tester.pumpAndSettle();
+      expect(valorEnPantalla(tester), '6 días');
+      expect(await repo.getTypicalPeriodLength(), 6);
+      await db.close();
+    });
+
+    testWidgets('tope en 1: "-" se deshabilita y dice "1 dia"',
+        (tester) async {
+      await repo.setTypicalPeriodLength(2);
+      await pumpScreen(tester);
+      expect(habilitado(tester, menos), isTrue);
+
+      await tester.tap(menos);
+      await tester.pumpAndSettle();
+
+      expect(valorEnPantalla(tester), '1 día');
+      expect(habilitado(tester, menos), isFalse);
+      expect(habilitado(tester, mas), isTrue);
+      await tester.tap(menos, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(await repo.getTypicalPeriodLength(), 1);
+      await db.close();
+    });
+
+    testWidgets('tope en 15: "+" se deshabilita', (tester) async {
+      await repo.setTypicalPeriodLength(14);
+      await pumpScreen(tester);
+
+      await tester.tap(mas);
+      await tester.pumpAndSettle();
+
+      expect(valorEnPantalla(tester), '15 días');
+      expect(habilitado(tester, mas), isFalse);
+      expect(habilitado(tester, menos), isTrue);
+      await tester.tap(mas, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(await repo.getTypicalPeriodLength(), 15);
+      await db.close();
+    });
+
+    testWidgets('el valor sigue al reabrir la pantalla', (tester) async {
+      await pumpScreen(tester);
+      await tester.tap(menos);
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpScreen(tester);
+
+      expect(valorEnPantalla(tester), '4 días');
+      await db.close();
+    });
+
+    testWidgets('cambiarla no modifica ningun registro (criterio 3)',
+        (tester) async {
+      await repo.markPeriodDays(['2026-01-01', '2026-01-02']);
+      final antes = await repo.getDerivedCycles();
+      await pumpScreen(tester);
+
+      await tester.tap(mas);
+      await tester.pumpAndSettle();
+
+      expect(await repo.countDays(), 2);
+      expect(await repo.getDerivedCycles(), antes);
+      await db.close();
+    });
+
+    testWidgets('se actualiza sola si cambia por fuera (importar un respaldo)',
+        (tester) async {
+      await pumpScreen(tester);
+
+      await repo.replaceAllWithBackup(const BackupData(
+        schemaVersion: currentBackupSchemaVersion,
+        appVersion: '1.0.1',
+        exportedAt: '2026-10-04T10:15:00-03:00',
+        days: [],
+        settings: BackupSettings(
+          onboardingSeen: true,
+          notificationsEnabled: false,
+          periodReminderEnabled: true,
+          fertileWindowRemindersEnabled: false,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+          typicalPeriodLength: 9,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(valorEnPantalla(tester), '9 días');
+      await db.close();
+    });
+
+    testWidgets('etiquetas para lector de pantalla y area tactil de 48 dp',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpScreen(tester);
+
+      expect(find.bySemanticsLabel('Disminuir duración'), findsOneWidget);
+      expect(find.bySemanticsLabel('Aumentar duración'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel('Duración habitual del período: 5 días'),
+          findsOneWidget);
+      for (final boton in [menos, mas]) {
+        final size = tester.getSize(boton);
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+      }
+
+      await tester.tap(mas);
+      await tester.pumpAndSettle();
+      expect(
+          find.bySemanticsLabel('Duración habitual del período: 6 días'),
+          findsOneWidget);
+
+      semantics.dispose();
+      await db.close();
+    });
   });
 }
