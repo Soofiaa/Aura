@@ -149,6 +149,9 @@ void main() {
           endsWith('aura_respaldo_2026-10-04.json'));
       expect(find.text('Respaldo listo. Guárdalo en un lugar seguro.'),
           findsOneWidget);
+      expect(backup.preMigrationCopyDeleteCount, 0,
+          reason: 'compartir no borra la copia previa a la migracion: '
+              'share_plus puede informar unavailable sin enviar nada');
       await db.close();
     });
 
@@ -182,6 +185,8 @@ void main() {
       final result = decodeBackup(gateway.savedBytes!);
       expect((result as BackupParseSuccess).data.days, hasLength(2));
       expect(find.text('Respaldo guardado.'), findsOneWidget);
+      expect(backup.preMigrationCopyDeleteCount, 1,
+          reason: 'un guardado exitoso borra la copia previa a la migracion');
       await db.close();
     });
 
@@ -196,6 +201,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsNothing);
+      expect(backup.preMigrationCopyDeleteCount, 0);
       await db.close();
     });
 
@@ -211,6 +217,7 @@ void main() {
 
       expect(find.text('No se pudo guardar el respaldo.'), findsOneWidget);
       expect(find.textContaining('detalle interno'), findsNothing);
+      expect(backup.preMigrationCopyDeleteCount, 0);
       await db.close();
     });
 

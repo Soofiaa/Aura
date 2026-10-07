@@ -85,6 +85,9 @@ class FakeBackupService extends BackupService {
   int undoCount = 0;
   int deleteAllDataCallCount = 0;
   bool failOnDelete = false;
+
+  /// Veces que se pidio borrar la copia previa a la migracion v4.
+  int preMigrationCopyDeleteCount = 0;
   String? _preImportCopy;
 
   @override
@@ -114,6 +117,10 @@ class FakeBackupService extends BackupService {
 
   @override
   Future<bool> hasPreImportCopy() async => _preImportCopy != null;
+
+  @override
+  Future<void> deletePreMigrationCopy() async =>
+      preMigrationCopyDeleteCount++;
 
   @override
   Future<void> undoLastImport() async {

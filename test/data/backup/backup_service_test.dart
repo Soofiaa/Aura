@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:aura/data/backup/backup_service.dart';
+import 'package:aura/data/backup/pre_migration_copy.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
@@ -540,5 +541,58 @@ void main() {
           PeriodEndSource.inferred);
     });
   });
-}
+  group('copia previa a la migracion v4', () {
+    File migrationCopy() => File(p.join(support.path,
+        BackupService.backupsDirName, preMigrationCopyFileName));
 
+    File writeCopy({required DateTime modified}) {
+      final file = migrationCopy()
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('base sqlite');
+      file.setLastModifiedSync(modified);
+      return file;
+    }
+
+    test('deletePreMigrationCopy la borra (y un .tmp huerfano)', () async {
+      writeCopy(modified: now);
+      final tmp = File('${migrationCopy().path}.tmp')
+        ..writeAsStringSync('a medias');
+
+      await service.deletePreMigrationCopy();
+
+      expect(migrationCopy().existsSync(), isFalse);
+      expect(tmp.existsSync(), isFalse);
+      expect(Directory(p.join(support.path, BackupService.backupsDirName))
+          .existsSync(), isTrue,
+          reason: 'no borra la carpeta ni la copia previa a importar');
+    });
+
+    test('deletePreMigrationCopy sin copia no falla', () async {
+      await service.deletePreMigrationCopy();
+    });
+
+    test('al abrir la app se borra si tiene mas de 30 dias', () async {
+      writeCopy(modified: now.subtract(const Duration(days: 31)));
+      await service.deleteExpiredPreMigrationCopy();
+      expect(migrationCopy().existsSync(), isFalse);
+    });
+
+    test('al abrir la app se conserva si tiene 29 dias', () async {
+      writeCopy(modified: now.subtract(const Duration(days: 29)));
+      await service.deleteExpiredPreMigrationCopy();
+      expect(migrationCopy().existsSync(), isTrue);
+    });
+
+    test('sin copia, la limpieza de los 30 dias no falla', () async {
+      await service.deleteExpiredPreMigrationCopy();
+    });
+
+    test('"Borrar todos los datos" borra tambien la copia .sqlite', () async {
+      writeCopy(modified: now);
+      await service.deleteAllData();
+      expect(migrationCopy().existsSync(), isFalse);
+      expect(Directory(p.join(support.path, BackupService.backupsDirName))
+          .existsSync(), isFalse);
+    });
+  });
+}

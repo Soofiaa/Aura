@@ -8,6 +8,7 @@ import '../../domain/backup_codec.dart';
 import '../../utils/app_version.dart';
 import '../../utils/day_key.dart';
 import '../repositories/cycle_repository.dart';
+import 'pre_migration_copy.dart' as copy;
 
 /// Lo que la confirmacion de importar necesita mostrar: cuantos dias hay
 /// hoy en el telefono y cuantos trae el respaldo. "Dias" son todos los
@@ -110,8 +111,9 @@ class BackupService {
 
   /// Copia automatica de los datos anteriores a la ultima importacion,
   /// dentro del almacenamiento privado de la app. Hay una sola: cada
-  /// importacion la reemplaza, deshacer no.
-  static const String backupsDirName = 'respaldos';
+  /// importacion la reemplaza, deshacer no. En la misma carpeta queda la
+  /// copia previa a la migracion v4 (ver pre_migration_copy.dart).
+  static const String backupsDirName = copy.backupsDirName;
   static const String preImportFileName = 'antes_de_importar.json';
 
   /// Carpeta propia dentro del directorio temporal para el archivo que
@@ -267,8 +269,41 @@ class BackupService {
     }
   }
 
+  /// Borra la copia del archivo de la base tomada antes de migrar a v4.
+  /// Se llama tras un "Guardar en el telefono" exitoso: desde ahi la
+  /// usuaria tiene una copia completa y mas reciente fuera de la app. NO
+  /// tras compartir, porque share_plus puede informar `unavailable` aunque
+  /// no se haya enviado nada. Borra tambien un .tmp huerfano.
+  Future<void> deletePreMigrationCopy() async {
+    for (final file in await _preMigrationFiles()) {
+      if (await file.exists()) await file.delete();
+    }
+  }
+
+  /// Borra la copia previa a la migracion si tiene mas de
+  /// [copy.preMigrationCopyMaxAge] segun su fecha de modificacion (la del
+  /// VACUUM INTO). Se llama al abrir la app.
+  Future<void> deleteExpiredPreMigrationCopy() async {
+    final files = await _preMigrationFiles();
+    final target = files.first;
+    if (!await target.exists()) return;
+    final age = _clock().difference(await target.lastModified());
+    if (age > copy.preMigrationCopyMaxAge) {
+      for (final file in files) {
+        if (await file.exists()) await file.delete();
+      }
+    }
+  }
+
+  Future<List<File>> _preMigrationFiles() async {
+    final path = p.join(
+        (await _backupsDirectory()).path, copy.preMigrationCopyFileName);
+    return [File(path), File('$path.tmp')];
+  }
+
   /// "Borrar todos los datos": la base, la carpeta respaldos/ completa
-  /// (copia previa y cualquier .tmp huerfano) y los temporales del
+  /// (copia previa a importar, copia previa a la migracion v4 y cualquier
+  /// .tmp huerfano) y los temporales del
   /// respaldo. Intenta siempre los tres pasos aunque alguno falle, para
   /// no dejar datos de salud por un error en otro paso, y al final lanza
   /// un unico [BackupDeleteException] si alguno fallo.

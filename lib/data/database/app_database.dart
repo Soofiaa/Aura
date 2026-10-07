@@ -10,6 +10,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../../domain/legacy_period_ends.dart';
 import '../../utils/day_key.dart';
+import '../backup/pre_migration_copy.dart';
 import '../models/day_enums.dart';
 import 'app_database.steps.dart';
 
@@ -324,9 +325,24 @@ enum MigrationTestPoint {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'aura.sqlite'));
-    return NativeDatabase.createInBackground(file, setup: enableForeignKeys);
+    final support = await getApplicationSupportDirectory();
+    return openDatabaseFile(
+      database: File(p.join(dbFolder.path, 'aura.sqlite')),
+      backupsDir: Directory(p.join(support.path, backupsDirName)),
+    );
   });
+}
+
+/// Abre [database] con drift. ANTES, si la base todavia tiene que migrar
+/// a v4, guarda una copia en [backupsDir] (R-5, ver
+/// [ensurePreMigrationCopy]); si esa copia no se puede escribir, lanza
+/// [PreMigrationCopyException] y la base no se abre ni se migra.
+QueryExecutor openDatabaseFile({
+  required File database,
+  required Directory backupsDir,
+}) {
+  ensurePreMigrationCopy(database: database, backupsDir: backupsDir);
+  return NativeDatabase.createInBackground(database, setup: enableForeignKeys);
 }
 
 /// SQLite no aplica ON DELETE CASCADE salvo que foreign_keys este

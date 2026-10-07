@@ -85,7 +85,15 @@ class _BackupSectionState extends State<BackupSection> {
             bytes: Uint8List.fromList(utf8.encode(json)),
           );
           // Cancelar el "Guardar como" no es un error: sin mensaje.
-          if (guardado) _aviso('Respaldo guardado.');
+          if (guardado) {
+            _aviso('Respaldo guardado.');
+            // Ya hay una copia completa fuera de la app: la copia previa a
+            // la migracion v4 deja de hacer falta. Si no se puede borrar,
+            // se reintenta a los 30 dias o al borrar los datos.
+            try {
+              await widget.service.deletePreMigrationCopy();
+            } catch (_) {}
+          }
       }
     } on BackupWriteException catch (e) {
       _aviso(_mensajeNoSeCreo(e));
