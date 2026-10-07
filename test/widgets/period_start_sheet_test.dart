@@ -7,7 +7,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
-import 'package:aura/domain/current_period.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/widgets/period_start_sheet.dart';
 
@@ -319,35 +318,55 @@ void main() {
     await db.close();
   });
 
-  testWidgets('la duracion de la hoja es la misma que usan los dias estimados '
-      '(el ajuste), aunque el promedio de periodos cerrados sea otro',
-      (tester) async {
-    // Historia inventada: dos periodos cerrados de 3 dias, ajuste en 7.
+  // Historia inventada: dos periodos cerrados de 3 dias (por un "No"
+  // explicito al dia siguiente).
+  Future<void> seedClosedPeriodsOf3Days() async {
     await repo.markPeriodDays(['2026-05-01', '2026-05-02', '2026-05-03']);
     await repo.setPeriodDayExplicitly('2026-05-04', isPeriodDay: false);
     await repo.markPeriodDays(['2026-06-01', '2026-06-02', '2026-06-03']);
     await repo.setPeriodDayExplicitly('2026-06-04', isPeriodDay: false);
+  }
+
+  testWidgets('sin periodos cerrados usa el ajuste y menciona Ajustes; '
+      'cambiar el ajuste cambia el numero', (tester) async {
+    // Un periodo abierto no cuenta para el promedio.
+    await repo.markPeriodDays(['2026-06-01', '2026-06-02']);
+    await repo.setTypicalPeriodLength(4);
+    await openSheet(tester);
+    expect(
+        find.text('Duración estimada: 4 días (puedes cambiarla en Ajustes)'),
+        findsOneWidget);
+    await db.close();
+  });
+
+  testWidgets('con periodos cerrados de 3 dias y ajuste 7 muestra 3 segun '
+      'sus periodos, sin mencionar Ajustes; el ajuste no lo cambia',
+      (tester) async {
+    await seedClosedPeriodsOf3Days();
     await repo.setTypicalPeriodLength(7);
     await openSheet(tester);
 
     expect(
-        find.text('Duración estimada: 7 días (puedes cambiarla en Ajustes)'),
+        find.text('Duración estimada: 3 días (según tus últimos períodos)'),
         findsOneWidget);
-    await confirm(tester);
+    expect(find.textContaining('Ajustes'), findsNothing);
 
+    // Mismo numero que la fase menstrual del predictor.
     final inputs = await repo.getPredictionInputs();
-    final estimated = estimatedPeriodDays(
-      cycles: inputs.cycles,
-      typicalPeriodLengthDays: inputs.typicalPeriodLengthDays,
-      today: today,
-    );
-    // Hoy marcado + 6 estimados = los 7 dias que dijo la hoja.
-    expect(estimated.length + 1, 7);
-    expect(estimated.last, '2026-07-21');
-    // El promedio del predictor (fases) es otro numero: 3.
     final prediction = predictCycle(
         cycles: inputs.cycles, today: today, config: inputs.config);
     expect((prediction! as ActivePrediction).averagePeriodLengthDays, 3);
+    await db.close();
+  });
+
+  testWidgets('con periodos cerrados, otro ajuste da el mismo numero',
+      (tester) async {
+    await seedClosedPeriodsOf3Days();
+    await repo.setTypicalPeriodLength(12);
+    await openSheet(tester);
+    expect(
+        find.text('Duración estimada: 3 días (según tus últimos períodos)'),
+        findsOneWidget);
     await db.close();
   });
 }

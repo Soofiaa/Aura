@@ -276,6 +276,85 @@ _WeightedStats _weightedMeanAndStdDev(List<int> values) {
   return _WeightedStats(mean, math.sqrt(variance));
 }
 
+/// Ciclos completos con duracion valida (entre los limites de [config]),
+/// ordenados de mas viejo a mas nuevo, y cuantos se excluyeron. Solo los
+/// [PredictionConfig.maxCyclesConsidered] mas recientes van en [windowed].
+({List<CycleSummary> windowed, int excluded}) _windowedValidCycles(
+  List<CycleSummary> sorted,
+  PredictionConfig config,
+) {
+  final completeCycles = sorted.where((c) => c.cycleLengthDays != null).toList();
+  final validCycles = completeCycles
+      .where((c) =>
+          c.cycleLengthDays! >= config.minValidCycleLengthDays &&
+          c.cycleLengthDays! <= config.maxValidCycleLengthDays)
+      .toList();
+  final windowed = validCycles.length > config.maxCyclesConsidered
+      ? validCycles.sublist(validCycles.length - config.maxCyclesConsidered)
+      : validCycles;
+  return (
+    windowed: windowed,
+    excluded: completeCycles.length - validCycles.length,
+  );
+}
+
+/// De donde sale la duracion estimada del periodo.
+enum PeriodLengthSource {
+  /// No hay periodos cerrados que cuenten: se usa el ajuste guardado.
+  setting,
+
+  /// Promedio de los periodos cerrados de la usuaria.
+  ownPeriods,
+}
+
+/// Duracion estimada del periodo (P-1): el unico numero que usa toda la
+/// app (fase menstrual, hoja "Me llego hoy", tarjeta de Inicio y dias
+/// estimados del Calendario).
+class PeriodLengthEstimate {
+  const PeriodLengthEstimate({required this.averageDays, required this.source});
+
+  /// Promedio sin redondear (el que guarda [ActivePrediction]).
+  final double averageDays;
+  final PeriodLengthSource source;
+
+  /// Dias enteros que se muestran y se usan para estimar.
+  int get days => averageDays.round();
+}
+
+/// Duracion estimada del periodo (P-1): promedio ponderado de la
+/// duracion de los periodos cerrados, solo los de los ciclos validos de
+/// la ventana mas el actual si ya cerro (R-3: su duracion ya es un dato
+/// real aunque su ciclo no este completo), como el mas reciente. Un
+/// periodo abierto puede ser solo el primer dia marcado y bajaria el
+/// promedio en silencio (hallazgo 5). Sin ninguno cerrado, la duracion
+/// habitual del ajuste. Funcion pura; [predictCycle] la usa.
+PeriodLengthEstimate estimatePeriodLength({
+  required List<CycleSummary> cycles,
+  PredictionConfig config = const PredictionConfig(),
+}) {
+  final sorted = [...cycles]..sort((a, b) => DayKey.compare(a.startDate, b.startDate));
+  final windowed = _windowedValidCycles(sorted, config).windowed;
+  final mostRecent = sorted.isEmpty ? null : sorted.last;
+  final closedPeriodLengths = [
+    for (final c in windowed)
+      if (c.isClosed) c.periodLengthDays,
+    if (mostRecent != null &&
+        mostRecent.cycleLengthDays == null &&
+        mostRecent.isClosed)
+      mostRecent.periodLengthDays,
+  ];
+  if (closedPeriodLengths.isEmpty) {
+    return PeriodLengthEstimate(
+      averageDays: config.typicalPeriodLengthDays.toDouble(),
+      source: PeriodLengthSource.setting,
+    );
+  }
+  return PeriodLengthEstimate(
+    averageDays: _weightedMeanAndStdDev(closedPeriodLengths).mean,
+    source: PeriodLengthSource.ownPeriods,
+  );
+}
+
 /// Motor de prediccion puro: sin DateTime.now(), sin base de datos.
 /// [today] es una clave 'yyyy-MM-dd' (igual que [CycleSummary.startDate])
 /// para reusar la aritmetica de [DayKey], que ya es segura ante los
@@ -306,13 +385,8 @@ CyclePrediction? predictCycle({
     );
   }
 
-  final completeCycles = sorted.where((c) => c.cycleLengthDays != null).toList();
-  final validCycles = completeCycles
-      .where((c) =>
-          c.cycleLengthDays! >= config.minValidCycleLengthDays &&
-          c.cycleLengthDays! <= config.maxValidCycleLengthDays)
-      .toList();
-  final excludedCyclesCount = completeCycles.length - validCycles.length;
+  final valid = _windowedValidCycles(sorted, config);
+  final excludedCyclesCount = valid.excluded;
   if (excludedCyclesCount > 0) {
     confidenceReasons.add(
       'Se excluyeron $excludedCyclesCount ciclo(s) fuera del rango válido '
@@ -320,25 +394,12 @@ CyclePrediction? predictCycle({
     );
   }
 
-  final windowed = validCycles.length > config.maxCyclesConsidered
-      ? validCycles.sublist(validCycles.length - config.maxCyclesConsidered)
-      : validCycles;
+  final windowed = valid.windowed;
   final completeCyclesConsidered = windowed.length;
 
-  // Duracion del periodo (P-1): solo periodos cerrados, los de la ventana
-  // mas el actual si ya cerro (R-3: su duracion ya es un dato real aunque
-  // su ciclo no este completo), como el mas reciente. Un periodo abierto
-  // puede ser solo el primer dia marcado y bajaria el promedio en
-  // silencio (hallazgo 5). Sin ninguno cerrado, la duracion habitual.
-  final closedPeriodLengths = [
-    for (final c in windowed)
-      if (c.isClosed) c.periodLengthDays,
-    if (mostRecent.cycleLengthDays == null && mostRecent.isClosed)
-      mostRecent.periodLengthDays,
-  ];
-  final averagePeriodLengthDays = closedPeriodLengths.isEmpty
-      ? config.typicalPeriodLengthDays.toDouble()
-      : _weightedMeanAndStdDev(closedPeriodLengths).mean;
+  // Duracion del periodo (P-1): ver estimatePeriodLength.
+  final averagePeriodLengthDays =
+      estimatePeriodLength(cycles: sorted, config: config).averageDays;
 
   final double averageCycleLengthDays;
   final double cycleLengthStdDevDays;

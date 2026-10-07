@@ -93,7 +93,7 @@ void main() {
       await pumpHome(tester);
 
       expect(find.text(card), findsOneWidget);
-      expect(find.text('Día 2 de tu período · duración habitual: 5 días'),
+      expect(find.text('Día 2 de tu período · duración estimada: 5 días'),
           findsOneWidget);
       expect(find.text('Sigue'), findsOneWidget);
       expect(find.text('Terminó hoy'), findsOneWidget);
@@ -101,13 +101,39 @@ void main() {
       expect(find.text('Me llegó hoy'), findsNothing);
     });
 
-    testHome('la linea de contexto usa la duracion habitual guardada',
-        (tester) async {
+    testHome('sin periodos cerrados la linea de contexto usa el ajuste; '
+        'cambiarlo cambia el numero', (tester) async {
       await seedHistory();
       await repo.markPeriodDay('2026-02-26');
       await repo.setTypicalPeriodLength(7);
       await pumpHome(tester);
-      expect(find.text('Día 2 de tu período · duración habitual: 7 días'),
+      expect(find.text('Día 2 de tu período · duración estimada: 7 días'),
+          findsOneWidget);
+
+      await repo.setTypicalPeriodLength(4);
+      await tester.pumpAndSettle();
+      expect(find.text('Día 2 de tu período · duración estimada: 4 días'),
+          findsOneWidget);
+    });
+
+    testHome('con periodos cerrados de 3 dias la linea de contexto muestra '
+        '3 aunque el ajuste sea 7, sin mencionar Ajustes, y el ajuste no '
+        'lo cambia', (tester) async {
+      // Dos periodos cerrados de 3 dias (fin declarado en su ultimo dia).
+      await seedRange('2026-01-01', 3);
+      await repo.closePeriod('2026-01-01', '2026-01-03', today: fakeToday);
+      await seedRange('2026-01-29', 3);
+      await repo.closePeriod('2026-01-29', '2026-01-31', today: fakeToday);
+      await repo.markPeriodDay('2026-02-26');
+      await repo.setTypicalPeriodLength(7);
+      await pumpHome(tester);
+      expect(find.text('Día 2 de tu período · duración estimada: 3 días'),
+          findsOneWidget);
+      expect(find.textContaining('Ajustes'), findsNothing);
+
+      await repo.setTypicalPeriodLength(12);
+      await tester.pumpAndSettle();
+      expect(find.text('Día 2 de tu período · duración estimada: 3 días'),
           findsOneWidget);
     });
 
@@ -155,7 +181,7 @@ void main() {
       await seedRange('2026-02-26', 6);
       await pumpHome(tester, '2026-03-04');
       expect(find.text(card), findsOneWidget);
-      expect(find.text('Día 7 de tu período · duración habitual: 5 días'),
+      expect(find.text('Día 7 de tu período · duración estimada: 5 días'),
           findsOneWidget);
     });
 

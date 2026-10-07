@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
+import '../domain/cycle_predictor.dart';
 import '../utils/app_snackbar.dart';
 import '../utils/colors.dart';
 import '../utils/day_key.dart';
@@ -83,10 +84,14 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
   PeriodStartOption _option = PeriodStartOption.today;
   String? _otherDay;
 
-  Future<_SheetData> _load() async => _SheetData(
-        periodDays: await widget.repository.getPeriodDayDates(),
-        typicalLength: await widget.repository.getTypicalPeriodLength(),
-      );
+  Future<_SheetData> _load() async {
+    final inputs = await widget.repository.getPredictionInputs();
+    return _SheetData(
+      periodDays: await widget.repository.getPeriodDayDates(),
+      estimate:
+          estimatePeriodLength(cycles: inputs.cycles, config: inputs.config),
+    );
+  }
 
   String get _chosenDay => switch (_option) {
         PeriodStartOption.today => widget.today,
@@ -164,7 +169,12 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final alreadyMarked = data.periodDays.contains(day);
     final joinWarning =
         alreadyMarked ? null : _joinWarning(day, data.periodDays);
-    final days = data.typicalLength == 1 ? '1 día' : '${data.typicalLength} días';
+    final n = data.estimate.days;
+    final days = n == 1 ? '1 día' : '$n días';
+    // La misma duracion estimada que Inicio y el Calendario (P-1).
+    final source = data.estimate.source == PeriodLengthSource.setting
+        ? 'puedes cambiarla en Ajustes'
+        : 'según tus últimos períodos';
     const secondary = TextStyle(fontSize: 14, color: AppColors.textSecondary);
 
     return Column(
@@ -221,7 +231,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Duración estimada: $days (puedes cambiarla en Ajustes)',
+          'Duración estimada: $days ($source)',
           style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
@@ -268,8 +278,8 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
 }
 
 class _SheetData {
-  const _SheetData({required this.periodDays, required this.typicalLength});
+  const _SheetData({required this.periodDays, required this.estimate});
 
   final List<String> periodDays;
-  final int typicalLength;
+  final PeriodLengthEstimate estimate;
 }

@@ -243,10 +243,10 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         const SizedBox(height: 4),
         const Text(
-          "Aura la usa para estimar los días de tu período en curso. "
-          "Para calcular tus fases también la usa mientras todavía no "
-          "tienes períodos terminados registrados; después usa el "
-          "promedio de los tuyos. Cambiarla no modifica tus registros.",
+          "Aura la usa para estimar cuántos días dura tu período "
+          "mientras todavía no tienes períodos terminados registrados; "
+          "después usa el promedio de los tuyos. Cambiarla no modifica "
+          "tus registros.",
           style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
       ],

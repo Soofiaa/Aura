@@ -268,7 +268,11 @@ void main() {
       expect(find.text('Tu ciclo'), findsOneWidget);
       expect(find.text('Duración habitual del período'), findsOneWidget);
       expect(valorEnPantalla(tester), '5 días');
-      expect(find.textContaining('estimar los días de tu período en curso'),
+      expect(
+          find.text('Aura la usa para estimar cuántos días dura tu período '
+              'mientras todavía no tienes períodos terminados registrados; '
+              'después usa el promedio de los tuyos. Cambiarla no modifica '
+              'tus registros.'),
           findsOneWidget);
       expect(tester.getTopLeft(find.text('Tu ciclo')).dy,
           lessThan(tester.getTopLeft(find.text('Notificaciones').first).dy));

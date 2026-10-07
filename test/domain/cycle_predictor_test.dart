@@ -625,4 +625,64 @@ void main() {
       expect(abiertos.confidence, p.confidence);
     });
   });
+
+  group('estimatePeriodLength - duracion estimada unica (P-1)', () {
+    test('sin ciclos: el ajuste, con origen setting', () {
+      final e = estimatePeriodLength(
+        cycles: const [],
+        config: const PredictionConfig(typicalPeriodLengthDays: 6),
+      );
+      expect(e.averageDays, 6.0);
+      expect(e.days, 6);
+      expect(e.source, PeriodLengthSource.setting);
+    });
+
+    test('solo periodos abiertos: el ajuste', () {
+      final e = estimatePeriodLength(
+        cycles: [_cycle('2026-01-01', 2, 28), _cycle('2026-01-29', 1, null)],
+        config: const PredictionConfig(typicalPeriodLengthDays: 7),
+      );
+      expect(e.days, 7);
+      expect(e.source, PeriodLengthSource.setting);
+    });
+
+    test('con periodos cerrados: su promedio ponderado, redondeado en days',
+        () {
+      final e = estimatePeriodLength(
+        cycles: [
+          _closed('2026-01-01', 3, 28),
+          _closed('2026-01-29', 4, 28),
+          _cycle('2026-02-26', 1, null),
+        ],
+        config: const PredictionConfig(typicalPeriodLengthDays: 7),
+      );
+      // Ponderado 1, 2: (3 + 8) / 3 = 3,67.
+      expect(e.averageDays, closeTo(11 / 3, 1e-9));
+      expect(e.days, 4);
+      expect(e.source, PeriodLengthSource.ownPeriods);
+    });
+
+    test('un cerrado solo en un ciclo invalido no cuenta: el ajuste', () {
+      final e = estimatePeriodLength(
+        cycles: [_closed('2026-01-01', 9, 10), _cycle('2026-01-11', 1, null)],
+        config: const PredictionConfig(typicalPeriodLengthDays: 5),
+      );
+      expect(e.days, 5);
+      expect(e.source, PeriodLengthSource.setting);
+    });
+
+    test('es el mismo numero que averagePeriodLengthDays de predictCycle', () {
+      final cycles = [
+        _closed('2025-11-03', 3, 28),
+        _closed('2025-12-01', 5, 28),
+        _cycle('2025-12-29', 2, 28),
+        _closed('2026-01-26', 4, null),
+      ];
+      const config = PredictionConfig(typicalPeriodLengthDays: 9);
+      final p = predictCycle(cycles: cycles, today: '2026-02-01', config: config)
+          as ActivePrediction;
+      expect(estimatePeriodLength(cycles: cycles, config: config).averageDays,
+          p.averagePeriodLengthDays);
+    });
+  });
 }

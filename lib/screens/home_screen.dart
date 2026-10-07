@@ -233,8 +233,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       prediction,
                       todaySnapshot.data,
                       current,
-                      inputs?.typicalPeriodLengthDays ??
-                          const PredictionConfig().typicalPeriodLengthDays,
+                      estimatePeriodLength(
+                        cycles: inputs?.cycles ?? const [],
+                        config: inputs?.config ?? const PredictionConfig(),
+                      ).days,
                     );
                     if (card == null) return const SizedBox.shrink();
                     return Column(children: [
@@ -348,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     CyclePrediction? prediction,
     DailyLogRow? today,
     CurrentPeriod? current,
-    int typicalPeriodLength,
+    int estimatedPeriodLength,
   ) {
     if (prediction is! ActivePrediction) return null;
     if (current == null || current.isClosed) return null;
@@ -363,8 +365,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         (today.isPeriodDay || (!today.isPeriodDay && today.periodDayExplicit));
     if (yaRespondida) return null;
 
-    final dias =
-        typicalPeriodLength == 1 ? '1 día' : '$typicalPeriodLength días';
+    final dias = estimatedPeriodLength == 1
+        ? '1 día'
+        : '$estimatedPeriodLength días';
     const minimo = Size(48, 48);
 
     return _buildCardShell(children: [
@@ -375,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 4),
       Text(
-        'Día ${current.dayNumber} de tu período · duración habitual: $dias',
+        'Día ${current.dayNumber} de tu período · duración estimada: $dias',
         style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         textAlign: TextAlign.center,
       ),
