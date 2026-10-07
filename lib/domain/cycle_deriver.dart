@@ -1,3 +1,4 @@
+import '../data/models/day_enums.dart';
 import '../utils/day_key.dart';
 
 /// Si entre un dia de sangrado y el dia de sangrado anterior pasan mas de
@@ -35,12 +36,23 @@ class CycleSummary {
   /// historico cuando la usuaria ya confirmo que termino.
   final bool periodConfirmedEnded;
 
+  /// period_end del ULTIMO dia de sangrado de este periodo, o null. Un
+  /// period_end en un dia interior no cuenta (R-4): marcar un dia a
+  /// continuacion de un fin reabre el periodo sin borrar la marca.
+  final PeriodEndSource? periodEnd;
+
   const CycleSummary({
     required this.startDate,
     required this.periodLengthDays,
     required this.cycleLengthDays,
     this.periodConfirmedEnded = false,
+    this.periodEnd,
   });
+
+  /// Periodo cerrado (D-1): su ultimo dia tiene period_end, o se cumple la
+  /// regla del "no" explicito ([periodConfirmedEnded]). Un periodo abierto
+  /// es uno sin fin conocido.
+  bool get isClosed => periodConfirmedEnded || periodEnd != null;
 
   @override
   bool operator ==(Object other) =>
@@ -48,16 +60,18 @@ class CycleSummary {
       other.startDate == startDate &&
       other.periodLengthDays == periodLengthDays &&
       other.cycleLengthDays == cycleLengthDays &&
-      other.periodConfirmedEnded == periodConfirmedEnded;
+      other.periodConfirmedEnded == periodConfirmedEnded &&
+      other.periodEnd == periodEnd;
 
   @override
-  int get hashCode => Object.hash(
-      startDate, periodLengthDays, cycleLengthDays, periodConfirmedEnded);
+  int get hashCode => Object.hash(startDate, periodLengthDays,
+      cycleLengthDays, periodConfirmedEnded, periodEnd);
 
   @override
   String toString() =>
       'CycleSummary(startDate: $startDate, periodLengthDays: $periodLengthDays, '
-      'cycleLengthDays: $cycleLengthDays, periodConfirmedEnded: $periodConfirmedEnded)';
+      'cycleLengthDays: $cycleLengthDays, periodConfirmedEnded: $periodConfirmedEnded, '
+      'periodEnd: $periodEnd)';
 }
 
 /// Deriva los ciclos a partir de la lista de dias marcados como dia de
@@ -68,19 +82,55 @@ class CycleSummary {
 /// Un dia de sangrado inicia un ciclo nuevo si el dia de sangrado anterior
 /// (una vez ordenados y sin duplicados) quedo a mas de [maxGap] dias de
 /// distancia; de lo contrario se considera parte del mismo periodo.
+///
+/// [periodEnds] son las fechas con period_end (D-1); solo cuenta la del
+/// ultimo dia de cada periodo.
 List<CycleSummary> deriveCycles(
   List<String> periodDays, {
   int maxGap = maxGapWithinPeriod,
   List<String> explicitNonPeriodDays = const [],
+  Map<String, PeriodEndSource> periodEnds = const {},
 }) {
   if (periodDays.isEmpty) return [];
 
-  final sorted = periodDays.toSet().toList()..sort(DayKey.compare);
+  final runs = groupPeriodRuns(periodDays, maxGap: maxGap);
   final nonPeriodSorted = explicitNonPeriodDays.toSet().toList()
     ..sort(DayKey.compare);
 
-  // Agrupa en corridas: una corrida nueva empieza cuando el hueco con el
-  // dia anterior supera maxGap.
+  final summaries = <CycleSummary>[];
+  for (var i = 0; i < runs.length; i++) {
+    final run = runs[i];
+    final periodStart = run.first;
+    final periodEnd = run.last;
+    final periodLengthDays = DayKey.diffInDays(periodStart, periodEnd) + 1;
+    final isLast = i == runs.length - 1;
+    final cycleLengthDays =
+        isLast ? null : DayKey.diffInDays(periodStart, runs[i + 1].first);
+
+    summaries.add(CycleSummary(
+      startDate: periodStart,
+      periodLengthDays: periodLengthDays,
+      cycleLengthDays: cycleLengthDays,
+      periodConfirmedEnded: isEndConfirmedByExplicitNo(
+          periodEnd, nonPeriodSorted,
+          maxGap: maxGap),
+      periodEnd: periodEnds[periodEnd],
+    ));
+  }
+
+  return summaries;
+}
+
+/// Agrupa [periodDays] en periodos ("corridas"), ordenados y sin
+/// duplicados: una corrida nueva empieza cuando el hueco con el dia
+/// marcado anterior supera [maxGap]. Lista vacia si no hay dias.
+List<List<String>> groupPeriodRuns(
+  List<String> periodDays, {
+  int maxGap = maxGapWithinPeriod,
+}) {
+  if (periodDays.isEmpty) return [];
+  final sorted = periodDays.toSet().toList()..sort(DayKey.compare);
+
   final runs = <List<String>>[];
   var currentRun = <String>[sorted.first];
   for (var i = 1; i < sorted.length; i++) {
@@ -93,29 +143,18 @@ List<CycleSummary> deriveCycles(
     }
   }
   runs.add(currentRun);
+  return runs;
+}
 
-  final summaries = <CycleSummary>[];
-  for (var i = 0; i < runs.length; i++) {
-    final run = runs[i];
-    final periodStart = run.first;
-    final periodEnd = run.last;
-    final periodLengthDays = DayKey.diffInDays(periodStart, periodEnd) + 1;
-    final isLast = i == runs.length - 1;
-    final cycleLengthDays =
-        isLast ? null : DayKey.diffInDays(periodStart, runs[i + 1].first);
-
-    final periodConfirmedEnded = nonPeriodSorted.any((explicitDate) {
-      final gap = DayKey.diffInDays(periodEnd, explicitDate);
-      return gap > 0 && gap <= maxGap;
-    });
-
-    summaries.add(CycleSummary(
-      startDate: periodStart,
-      periodLengthDays: periodLengthDays,
-      cycleLengthDays: cycleLengthDays,
-      periodConfirmedEnded: periodConfirmedEnded,
-    ));
-  }
-
-  return summaries;
+/// Regla del "no" explicito: hay un dia confirmado como "sin sangrado"
+/// entre 1 y [maxGap] dias despues de [lastPeriodDay].
+bool isEndConfirmedByExplicitNo(
+  String lastPeriodDay,
+  List<String> explicitNonPeriodDays, {
+  int maxGap = maxGapWithinPeriod,
+}) {
+  return explicitNonPeriodDays.any((explicitDate) {
+    final gap = DayKey.diffInDays(lastPeriodDay, explicitDate);
+    return gap > 0 && gap <= maxGap;
+  });
 }

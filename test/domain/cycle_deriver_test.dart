@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 
 void main() {
@@ -204,6 +205,124 @@ void main() {
       expect(result, hasLength(2));
       expect(result[0].periodConfirmedEnded, isTrue);
       expect(result[1].periodConfirmedEnded, isFalse);
+    });
+  });
+  group('deriveCycles - periodEnd e isClosed (D-1)', () {
+    test('sin periodEnds: periodEnd null e isClosed false por defecto', () {
+      final result = deriveCycles(['2026-01-01', '2026-01-02']);
+      expect(result.single.periodEnd, isNull);
+      expect(result.single.isClosed, isFalse);
+    });
+
+    test(
+        'period_end en el ultimo dia cierra el periodo sin cambiar '
+        'periodConfirmedEnded', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03'],
+        periodEnds: {'2026-01-03': PeriodEndSource.inferred},
+      );
+      expect(result.single.periodEnd, PeriodEndSource.inferred);
+      expect(result.single.isClosed, isTrue);
+      expect(result.single.periodConfirmedEnded, isFalse,
+          reason: 'periodConfirmedEnded sigue siendo solo la regla del "no"');
+    });
+
+    test('un "no" explicito solo tambien deja el periodo cerrado', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02'],
+        explicitNonPeriodDays: ['2026-01-03'],
+      );
+      expect(result.single.periodEnd, isNull);
+      expect(result.single.isClosed, isTrue);
+    });
+
+    test('"no" explicito y period_end juntos: cerrado', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02'],
+        explicitNonPeriodDays: ['2026-01-03'],
+        periodEnds: {'2026-01-02': PeriodEndSource.declared},
+      );
+      expect(result.single.periodConfirmedEnded, isTrue);
+      expect(result.single.periodEnd, PeriodEndSource.declared);
+      expect(result.single.isClosed, isTrue);
+    });
+
+    test(
+        'period_end en un dia interior no cuenta (R-4): marcar el dia '
+        'siguiente reabre el periodo', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04'],
+        periodEnds: {'2026-01-03': PeriodEndSource.declared},
+      );
+      expect(result.single.periodLengthDays, 4);
+      expect(result.single.periodEnd, isNull);
+      expect(result.single.isClosed, isFalse);
+    });
+
+    test(
+        'quitar el dia que seguia al fin declarado: el fin vuelve a valer '
+        '(R-4)', () {
+      const ends = {'2026-01-03': PeriodEndSource.declared};
+      final reabierto = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04'],
+        periodEnds: ends,
+      );
+      final sinElDiaNuevo = deriveCycles(
+        ['2026-01-01', '2026-01-02', '2026-01-03'],
+        periodEnds: ends,
+      );
+      expect(reabierto.single.isClosed, isFalse);
+      expect(sinElDiaNuevo.single.periodEnd, PeriodEndSource.declared);
+      expect(sinElDiaNuevo.single.isClosed, isTrue);
+    });
+
+    test('cada periodo toma solo el period_end de su propio ultimo dia', () {
+      final result = deriveCycles(
+        [
+          '2026-01-01', '2026-01-02', // periodo 1
+          '2026-02-01', '2026-02-02', // periodo 2
+        ],
+        periodEnds: {'2026-01-02': PeriodEndSource.inferred},
+      );
+      expect(result[0].periodEnd, PeriodEndSource.inferred);
+      expect(result[0].isClosed, isTrue);
+      expect(result[1].periodEnd, isNull);
+      expect(result[1].isClosed, isFalse);
+    });
+
+    test(
+        'un period_end en una fecha que no es dia marcado se ignora (el '
+        'CHECK de la base no lo permite)', () {
+      final result = deriveCycles(
+        ['2026-01-01', '2026-01-02'],
+        periodEnds: {'2026-01-05': PeriodEndSource.declared},
+      );
+      expect(result.single.periodEnd, isNull);
+      expect(result.single.isClosed, isFalse);
+    });
+
+    test('la igualdad de CycleSummary considera periodEnd', () {
+      const a = CycleSummary(
+        startDate: '2026-01-01',
+        periodLengthDays: 3,
+        cycleLengthDays: null,
+      );
+      const b = CycleSummary(
+        startDate: '2026-01-01',
+        periodLengthDays: 3,
+        cycleLengthDays: null,
+        periodEnd: PeriodEndSource.inferred,
+      );
+      expect(a == b, isFalse);
+      expect(
+        b,
+        const CycleSummary(
+          startDate: '2026-01-01',
+          periodLengthDays: 3,
+          cycleLengthDays: null,
+          periodEnd: PeriodEndSource.inferred,
+        ),
+      );
     });
   });
 }

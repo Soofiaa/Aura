@@ -56,3 +56,11 @@ extension SymptomLabel on Symptom {
         Symptom.dolorDeEspalda => 'Dolor de espalda',
       };
 }
+
+/// Origen del fin de un periodo (columna period_end de daily_logs, decision
+/// D-1). Se guarda solo en el ULTIMO dia de sangrado del periodo.
+/// - declared: la usuaria dijo que termino.
+/// - inferred: lo escribio la migracion a v4 (o la conversion de un
+///   respaldo v3) aplicando la regla D-2; se puede revertir sin tocar las
+///   declaraciones reales.
+enum PeriodEndSource { declared, inferred }
