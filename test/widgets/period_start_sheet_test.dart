@@ -336,6 +336,15 @@ void main() {
     expect(
         find.text('Duración estimada: 4 días (puedes cambiarla en Ajustes)'),
         findsOneWidget);
+
+    // Se cierra la hoja, se cambia el ajuste y se vuelve a abrir.
+    Navigator.of(tester.element(find.text('Hoy'))).pop();
+    await tester.pumpAndSettle();
+    await repo.setTypicalPeriodLength(9);
+    await openSheet(tester);
+    expect(
+        find.text('Duración estimada: 9 días (puedes cambiarla en Ajustes)'),
+        findsOneWidget);
     await db.close();
   });
 

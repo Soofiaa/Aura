@@ -14,6 +14,15 @@ Future<void> _tapDay(WidgetTester tester, int day) async {
   await tester.pumpAndSettle();
 }
 
+/// Pantalla alta: el boton "Me llego hoy" y la leyenda empujan el
+/// panel del dia fuera de los 800x600 del test.
+Future<void> _pumpCalendar(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+}
+
 /// Retrocede [times] meses en el calendario tocando la flecha izquierda
 /// del encabezado, para operar siempre sobre un mes completamente en el
 /// pasado respecto a "hoy" sin importar en que dia del mes corra el test.
@@ -50,7 +59,7 @@ void main() {
 
   testWidgets('seleccionar un dia y registrarlo lo marca como menstruacion',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
@@ -69,7 +78,7 @@ void main() {
     final key = _clave(mesPasado, 10);
     await repo.markPeriodDay(key);
 
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
@@ -97,7 +106,7 @@ void main() {
       '8 segundos', (tester) async {
     await repo.markPeriodDay(_clave(mesPasado, 10));
 
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
     await _tapDay(tester, 10);
@@ -118,7 +127,7 @@ void main() {
 
   testWidgets('seleccionar un rango y confirmarlo marca todos los dias',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
@@ -143,7 +152,7 @@ void main() {
 
   testWidgets('un rango de mas de 10 dias pide confirmacion extra',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
 
@@ -167,7 +176,7 @@ void main() {
   });
 
   testWidgets('los dias futuros no se pueden seleccionar', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
 
     final calendar = tester.widget<TableCalendar>(find.byType(TableCalendar));
@@ -180,7 +189,7 @@ void main() {
   testWidgets(
       'un cambio hecho fuera del calendario (importar un respaldo) se ve sin '
       'volver a abrir la pantalla', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CalendarScreen()));
+    await _pumpCalendar(tester);
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
     await _tapDay(tester, 10);
