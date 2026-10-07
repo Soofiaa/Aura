@@ -202,6 +202,8 @@ void main() {
     await pumpScreen(tester);
 
     await tester.scrollUntilVisible(find.text('Borrar todos los datos'), 200);
+    await tester.ensureVisible(find.text('Borrar todos los datos'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Borrar todos los datos'));
     await tester.pumpAndSettle();
     expect(
@@ -233,6 +235,8 @@ void main() {
     await pumpScreen(tester);
 
     await tester.scrollUntilVisible(find.text('Borrar todos los datos'), 200);
+    await tester.ensureVisible(find.text('Borrar todos los datos'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Borrar todos los datos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Borrar todo'));
@@ -264,7 +268,7 @@ void main() {
       expect(find.text('Tu ciclo'), findsOneWidget);
       expect(find.text('Duración habitual del período'), findsOneWidget);
       expect(valorEnPantalla(tester), '5 días');
-      expect(find.textContaining('estimar cuántos días suele durar'),
+      expect(find.textContaining('estimar los días de tu período en curso'),
           findsOneWidget);
       expect(tester.getTopLeft(find.text('Tu ciclo')).dy,
           lessThan(tester.getTopLeft(find.text('Notificaciones').first).dy));

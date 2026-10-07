@@ -383,4 +383,54 @@ void main() {
           _jul(11));
     });
   });
+
+  group('laterPeriodThatDayWouldJoin (decision 7 hacia adelante)', () {
+    test('sin periodos: null', () {
+      expect(laterPeriodThatDayWouldJoin(day: _today, periodDays: const []),
+          isNull);
+    });
+
+    test('a 7 dias antes del inicio de un periodo posterior: se suma', () {
+      expect(
+          laterPeriodThatDayWouldJoin(
+              day: _jul(3), periodDays: _julRange(10, 12)),
+          _jul(10));
+    });
+
+    test('a 8 dias antes: no se suma', () {
+      expect(
+          laterPeriodThatDayWouldJoin(
+              day: _jul(2), periodDays: _julRange(10, 12)),
+          isNull);
+    });
+
+    test('dia ya marcado: null', () {
+      expect(
+          laterPeriodThatDayWouldJoin(
+              day: _jul(10), periodDays: _julRange(10, 12)),
+          isNull);
+    });
+
+    test('un hueco dentro de un periodo no es "posterior" (lo cubre '
+        'periodThatDayWouldJoin)', () {
+      final days = [_jul(10), _jul(14)];
+      expect(laterPeriodThatDayWouldJoin(day: _jul(12), periodDays: days),
+          isNull);
+      expect(periodThatDayWouldJoin(day: _jul(12), periodDays: days),
+          _jul(10));
+    });
+
+    test('entre dos periodos cercanos avisan las dos funciones', () {
+      final days = [_jul(1), _jul(2), _jul(14), _jul(15)];
+      expect(periodThatDayWouldJoin(day: _jul(8), periodDays: days), _jul(2));
+      expect(laterPeriodThatDayWouldJoin(day: _jul(8), periodDays: days),
+          _jul(14));
+    });
+
+    test('mira el primer periodo posterior, no uno mas lejano', () {
+      final days = [_jul(20), _jul(21)];
+      expect(laterPeriodThatDayWouldJoin(day: _jul(1), periodDays: days),
+          isNull);
+    });
+  });
 }

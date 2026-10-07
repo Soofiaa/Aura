@@ -202,3 +202,28 @@ String? periodThatDayWouldJoin({
   if (lastBefore == null) return null;
   return DayKey.diffInDays(lastBefore, day) <= maxGap ? lastBefore : null;
 }
+
+/// Decision 7, hacia adelante: si marcar [day] lo sumaria a un periodo
+/// POSTERIOR (porque queda a [maxGap] dias o menos antes de su primer
+/// dia), devuelve ese primer dia para avisarlo. Null si [day] ya esta
+/// marcado, si no hay un periodo que empiece a esa distancia, o si el
+/// dia marcado siguiente no es el inicio de un periodo (entonces [day]
+/// cae en un hueco de un periodo ya existente, y eso lo cubre
+/// [periodThatDayWouldJoin]).
+String? laterPeriodThatDayWouldJoin({
+  required String day,
+  required List<String> periodDays,
+  int maxGap = maxGapWithinPeriod,
+}) {
+  if (periodDays.contains(day)) return null;
+  for (final run in groupPeriodRuns(periodDays, maxGap: maxGap)) {
+    final start = run.first;
+    if (DayKey.isBefore(day, start)) {
+      final gap = DayKey.diffInDays(day, start);
+      // Solo el primer periodo posterior a [day] puede quedar cerca.
+      return gap <= maxGap ? start : null;
+    }
+    if (!DayKey.isBefore(run.last, day)) return null;
+  }
+  return null;
+}
