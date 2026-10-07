@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/utils/day_key.dart';
@@ -37,6 +38,16 @@ CycleSummary _cycle(String start, int periodLength, int? cycleLength) =>
       cycleLengthDays: cycleLength,
     );
 
+/// Igual que [_cycle], pero con el periodo cerrado (period_end en su
+/// ultimo dia, D-1).
+CycleSummary _closed(String start, int periodLength, int? cycleLength) =>
+    CycleSummary(
+      startDate: start,
+      periodLengthDays: periodLength,
+      cycleLengthDays: cycleLength,
+      periodEnd: PeriodEndSource.inferred,
+    );
+
 void main() {
   group('predictCycle - casos sin datos / datos minimos', () {
     test('sin datos devuelve null', () {
@@ -52,6 +63,8 @@ void main() {
       final p = result as ActivePrediction;
       expect(p.completeCyclesConsidered, 0);
       expect(p.averageCycleLengthDays, 28.0);
+      // 5 sale de typicalPeriodLengthDays por defecto, no de los datos:
+      // el periodo es abierto y no entra al promedio (P-1).
       expect(p.averagePeriodLengthDays, 5.0);
       expect(p.confidence, PredictionConfidence.low);
       expect(p.nextPeriodExpectedDate, '2026-01-29');
@@ -197,8 +210,10 @@ void main() {
   group('predictCycle - fases del ciclo', () {
     test('fase menstrual se extiende si el sangrado actual supera el '
         'promedio historico', () {
-      // Promedio historico de menstruacion: 5 dias. El ciclo actual
-      // (abierto) ya lleva 8 dias de sangrado registrados.
+      // Promedio de menstruacion: 5 dias, que sale de
+      // typicalPeriodLengthDays por defecto y no de los datos (_cycle arma
+      // periodos abiertos, que no entran al promedio, P-1). El ciclo
+      // actual (abierto) ya lleva 8 dias de sangrado registrados.
       final result = predictCycle(
         cycles: [
           _cycle('2026-01-01', 5, 28),
@@ -216,9 +231,12 @@ void main() {
         'periodConfirmedEnded anula la extension por el promedio: la fase '
         'deja de ser menstrual aunque el heuristico sin confirmar seguiria '
         'ahi', () {
-      // Promedio historico de menstruacion: 5 dias. Este periodo solo
-      // tuvo 3 dias observados, pero la usuaria confirmo explicitamente
-      // que ya termino (p.ej. respondio "No" en la pregunta de Inicio).
+      // Promedio de menstruacion: 5 dias en el control sin confirmar, que
+      // sale de typicalPeriodLengthDays por defecto y no de los datos
+      // (_cycle arma periodos abiertos, que no entran al promedio, P-1).
+      // Este periodo solo tuvo 3 dias observados, pero la usuaria
+      // confirmo explicitamente que ya termino (p.ej. respondio "No" en
+      // la pregunta de Inicio).
       final cycles = [
         _cycle('2026-01-01', 5, 28),
         _cycle('2026-01-29', 5, 28),
@@ -236,7 +254,8 @@ void main() {
       expect(p.currentPhase, CyclePhase.folicular);
 
       // Control: el mismo dia 4, SIN la confirmacion, el heuristico
-      // max(3,5)=5 si seguiria mostrando fase menstrual.
+      // max(3,5)=5 (5 = typicalPeriodLengthDays por defecto) si seguiria
+      // mostrando fase menstrual.
       final sinConfirmar = predictCycle(
         cycles: [
           _cycle('2026-01-01', 5, 28),
@@ -256,7 +275,10 @@ void main() {
           _cycle('2026-01-29', 5, 28),
           _cycle('2026-02-26', 5, null),
         ],
-        today: '2026-03-03', // dia de ciclo 6, justo tras la menstruacion (dias 1-5)
+        // Dia de ciclo 6, justo tras la menstruacion (dias 1-5). Esos 5 dias
+        // salen de typicalPeriodLengthDays por defecto, no de los datos:
+        // _cycle arma periodos abiertos, que no entran al promedio (P-1).
+        today: '2026-03-03',
       );
       final p = result as ActivePrediction;
       expect(p.currentPhase, CyclePhase.folicular);
@@ -415,6 +437,192 @@ void main() {
       );
       _expectCoreInvariants(result as ActivePrediction);
       expect(result.averageCycleLengthDays, 28.0);
+    });
+  });
+  group('predictCycle - duracion del periodo solo con periodos cerrados (P-1)',
+      () {
+    test(
+        'regresion HU-03: un ciclo abierto de 1 dia y otro cerrado de 5 dias '
+        'dan duracion promedio 5, no 3,67', () {
+      final p = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 1, 28), // solo se marco el primer dia
+          _closed('2026-01-29', 5, 28),
+          _cycle('2026-02-26', 2, null), // actual, abierto
+        ],
+        today: '2026-02-27',
+      ) as ActivePrediction;
+      expect(p.averagePeriodLengthDays, 5.0);
+    });
+
+    test(
+        'pocos ciclos completos con el periodo abierto: usa la duracion '
+        'habitual (ya no la del periodo mas reciente)', () {
+      final p = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 1, 28),
+          _cycle('2026-01-29', 1, null),
+        ],
+        today: '2026-01-30',
+        config: const PredictionConfig(typicalPeriodLengthDays: 6),
+      ) as ActivePrediction;
+      expect(p.completeCyclesConsidered, 1);
+      expect(p.averagePeriodLengthDays, 6.0);
+      // Dia de ciclo 2 con duracion habitual 6: sigue en fase menstrual
+      // (antes, con la duracion 1 del periodo mas reciente, no).
+      expect(p.currentPhase, CyclePhase.menstrual);
+    });
+
+    test(
+        'el periodo actual cerrado entra al promedio aunque su ciclo no este '
+        'completo (R-3), como el mas reciente', () {
+      final p = predictCycle(
+        cycles: [
+          _closed('2026-01-01', 4, 28),
+          _closed('2026-01-29', 4, 28),
+          _closed('2026-02-26', 6, null), // actual, cerrado
+        ],
+        today: '2026-03-10',
+      ) as ActivePrediction;
+      // Ponderado 1, 2, 3: (4 + 8 + 18) / 6 = 5.
+      expect(p.averagePeriodLengthDays, 5.0);
+    });
+
+    test('solo el periodo actual cerrado, sin ciclos completos: su duracion',
+        () {
+      final p = predictCycle(
+        cycles: [_closed('2026-01-01', 3, null)],
+        today: '2026-01-10',
+      ) as ActivePrediction;
+      expect(p.averagePeriodLengthDays, 3.0);
+    });
+
+    test('sin ningun periodo cerrado: typicalPeriodLengthDays', () {
+      final p = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 2, 28),
+          _cycle('2026-01-29', 2, 28),
+          _cycle('2026-02-26', 2, 28),
+          _cycle('2026-03-26', 2, null),
+        ],
+        today: '2026-03-28',
+        config: const PredictionConfig(typicalPeriodLengthDays: 7),
+      ) as ActivePrediction;
+      expect(p.averagePeriodLengthDays, 7.0);
+    });
+
+    test('typicalPeriodLengthDays vale 5 por defecto', () {
+      expect(const PredictionConfig().typicalPeriodLengthDays, 5);
+      final p = predictCycle(
+        cycles: [_cycle('2026-01-01', 1, null)],
+        today: '2026-01-02',
+      ) as ActivePrediction;
+      expect(p.averagePeriodLengthDays, 5.0);
+    });
+
+    test(
+        'un periodo cerrado de un ciclo fuera del rango valido no entra '
+        '(solo cuenta la ventana)', () {
+      final p = predictCycle(
+        cycles: [
+          _closed('2026-01-01', 9, 10), // ciclo invalido (< 15)
+          _closed('2026-01-11', 4, 28),
+          _closed('2026-02-08', 4, 28),
+          _cycle('2026-03-08', 1, null),
+        ],
+        today: '2026-03-09',
+      ) as ActivePrediction;
+      expect(p.excludedCyclesCount, 1);
+      expect(p.averagePeriodLengthDays, 4.0);
+    });
+
+    test('un periodo cerrado por el "no" explicito tambien cuenta', () {
+      final p = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 1, 28),
+          const CycleSummary(
+            startDate: '2026-01-29',
+            periodLengthDays: 4,
+            cycleLengthDays: 28,
+            periodConfirmedEnded: true,
+          ),
+          _cycle('2026-02-26', 1, null),
+        ],
+        today: '2026-02-27',
+      ) as ActivePrediction;
+      expect(p.averagePeriodLengthDays, 4.0);
+    });
+
+    test(
+        'menstrualEndDay usa isClosed: un periodo actual con period_end '
+        '(sin "no") termina la fase menstrual en lo observado', () {
+      final cerrado = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 5, 28),
+          _cycle('2026-01-29', 5, 28),
+          _closed('2026-02-26', 3, null),
+        ],
+        today: '2026-03-01', // dia de ciclo 4
+      ) as ActivePrediction;
+      expect(cerrado.currentPhase, CyclePhase.folicular);
+
+      final abierto = predictCycle(
+        cycles: [
+          _cycle('2026-01-01', 5, 28),
+          _cycle('2026-01-29', 5, 28),
+          _cycle('2026-02-26', 3, null),
+        ],
+        today: '2026-03-01',
+      ) as ActivePrediction;
+      expect(abierto.currentPhase, CyclePhase.menstrual); // max(3, 5)
+    });
+
+    test(
+        'forma de datos reales (fechas inventadas): 4 periodos de 3 dias cada '
+        '28 dias, los 3 primeros cerrados y el ultimo en curso', () {
+      final p = predictCycle(
+        cycles: [
+          _closed('2025-11-03', 3, 28),
+          _closed('2025-12-01', 3, 28),
+          _closed('2025-12-29', 3, 28),
+          _cycle('2026-01-26', 2, null), // en curso: lleva 2 dias
+        ],
+        today: '2026-01-27',
+      ) as ActivePrediction;
+
+      expect(p.averagePeriodLengthDays, 3.0);
+      expect(p.currentPhase, CyclePhase.menstrual); // dia 2 de max(2, 3)
+
+      // Fechas, rango y confianza iguales a los de antes de P-1: la
+      // duracion del ciclo no cambia (28, desviacion 0, semiancho 2).
+      expect(p.completeCyclesConsidered, 3);
+      expect(p.averageCycleLengthDays, 28.0);
+      expect(p.cycleLengthStdDevDays, 0.0);
+      expect(p.nextPeriodExpectedDate, '2026-02-23');
+      expect(p.nextPeriodEarliestDate, '2026-02-21');
+      expect(p.nextPeriodLatestDate, '2026-02-25');
+      expect(p.estimatedOvulationDate, '2026-02-09');
+      expect(p.fertileWindowStartDate, '2026-02-04');
+      expect(p.fertileWindowEndDate, '2026-02-09');
+      expect(p.confidence, PredictionConfidence.medium);
+      expect(p.isPeriodLate, isFalse);
+      _expectCoreInvariants(p);
+
+      // Mismas fechas con los periodos abiertos: la duracion del periodo
+      // no interviene en fechas, rango ni confianza.
+      final abiertos = predictCycle(
+        cycles: [
+          _cycle('2025-11-03', 3, 28),
+          _cycle('2025-12-01', 3, 28),
+          _cycle('2025-12-29', 3, 28),
+          _cycle('2026-01-26', 2, null),
+        ],
+        today: '2026-01-27',
+      ) as ActivePrediction;
+      expect(abiertos.nextPeriodExpectedDate, p.nextPeriodExpectedDate);
+      expect(abiertos.nextPeriodEarliestDate, p.nextPeriodEarliestDate);
+      expect(abiertos.nextPeriodLatestDate, p.nextPeriodLatestDate);
+      expect(abiertos.confidence, p.confidence);
     });
   });
 }

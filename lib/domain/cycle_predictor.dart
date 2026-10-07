@@ -58,6 +58,11 @@ class PredictionConfig {
   /// independientemente de cuantos ciclos haya.
   final double highStdDevRelativeRatio;
 
+  /// Duracion habitual del periodo (HU-01, ajuste typical_period_length).
+  /// Es la duracion promedio cuando no hay ningun periodo cerrado en la
+  /// ventana ni un periodo actual cerrado (P-1).
+  final int typicalPeriodLengthDays;
+
   const PredictionConfig({
     this.maxCyclesConsidered = 6,
     this.minValidCycleLengthDays = 15,
@@ -72,6 +77,7 @@ class PredictionConfig {
     this.minCompleteCyclesForMedium = 2,
     this.minCompleteCyclesForHigh = 4,
     this.highStdDevRelativeRatio = 0.18,
+    this.typicalPeriodLengthDays = 5,
   });
 }
 
@@ -319,15 +325,28 @@ CyclePrediction? predictCycle({
       : validCycles;
   final completeCyclesConsidered = windowed.length;
 
+  // Duracion del periodo (P-1): solo periodos cerrados, los de la ventana
+  // mas el actual si ya cerro (R-3: su duracion ya es un dato real aunque
+  // su ciclo no este completo), como el mas reciente. Un periodo abierto
+  // puede ser solo el primer dia marcado y bajaria el promedio en
+  // silencio (hallazgo 5). Sin ninguno cerrado, la duracion habitual.
+  final closedPeriodLengths = [
+    for (final c in windowed)
+      if (c.isClosed) c.periodLengthDays,
+    if (mostRecent.cycleLengthDays == null && mostRecent.isClosed)
+      mostRecent.periodLengthDays,
+  ];
+  final averagePeriodLengthDays = closedPeriodLengths.isEmpty
+      ? config.typicalPeriodLengthDays.toDouble()
+      : _weightedMeanAndStdDev(closedPeriodLengths).mean;
+
   final double averageCycleLengthDays;
   final double cycleLengthStdDevDays;
-  final double averagePeriodLengthDays;
   final double rangeHalfWidthDays;
 
   if (completeCyclesConsidered < config.minCompleteCyclesForMedium) {
     averageCycleLengthDays = config.defaultCycleLengthDays.toDouble();
     cycleLengthStdDevDays = 0;
-    averagePeriodLengthDays = mostRecent.periodLengthDays.toDouble();
     rangeHalfWidthDays = config.defaultRangeHalfWidthDays.toDouble();
     confidenceReasons.add(
       'Menos de ${config.minCompleteCyclesForMedium} ciclos completos '
@@ -336,12 +355,9 @@ CyclePrediction? predictCycle({
     );
   } else {
     final cycleLengths = windowed.map((c) => c.cycleLengthDays!).toList();
-    final periodLengths = windowed.map((c) => c.periodLengthDays).toList();
     final cycleStats = _weightedMeanAndStdDev(cycleLengths);
-    final periodStats = _weightedMeanAndStdDev(periodLengths);
     averageCycleLengthDays = cycleStats.mean;
     cycleLengthStdDevDays = cycleStats.stdDev;
-    averagePeriodLengthDays = periodStats.mean;
     rangeHalfWidthDays = math.max(
       config.rangeStdDevMultiplier * cycleStats.stdDev,
       config.minRangeHalfWidthDays.toDouble(),
@@ -363,14 +379,13 @@ CyclePrediction? predictCycle({
   // observada del periodo mas reciente (que puede seguir activo y ya
   // superar el promedio historico) y el promedio historico, para no
   // "salir" de la fase menstrual mientras todavia hay sangrado
-  // registrado por encima de lo usual -- EXCEPTO si la usuaria ya
-  // confirmo explicitamente que el periodo termino (periodConfirmedEnded),
-  // en cuyo caso esa confirmacion directa gana por sobre el heuristico
-  // del promedio: la fase menstrual no se extiende mas alla de lo
-  // observado.
+  // registrado por encima de lo usual -- EXCEPTO si el periodo ya esta
+  // cerrado (isClosed: un "no" explicito o period_end en su ultimo dia),
+  // en cuyo caso ese cierre gana por sobre el heuristico del promedio: la
+  // fase menstrual no se extiende mas alla de lo observado.
   final rawCycleDay = daysSinceStart + 1;
   final cycleDay = rawCycleDay < 1 ? 1 : rawCycleDay;
-  final menstrualEndDay = mostRecent.periodConfirmedEnded
+  final menstrualEndDay = mostRecent.isClosed
       ? mostRecent.periodLengthDays
       : math.max(
           mostRecent.periodLengthDays,
