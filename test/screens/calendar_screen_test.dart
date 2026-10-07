@@ -187,7 +187,7 @@ void main() {
     expect(find.text('Registrar día de menstruación'), findsOneWidget);
 
     await repo.replaceAllWithBackup(BackupData(
-      schemaVersion: 3,
+      schemaVersion: currentBackupSchemaVersion,
       appVersion: '1.0.1',
       exportedAt: '2026-10-04T10:15:00-03:00',
       days: [

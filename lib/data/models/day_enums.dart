@@ -64,3 +64,9 @@ extension SymptomLabel on Symptom {
 ///   respaldo v3) aplicando la regla D-2; se puede revertir sin tocar las
 ///   declaraciones reales.
 enum PeriodEndSource { declared, inferred }
+
+/// Duracion habitual del periodo (HU-01, columna typical_period_length de
+/// app_settings): valores admitidos y valor por defecto.
+const int minTypicalPeriodLength = 1;
+const int maxTypicalPeriodLength = 15;
+const int defaultTypicalPeriodLength = 5;

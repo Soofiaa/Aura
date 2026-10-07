@@ -159,7 +159,7 @@ void main() {
     expect(switchDe('Ventana fértil').value, isFalse);
 
     await repo.replaceAllWithBackup(const BackupData(
-      schemaVersion: 3,
+      schemaVersion: currentBackupSchemaVersion,
       appVersion: '1.0.1',
       exportedAt: '2026-10-04T10:15:00-03:00',
       days: [],

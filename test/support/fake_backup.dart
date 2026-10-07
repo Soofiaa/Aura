@@ -7,6 +7,7 @@ import 'package:aura/data/backup/backup_file_gateway.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/utils/day_key.dart';
 
 /// Gateway falso: no toca canales de plataforma, solo registra que se le
 /// pidio y devuelve lo configurado.
@@ -107,7 +108,8 @@ class FakeBackupService extends BackupService {
     importCount++;
     _preImportCopy = await buildExportJson();
     if (importGate != null) await importGate!.future;
-    await _repo.replaceAllWithBackup(data);
+    await _repo
+        .replaceAllWithBackup(upgradeBackupData(data, today: DayKey.today()));
   }
 
   @override

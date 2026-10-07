@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../data/database/app_database.dart' show DailyLogRow;
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
-import '../domain/cycle_deriver.dart';
 import '../domain/cycle_predictor.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
@@ -39,12 +38,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Stream en vez de un Future cargado una vez en initState: se vuelve a
   // calcular solo cuando cambia algo en daily_logs (registrar un dia,
-  // marcar desde el calendario, borrar datos), sin importar si volvimos
-  // aca con push/pop o cambiando de pestana en la NavigationBar. El motor
-  // (predictCycle) sigue siendo puro: "hoy" lo decide esta pantalla
-  // (_today, mas abajo), no el stream ni el repositorio.
-  late final Stream<List<CycleSummary>> _cyclesStream =
-      _repository.watchDerivedCycles();
+  // marcar desde el calendario, borrar datos) o en los ajustes (duracion
+  // habitual del periodo), sin importar si volvimos aca con push/pop o
+  // cambiando de pestana en la NavigationBar. El motor (predictCycle)
+  // sigue siendo puro: "hoy" lo decide esta pantalla (_today, mas abajo),
+  // no el stream ni el repositorio.
+  late final Stream<PredictionInputs> _inputsStream =
+      _repository.watchPredictionInputs();
 
   late String _today = DayKey.fromDate(_clock());
   late Stream<DailyLogRow?> _todayStream = _repository.watchDay(_today);
@@ -134,15 +134,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         centerTitle: true,
         backgroundColor: const Color(0xFFA8D8EA),
       ),
-      body: StreamBuilder<List<CycleSummary>>(
-        stream: _cyclesStream,
+      body: StreamBuilder<PredictionInputs>(
+        stream: _inputsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          final inputs = snapshot.data;
           final prediction = predictCycle(
-            cycles: snapshot.data ?? const [],
+            cycles: inputs?.cycles ?? const [],
             today: _today,
+            config: inputs?.config ?? const PredictionConfig(),
           );
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),

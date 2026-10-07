@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,7 +10,10 @@ import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 
-BackupData _fixture() {
+/// El fixture v3 ya convertido al schema actual, como lo importa la app.
+BackupData _fixture() => upgradeBackupData(_fixtureV3(), today: '2026-10-04');
+
+BackupData _fixtureV3() {
   final result = decodeBackup(
       utf8.encode(File('test/fixtures/backup_v3.json').readAsStringSync()));
   return (result as BackupParseSuccess).data;
@@ -26,7 +30,7 @@ const _settings = BackupSettings(
 );
 
 BackupData _dataWith(List<BackupDay> days) => BackupData(
-      schemaVersion: 3,
+      schemaVersion: currentBackupSchemaVersion,
       appVersion: '1.0.1',
       exportedAt: '2026-10-04T10:15:00-03:00',
       days: days,
@@ -79,7 +83,7 @@ void main() {
       final data = await repo.readBackupData(
           appVersion: '1.0.1', exportedAt: '2026-10-04T10:15:00-03:00');
 
-      expect(data.schemaVersion, 3);
+      expect(data.schemaVersion, currentBackupSchemaVersion);
       expect([for (final d in data.days) d.date], ['2026-03-01', '2026-03-02']);
       expect(data.days[1].symptoms,
           [Symptom.acne, Symptom.cansancio, Symptom.hinchazon]);
@@ -230,6 +234,69 @@ void main() {
     await seedCurrentData();
     await repo.upsertDay(date: '2026-06-01', isPeriodDaySwitch: false);
     expect(await repo.countDays(), 4);
+  });
+
+  group('respaldo v4: period_end y duracion habitual', () {
+    test('readBackupData exporta period_end y typicalPeriodLength', () async {
+      await repo.markPeriodDays(['2026-03-01', '2026-03-02']);
+      await db.into(db.dailyLogs).insertOnConflictUpdate(
+            DailyLogsCompanion.insert(
+              date: '2026-03-02',
+              isPeriodDay: const Value(true),
+              periodEnd: const Value(PeriodEndSource.declared),
+            ),
+          );
+      await repo.setTypicalPeriodLength(6);
+
+      final data =
+          await repo.readBackupData(appVersion: 'x', exportedAt: 'x');
+      expect(data.days.map((d) => d.periodEnd),
+          [null, PeriodEndSource.declared]);
+      expect(data.settings.typicalPeriodLength, 6);
+    });
+
+    test('replaceAllWithBackup importa period_end y typicalPeriodLength',
+        () async {
+      await repo.replaceAllWithBackup(_dataWith(const [
+        BackupDay(
+            date: '2026-03-01', isPeriodDay: true, periodDayExplicit: false),
+        BackupDay(
+          date: '2026-03-02',
+          isPeriodDay: true,
+          periodDayExplicit: false,
+          periodEnd: PeriodEndSource.inferred,
+        ),
+      ]).withSettings(const BackupSettings(
+        onboardingSeen: true,
+        notificationsEnabled: false,
+        periodReminderEnabled: true,
+        fertileWindowRemindersEnabled: false,
+        showDetailsEnabled: false,
+        reminderHour: 9,
+        reminderMinute: 0,
+        typicalPeriodLength: 3,
+      )));
+
+      expect((await repo.getDay('2026-03-02'))!.periodEnd,
+          PeriodEndSource.inferred);
+      expect(await repo.getTypicalPeriodLength(), 3);
+      expect((await repo.getDerivedCycles()).single.isClosed, isTrue);
+    });
+
+    test(
+        'replaceAllWithBackup rechaza datos de un schema anterior sin '
+        'convertir y no toca nada', () async {
+      await seedCurrentData();
+      final antes = await repo.readBackupData(appVersion: 'x', exportedAt: 'x');
+
+      await expectLater(
+          repo.replaceAllWithBackup(_fixtureV3()), throwsArgumentError);
+
+      final despues =
+          await repo.readBackupData(appVersion: 'x', exportedAt: 'x');
+      expect(despues.days, antes.days);
+      expect(despues.settings, antes.settings);
+    });
   });
 }
 

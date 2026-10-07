@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../data/models/day_enums.dart';
 import '../utils/day_key.dart';
+import 'legacy_period_ends.dart';
 
 /// Formato de respaldo de Aura (HU-06): JSON propio y versionado, sin
 /// depender de drift ni de Flutter, para poder validarlo entero en
@@ -9,14 +10,19 @@ import '../utils/day_key.dart';
 ///
 /// - `formatVersion` versiona el envoltorio (cifrado incluido, HU-06b).
 /// - `schemaVersion` versiona los datos: es el schema drift con que se
-///   exporto. Un respaldo de un schema anterior se importa; uno posterior
-///   se rechaza.
+///   exporto. Un respaldo de un schema anterior se importa (convertido con
+///   [upgradeBackupData]); uno posterior se rechaza.
+///
+/// Cambios por schema:
+/// - v4: `periodEnd` en cada dia (null, "declared" o "inferred") y
+///   `typicalPeriodLength` en los ajustes. El envoltorio no cambia, asi
+///   que `formatVersion` sigue en 1.
 const String backupFormatId = 'aura-backup';
 const int backupFormatVersion = 1;
 
 /// Schema drift actual (AppDatabase.schemaVersion). Duplicado aca para
 /// que el dominio no importe drift; un test compara ambos valores.
-const int currentBackupSchemaVersion = 3;
+const int currentBackupSchemaVersion = 4;
 
 /// Primer schema que pudo exportar respaldos (la funcion nace en v3):
 /// un `schemaVersion` menor no puede venir de Aura.
@@ -50,6 +56,7 @@ class BackupDay {
     required this.date,
     required this.isPeriodDay,
     required this.periodDayExplicit,
+    this.periodEnd,
     this.flow,
     this.mood,
     this.notes,
@@ -59,6 +66,9 @@ class BackupDay {
   final String date;
   final bool isPeriodDay;
   final bool periodDayExplicit;
+
+  /// Fin del periodo (D-1). Siempre null en un respaldo v3 sin convertir.
+  final PeriodEndSource? periodEnd;
   final FlowIntensity? flow;
   final Mood? mood;
   final String? notes;
@@ -70,18 +80,31 @@ class BackupDay {
       other.date == date &&
       other.isPeriodDay == isPeriodDay &&
       other.periodDayExplicit == periodDayExplicit &&
+      other.periodEnd == periodEnd &&
       other.flow == flow &&
       other.mood == mood &&
       other.notes == notes &&
       _listEquals(other.symptoms, symptoms);
 
   @override
-  int get hashCode => Object.hash(date, isPeriodDay, periodDayExplicit, flow,
-      mood, notes, Object.hashAll(symptoms));
+  int get hashCode => Object.hash(date, isPeriodDay, periodDayExplicit,
+      periodEnd, flow, mood, notes, Object.hashAll(symptoms));
 
   @override
   String toString() => 'BackupDay($date, period=$isPeriodDay, '
-      'explicit=$periodDayExplicit, $flow, $mood, $notes, $symptoms)';
+      'explicit=$periodDayExplicit, end=$periodEnd, $flow, $mood, $notes, '
+      '$symptoms)';
+
+  BackupDay withPeriodEnd(PeriodEndSource? value) => BackupDay(
+        date: date,
+        isPeriodDay: isPeriodDay,
+        periodDayExplicit: periodDayExplicit,
+        periodEnd: value,
+        flow: flow,
+        mood: mood,
+        notes: notes,
+        symptoms: symptoms,
+      );
 }
 
 class BackupSettings {
@@ -93,6 +116,7 @@ class BackupSettings {
     required this.showDetailsEnabled,
     required this.reminderHour,
     required this.reminderMinute,
+    this.typicalPeriodLength = defaultTypicalPeriodLength,
   });
 
   final bool onboardingSeen;
@@ -103,6 +127,10 @@ class BackupSettings {
   final int reminderHour;
   final int reminderMinute;
 
+  /// Duracion habitual del periodo (HU-01). Un respaldo v3 no la trae: se
+  /// usa el valor por defecto.
+  final int typicalPeriodLength;
+
   @override
   bool operator ==(Object other) =>
       other is BackupSettings &&
@@ -112,7 +140,8 @@ class BackupSettings {
       other.fertileWindowRemindersEnabled == fertileWindowRemindersEnabled &&
       other.showDetailsEnabled == showDetailsEnabled &&
       other.reminderHour == reminderHour &&
-      other.reminderMinute == reminderMinute;
+      other.reminderMinute == reminderMinute &&
+      other.typicalPeriodLength == typicalPeriodLength;
 
   @override
   int get hashCode => Object.hash(
@@ -122,7 +151,8 @@ class BackupSettings {
       fertileWindowRemindersEnabled,
       showDetailsEnabled,
       reminderHour,
-      reminderMinute);
+      reminderMinute,
+      typicalPeriodLength);
 }
 
 /// Contenido completo de un respaldo, ya validado.
@@ -205,6 +235,7 @@ String encodeBackup(BackupData data) {
         'date': day.date,
         'isPeriodDay': day.isPeriodDay,
         'periodDayExplicit': day.periodDayExplicit,
+        'periodEnd': day.periodEnd?.name,
         'flow': day.flow?.name,
         'mood': day.mood?.name,
         'notes': day.notes,
@@ -230,6 +261,7 @@ String encodeBackup(BackupData data) {
         'showDetailsEnabled': s.showDetailsEnabled,
         'reminderHour': s.reminderHour,
         'reminderMinute': s.reminderMinute,
+        'typicalPeriodLength': s.typicalPeriodLength,
       },
     },
     'counts': {
@@ -331,13 +363,13 @@ BackupData _parseRoot(Map<String, dynamic> root) {
   final seen = <String>{};
   for (final raw in rawLogs) {
     if (raw is! Map<String, dynamic>) throw _Invalid('dia no es objeto');
-    final day = _parseDay(raw, maxDate);
+    final day = _parseDay(raw, maxDate, schemaVersion);
     if (!seen.add(day.date)) throw _Invalid('fecha repetida ${day.date}');
     days.add(day);
   }
   days.sort((a, b) => a.date.compareTo(b.date));
 
-  final settings = _parseSettings(_map(data, 'settings'));
+  final settings = _parseSettings(_map(data, 'settings'), schemaVersion);
 
   final result = BackupData(
     schemaVersion: schemaVersion,
@@ -382,7 +414,8 @@ bool _isValidDayKey(String value) {
   return DayKey.fromDate(date) == value;
 }
 
-BackupDay _parseDay(Map<String, dynamic> raw, String maxDate) {
+BackupDay _parseDay(
+    Map<String, dynamic> raw, String maxDate, int schemaVersion) {
   final date = _string(raw, 'date');
   if (!_isValidDayKey(date)) throw _Invalid('fecha invalida $date');
   if (date.compareTo(minBackupDate) < 0 || date.compareTo(maxDate) > 0) {
@@ -392,6 +425,14 @@ BackupDay _parseDay(Map<String, dynamic> raw, String maxDate) {
   final flow = _enumOrNull(raw, 'flow', FlowIntensity.values);
   if (flow != null && !isPeriodDay) {
     throw _Invalid('flujo sin sangrado en $date');
+  }
+  // v3 no tiene periodEnd: si un archivo v3 trae la clave, se ignora
+  // (claves desconocidas dentro de la misma version).
+  final periodEnd = schemaVersion >= 4
+      ? _enumOrNull(raw, 'periodEnd', PeriodEndSource.values)
+      : null;
+  if (periodEnd != null && !isPeriodDay) {
+    throw _Invalid('fin de periodo sin sangrado en $date');
   }
   final rawSymptoms = _list(raw, 'symptoms');
   final symptoms = <Symptom>[];
@@ -411,6 +452,7 @@ BackupDay _parseDay(Map<String, dynamic> raw, String maxDate) {
     date: date,
     isPeriodDay: isPeriodDay,
     periodDayExplicit: _bool(raw, 'periodDayExplicit'),
+    periodEnd: periodEnd,
     flow: flow,
     mood: _enumOrNull(raw, 'mood', Mood.values),
     notes: notes as String?,
@@ -418,11 +460,18 @@ BackupDay _parseDay(Map<String, dynamic> raw, String maxDate) {
   );
 }
 
-BackupSettings _parseSettings(Map<String, dynamic> raw) {
+BackupSettings _parseSettings(Map<String, dynamic> raw, int schemaVersion) {
   final hour = _int(raw, 'reminderHour');
   final minute = _int(raw, 'reminderMinute');
   if (hour < 0 || hour > 23) throw _Invalid('reminderHour $hour');
   if (minute < 0 || minute > 59) throw _Invalid('reminderMinute $minute');
+  // v3 no tiene typicalPeriodLength: vale el predeterminado.
+  final typical = schemaVersion >= 4
+      ? _int(raw, 'typicalPeriodLength')
+      : defaultTypicalPeriodLength;
+  if (typical < minTypicalPeriodLength || typical > maxTypicalPeriodLength) {
+    throw _Invalid('typicalPeriodLength $typical');
+  }
   return BackupSettings(
     onboardingSeen: _bool(raw, 'onboardingSeen'),
     notificationsEnabled: _bool(raw, 'notificationsEnabled'),
@@ -432,6 +481,41 @@ BackupSettings _parseSettings(Map<String, dynamic> raw) {
     showDetailsEnabled: _bool(raw, 'showDetailsEnabled'),
     reminderHour: hour,
     reminderMinute: minute,
+    typicalPeriodLength: typical,
+  );
+}
+
+/// Lleva un respaldo ya validado al schema actual. Un respaldo v3 se
+/// convierte con la MISMA regla D-2 que la migracion de la base
+/// ([inferLegacyPeriodEnds]), con [today] = el dia de la importacion: asi
+/// importar un respaldo v3 da el mismo resultado que haber tenido esos
+/// datos en el telefono al actualizar. Uno del schema actual se devuelve
+/// tal cual (sus cierres ya vienen decididos). Funcion pura.
+BackupData upgradeBackupData(BackupData data, {required String today}) {
+  if (data.schemaVersion == currentBackupSchemaVersion) return data;
+  if (data.schemaVersion != 3) {
+    throw ArgumentError.value(
+        data.schemaVersion, 'schemaVersion', 'no se puede convertir');
+  }
+  final toClose = inferLegacyPeriodEnds(
+    periodDays: [for (final d in data.days) if (d.isPeriodDay) d.date],
+    explicitNonPeriodDays: [
+      for (final d in data.days)
+        if (!d.isPeriodDay && d.periodDayExplicit) d.date,
+    ],
+    today: today,
+  ).toSet();
+  return BackupData(
+    schemaVersion: currentBackupSchemaVersion,
+    appVersion: data.appVersion,
+    exportedAt: data.exportedAt,
+    days: List.unmodifiable([
+      for (final d in data.days)
+        toClose.contains(d.date)
+            ? d.withPeriodEnd(PeriodEndSource.inferred)
+            : d,
+    ]),
+    settings: data.settings,
   );
 }
 

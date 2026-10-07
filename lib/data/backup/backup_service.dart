@@ -235,11 +235,17 @@ class BackupService {
 
   /// Importa [data] reemplazando todo. Primero guarda la copia previa de
   /// los datos actuales; si esa copia no se puede escribir, no se importa
-  /// nada. El reemplazo es una unica transaccion.
+  /// nada. Un respaldo de un schema anterior se convierte antes (regla
+  /// D-2, con "hoy" = el dia de la importacion). El reemplazo es una unica
+  /// transaccion.
   Future<void> importBackup(BackupData data) async {
+    final current = _upgrade(data);
     await _writePreImportCopy();
-    await _repository.replaceAllWithBackup(data);
+    await _repository.replaceAllWithBackup(current);
   }
+
+  BackupData _upgrade(BackupData data) =>
+      upgradeBackupData(data, today: DayKey.fromDate(_clock()));
 
   Future<bool> hasPreImportCopy() async => (await _preImportFile()).exists();
 
@@ -253,7 +259,9 @@ class BackupService {
     final result = decodeBackup(await file.readAsBytes());
     switch (result) {
       case BackupParseSuccess(:final data):
-        await _repository.replaceAllWithBackup(data);
+        // La copia la escribe esta version (schema actual); una copia v3
+        // de antes de actualizar se convierte igual que un respaldo.
+        await _repository.replaceAllWithBackup(_upgrade(data));
       case BackupParseFailure():
         throw BackupUndoUnavailableException('copia previa invalida: $result');
     }

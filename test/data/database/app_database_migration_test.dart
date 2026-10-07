@@ -6,7 +6,7 @@ import 'package:aura/data/database/app_database.dart';
 
 void main() {
   test(
-      'migracion encadenada v1 -> v3: agrega todas las columnas nuevas y '
+      'migracion encadenada v1 -> v4: agrega todas las columnas nuevas y '
       'preserva los datos viejos', () async {
     // Base "v1" armada a mano con el esquema exacto que tenia la app
     // antes de la fase de notificaciones, para no depender de la
@@ -50,7 +50,8 @@ void main() {
       'VALUES (0, 1, 1);',
     );
     // Le dice a drift "esta base ya esta en la version 1" para que corra
-    // la cadena completa onUpgrade(1, 3) (los dos bloques if) al abrirla.
+    // la cadena completa al abrirla: los dos bloques escritos a mano (v1 ->
+    // v3) y el paso generado 3 -> 4.
     raw.userVersion = 1;
 
     final db = AppDatabase.forTesting(NativeDatabase.opened(raw));
@@ -66,6 +67,7 @@ void main() {
     expect(settingsRow.showDetailsEnabled, isFalse);
     expect(settingsRow.reminderHour, 9);
     expect(settingsRow.reminderMinute, 0);
+    expect(settingsRow.typicalPeriodLength, 5);
 
     final dayRow = await (db.select(db.dailyLogs)
           ..where((t) => t.date.equals('2026-01-01')))
@@ -75,12 +77,15 @@ void main() {
         reason:
             'nunca existio un camino que escribiera una negacion explicita '
             'antes de esta version; default false es correcto');
+    expect(dayRow.periodEnd, isNull,
+        reason: 'un periodo de 1 solo dia queda abierto (D-2)');
+    expect(raw.userVersion, 4);
 
     await db.close();
   });
 
   test(
-      'migracion v2 -> v3: agrega period_day_explicit con default false '
+      'migracion v2 -> v4: agrega period_day_explicit con default false '
       'sin tocar is_period_day existente', () async {
     // Base "v2" (con las columnas de notificaciones de app_settings ya
     // presentes, pero sin period_day_explicit en daily_logs).
@@ -130,6 +135,8 @@ void main() {
         .getSingle();
     expect(dayRow.isPeriodDay, isFalse, reason: 'dato viejo preservado');
     expect(dayRow.periodDayExplicit, isFalse);
+    expect(dayRow.periodEnd, isNull);
+    expect(raw.userVersion, 4);
 
     await db.close();
   });

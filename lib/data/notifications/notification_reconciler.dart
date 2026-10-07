@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import '../../domain/cycle_deriver.dart';
 import '../../domain/cycle_predictor.dart';
 import '../../domain/notification_planner.dart';
 import '../../utils/day_key.dart';
 import '../../utils/notifications.dart';
+import '../models/day_enums.dart';
 import '../repositories/cycle_repository.dart';
 
 /// Unica suscripcion, viva mientras la app esta abierta, que combina los
@@ -23,15 +23,16 @@ class NotificationReconciler {
   final NotificationScheduler _scheduler;
   final DateTime Function() _clock;
 
-  List<CycleSummary> _cycles = const [];
+  PredictionInputs _inputs = const PredictionInputs(
+      cycles: [], typicalPeriodLengthDays: defaultTypicalPeriodLength);
   NotificationSettings? _settings;
 
-  StreamSubscription<List<CycleSummary>>? _cyclesSub;
+  StreamSubscription<PredictionInputs>? _cyclesSub;
   StreamSubscription<NotificationSettings>? _settingsSub;
 
   void start() {
-    _cyclesSub = _repository.watchDerivedCycles().listen((cycles) {
-      _cycles = cycles;
+    _cyclesSub = _repository.watchPredictionInputs().listen((inputs) {
+      _inputs = inputs;
       _reconcile();
     });
     _settingsSub = _repository.watchNotificationSettings().listen((settings) {
@@ -61,7 +62,11 @@ class NotificationReconciler {
     if (settings == null) return; // todavia no llego la primera emision
 
     final today = DayKey.fromDate(_clock());
-    final prediction = predictCycle(cycles: _cycles, today: today);
+    final prediction = predictCycle(
+      cycles: _inputs.cycles,
+      today: today,
+      config: _inputs.config,
+    );
     final plan = planNotifications(
       prediction: prediction,
       settings: settings,

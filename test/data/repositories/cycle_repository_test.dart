@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aura/data/database/app_database.dart';
@@ -446,6 +447,175 @@ void main() {
       // app_settings tambien se borra por completo: onboarding vuelve a
       // su default (false) hasta que algo la vuelva a crear.
       expect(await repo.getOnboardingSeen(), isFalse);
+    });
+  });
+  group('periodo cerrado (v4): period_end y su CHECK', () {
+    /// Periodo de 3 dias cerrado en su ultimo dia, como lo deja la
+    /// migracion (o, en la v1.1, "Termino hoy").
+    Future<void> closedPeriod(PeriodEndSource source) async {
+      await repo.markPeriodDays(['2026-03-01', '2026-03-02']);
+      await db.into(db.dailyLogs).insert(DailyLogsCompanion.insert(
+            date: '2026-03-03',
+            isPeriodDay: const Value(true),
+            periodEnd: Value(source),
+          ));
+    }
+
+    test('getDerivedCycles entrega periodEnd del ultimo dia', () async {
+      await closedPeriod(PeriodEndSource.inferred);
+      final cycle = (await repo.getDerivedCycles()).single;
+      expect(cycle.periodEnd, PeriodEndSource.inferred);
+      expect(cycle.isClosed, isTrue);
+    });
+
+    test(
+        '"Quitar marca" sobre el dia con period_end no choca con el CHECK: '
+        'lo limpia y el periodo sigue cerrado por el "no"', () async {
+      await closedPeriod(PeriodEndSource.declared);
+
+      await repo.setPeriodDayExplicitly('2026-03-03', isPeriodDay: false);
+
+      final day = await repo.getDay('2026-03-03');
+      expect(day!.isPeriodDay, isFalse);
+      expect(day.periodEnd, isNull);
+      final cycle = (await repo.getDerivedCycles()).single;
+      expect(cycle.periodLengthDays, 2);
+      expect(cycle.periodConfirmedEnded, isTrue);
+      expect(cycle.isClosed, isTrue);
+    });
+
+    test(
+        'confirmar "si" sobre el dia con period_end no lo borra', () async {
+      await closedPeriod(PeriodEndSource.declared);
+      await repo.setPeriodDayExplicitly('2026-03-03', isPeriodDay: true);
+      expect((await repo.getDay('2026-03-03'))!.periodEnd,
+          PeriodEndSource.declared);
+    });
+
+    test(
+        'apagar el interruptor del formulario sobre el dia con period_end '
+        'no choca con el CHECK y el periodo sigue cerrado', () async {
+      await closedPeriod(PeriodEndSource.inferred);
+
+      await repo.upsertDay(date: '2026-03-03', isPeriodDaySwitch: false);
+
+      final day = await repo.getDay('2026-03-03');
+      expect(day!.isPeriodDay, isFalse);
+      expect(day.periodEnd, isNull);
+      expect(day.periodDayExplicit, isTrue);
+      expect((await repo.getDerivedCycles()).single.isClosed, isTrue);
+    });
+
+    test('guardar el formulario con el interruptor encendido conserva '
+        'period_end', () async {
+      await closedPeriod(PeriodEndSource.declared);
+      await repo.upsertDay(
+          date: '2026-03-03', isPeriodDaySwitch: true, mood: Mood.feliz);
+      expect((await repo.getDay('2026-03-03'))!.periodEnd,
+          PeriodEndSource.declared);
+    });
+
+    test('"Deshacer" restaura period_end', () async {
+      await closedPeriod(PeriodEndSource.inferred);
+      final before = await repo.getDay('2026-03-03');
+
+      await repo.setPeriodDayExplicitly('2026-03-03', isPeriodDay: false);
+      await repo.restoreDaySnapshot('2026-03-03', before);
+
+      final day = await repo.getDay('2026-03-03');
+      expect(day!.isPeriodDay, isTrue);
+      expect(day.periodEnd, PeriodEndSource.inferred);
+      expect(day.periodDayExplicit, isFalse);
+    });
+
+    test(
+        'marcar el dia siguiente al fin reabre el periodo sin borrar la marca; '
+        'quitarlo lo vuelve a cerrar (R-4)', () async {
+      await closedPeriod(PeriodEndSource.declared);
+
+      await repo.markPeriodDay('2026-03-04');
+      expect((await repo.getDay('2026-03-03'))!.periodEnd,
+          PeriodEndSource.declared);
+      expect((await repo.getDerivedCycles()).single.isClosed, isFalse);
+
+      await (db.delete(db.dailyLogs)
+            ..where((t) => t.date.equals('2026-03-04')))
+          .go();
+      expect((await repo.getDerivedCycles()).single.isClosed, isTrue);
+    });
+
+    test('marcar un rango encima del fin no toca period_end', () async {
+      await closedPeriod(PeriodEndSource.inferred);
+      await repo.markPeriodDays(['2026-03-02', '2026-03-03']);
+      expect((await repo.getDay('2026-03-03'))!.periodEnd,
+          PeriodEndSource.inferred);
+    });
+  });
+
+  group('duracion habitual del periodo (typical_period_length)', () {
+    test('vale 5 por defecto', () async {
+      expect(await repo.getTypicalPeriodLength(), 5);
+    });
+
+    test('se guarda entre 1 y 15', () async {
+      await repo.setTypicalPeriodLength(1);
+      expect(await repo.getTypicalPeriodLength(), 1);
+      await repo.setTypicalPeriodLength(15);
+      expect(await repo.getTypicalPeriodLength(), 15);
+    });
+
+    test('fuera de 1 a 15 lanza ArgumentError y no cambia nada', () async {
+      await repo.setTypicalPeriodLength(7);
+      expect(() => repo.setTypicalPeriodLength(0), throwsArgumentError);
+      expect(() => repo.setTypicalPeriodLength(16), throwsArgumentError);
+      expect(await repo.getTypicalPeriodLength(), 7);
+    });
+
+    test('no cambia ningun otro ajuste', () async {
+      await repo.setReminderTime(hour: 21, minute: 30);
+      await repo.setTypicalPeriodLength(4);
+      final settings = await repo.getNotificationSettings();
+      expect(settings.reminderHour, 21);
+      expect(settings.reminderMinute, 30);
+    });
+
+    test('"Borrar todos los datos" la vuelve a 5 (HU-01, criterio 4)',
+        () async {
+      await repo.setTypicalPeriodLength(9);
+      await repo.deleteAllData();
+      expect(await repo.getTypicalPeriodLength(), 5);
+    });
+  });
+
+  group('watchPredictionInputs', () {
+    test('entrega los ciclos y la duracion habitual (5 sin ajustes)',
+        () async {
+      await repo.markPeriodDays(['2026-03-01', '2026-03-02']);
+      final inputs = await repo.watchPredictionInputs().first;
+      expect(inputs.cycles.single.startDate, '2026-03-01');
+      expect(inputs.typicalPeriodLengthDays, 5);
+      expect(inputs.config.typicalPeriodLengthDays, 5);
+    });
+
+    test('emite de nuevo cuando cambia un ajuste (sin tocar los dias)',
+        () async {
+      final values = repo
+          .watchPredictionInputs()
+          .map((i) => i.typicalPeriodLengthDays)
+          .distinct();
+      final expectation = expectLater(values, emitsInOrder([5, 8]));
+      await Future<void>.delayed(Duration.zero);
+      await repo.setTypicalPeriodLength(8);
+      await expectation;
+    });
+
+    test('emite de nuevo cuando cambian los dias', () async {
+      final counts =
+          repo.watchPredictionInputs().map((i) => i.cycles.length).distinct();
+      final expectation = expectLater(counts, emitsInOrder([0, 1]));
+      await Future<void>.delayed(Duration.zero);
+      await repo.markPeriodDay('2026-03-01');
+      await expectation;
     });
   });
 }

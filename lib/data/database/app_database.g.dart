@@ -76,6 +76,16 @@ class $DailyLogsTable extends DailyLogs
     defaultValue: const Constant(false),
   );
   @override
+  late final GeneratedColumnWithTypeConverter<PeriodEndSource?, String>
+  periodEnd = GeneratedColumn<String>(
+    'period_end',
+    aliasedName,
+    true,
+    check: () => periodEnd.isNull() | isPeriodDay.equals(true),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<PeriodEndSource?>($DailyLogsTable.$converterperiodEndn);
+  @override
   List<GeneratedColumn> get $columns => [
     date,
     isPeriodDay,
@@ -83,6 +93,7 @@ class $DailyLogsTable extends DailyLogs
     mood,
     notes,
     periodDayExplicit,
+    periodEnd,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -165,6 +176,12 @@ class $DailyLogsTable extends DailyLogs
         DriftSqlType.bool,
         data['${effectivePrefix}period_day_explicit'],
       )!,
+      periodEnd: $DailyLogsTable.$converterperiodEndn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}period_end'],
+        ),
+      ),
     );
   }
 
@@ -181,6 +198,12 @@ class $DailyLogsTable extends DailyLogs
       const EnumNameConverter<Mood>(Mood.values);
   static JsonTypeConverter2<Mood?, String?, String?> $convertermoodn =
       JsonTypeConverter2.asNullable($convertermood);
+  static JsonTypeConverter2<PeriodEndSource, String, String>
+  $converterperiodEnd = const EnumNameConverter<PeriodEndSource>(
+    PeriodEndSource.values,
+  );
+  static JsonTypeConverter2<PeriodEndSource?, String?, String?>
+  $converterperiodEndn = JsonTypeConverter2.asNullable($converterperiodEnd);
 }
 
 class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
@@ -201,6 +224,13 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
   /// cuando is_period_day=false (ver fase de registro rapido de fin de
   /// periodo).
   final bool periodDayExplicit;
+
+  /// Fin del periodo (decision D-1): se guarda solo en el ULTIMO dia de
+  /// sangrado, con su origen (declared / inferred). Un period_end en un
+  /// dia interior no cuenta (R-4). El CHECK va en la columna, no en la
+  /// tabla, para que una base nueva y una migrada (ADD COLUMN) tengan el
+  /// mismo schema; impide guardarlo en un dia sin sangrado.
+  final PeriodEndSource? periodEnd;
   const DailyLogRow({
     required this.date,
     required this.isPeriodDay,
@@ -208,6 +238,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
     this.mood,
     this.notes,
     required this.periodDayExplicit,
+    this.periodEnd,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -228,6 +259,11 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       map['notes'] = Variable<String>(notes);
     }
     map['period_day_explicit'] = Variable<bool>(periodDayExplicit);
+    if (!nullToAbsent || periodEnd != null) {
+      map['period_end'] = Variable<String>(
+        $DailyLogsTable.$converterperiodEndn.toSql(periodEnd),
+      );
+    }
     return map;
   }
 
@@ -241,6 +277,9 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
           ? const Value.absent()
           : Value(notes),
       periodDayExplicit: Value(periodDayExplicit),
+      periodEnd: periodEnd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(periodEnd),
     );
   }
 
@@ -260,6 +299,9 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       ),
       notes: serializer.fromJson<String?>(json['notes']),
       periodDayExplicit: serializer.fromJson<bool>(json['periodDayExplicit']),
+      periodEnd: $DailyLogsTable.$converterperiodEndn.fromJson(
+        serializer.fromJson<String?>(json['periodEnd']),
+      ),
     );
   }
   @override
@@ -276,6 +318,9 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       ),
       'notes': serializer.toJson<String?>(notes),
       'periodDayExplicit': serializer.toJson<bool>(periodDayExplicit),
+      'periodEnd': serializer.toJson<String?>(
+        $DailyLogsTable.$converterperiodEndn.toJson(periodEnd),
+      ),
     };
   }
 
@@ -286,6 +331,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
     Value<Mood?> mood = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     bool? periodDayExplicit,
+    Value<PeriodEndSource?> periodEnd = const Value.absent(),
   }) => DailyLogRow(
     date: date ?? this.date,
     isPeriodDay: isPeriodDay ?? this.isPeriodDay,
@@ -293,6 +339,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
     mood: mood.present ? mood.value : this.mood,
     notes: notes.present ? notes.value : this.notes,
     periodDayExplicit: periodDayExplicit ?? this.periodDayExplicit,
+    periodEnd: periodEnd.present ? periodEnd.value : this.periodEnd,
   );
   DailyLogRow copyWithCompanion(DailyLogsCompanion data) {
     return DailyLogRow(
@@ -306,6 +353,7 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
       periodDayExplicit: data.periodDayExplicit.present
           ? data.periodDayExplicit.value
           : this.periodDayExplicit,
+      periodEnd: data.periodEnd.present ? data.periodEnd.value : this.periodEnd,
     );
   }
 
@@ -317,14 +365,22 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
           ..write('flow: $flow, ')
           ..write('mood: $mood, ')
           ..write('notes: $notes, ')
-          ..write('periodDayExplicit: $periodDayExplicit')
+          ..write('periodDayExplicit: $periodDayExplicit, ')
+          ..write('periodEnd: $periodEnd')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(date, isPeriodDay, flow, mood, notes, periodDayExplicit);
+  int get hashCode => Object.hash(
+    date,
+    isPeriodDay,
+    flow,
+    mood,
+    notes,
+    periodDayExplicit,
+    periodEnd,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -334,7 +390,8 @@ class DailyLogRow extends DataClass implements Insertable<DailyLogRow> {
           other.flow == this.flow &&
           other.mood == this.mood &&
           other.notes == this.notes &&
-          other.periodDayExplicit == this.periodDayExplicit);
+          other.periodDayExplicit == this.periodDayExplicit &&
+          other.periodEnd == this.periodEnd);
 }
 
 class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
@@ -344,6 +401,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
   final Value<Mood?> mood;
   final Value<String?> notes;
   final Value<bool> periodDayExplicit;
+  final Value<PeriodEndSource?> periodEnd;
   final Value<int> rowid;
   const DailyLogsCompanion({
     this.date = const Value.absent(),
@@ -352,6 +410,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     this.mood = const Value.absent(),
     this.notes = const Value.absent(),
     this.periodDayExplicit = const Value.absent(),
+    this.periodEnd = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DailyLogsCompanion.insert({
@@ -361,6 +420,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     this.mood = const Value.absent(),
     this.notes = const Value.absent(),
     this.periodDayExplicit = const Value.absent(),
+    this.periodEnd = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : date = Value(date);
   static Insertable<DailyLogRow> custom({
@@ -370,6 +430,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     Expression<String>? mood,
     Expression<String>? notes,
     Expression<bool>? periodDayExplicit,
+    Expression<String>? periodEnd,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -379,6 +440,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
       if (mood != null) 'mood': mood,
       if (notes != null) 'notes': notes,
       if (periodDayExplicit != null) 'period_day_explicit': periodDayExplicit,
+      if (periodEnd != null) 'period_end': periodEnd,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -390,6 +452,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     Value<Mood?>? mood,
     Value<String?>? notes,
     Value<bool>? periodDayExplicit,
+    Value<PeriodEndSource?>? periodEnd,
     Value<int>? rowid,
   }) {
     return DailyLogsCompanion(
@@ -399,6 +462,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
       mood: mood ?? this.mood,
       notes: notes ?? this.notes,
       periodDayExplicit: periodDayExplicit ?? this.periodDayExplicit,
+      periodEnd: periodEnd ?? this.periodEnd,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -428,6 +492,11 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
     if (periodDayExplicit.present) {
       map['period_day_explicit'] = Variable<bool>(periodDayExplicit.value);
     }
+    if (periodEnd.present) {
+      map['period_end'] = Variable<String>(
+        $DailyLogsTable.$converterperiodEndn.toSql(periodEnd.value),
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -443,6 +512,7 @@ class DailyLogsCompanion extends UpdateCompanion<DailyLogRow> {
           ..write('mood: $mood, ')
           ..write('notes: $notes, ')
           ..write('periodDayExplicit: $periodDayExplicit, ')
+          ..write('periodEnd: $periodEnd, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -786,6 +856,20 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _typicalPeriodLengthMeta =
+      const VerificationMeta('typicalPeriodLength');
+  @override
+  late final GeneratedColumn<int> typicalPeriodLength = GeneratedColumn<int>(
+    'typical_period_length',
+    aliasedName,
+    false,
+    check: () => ComparableExpr(
+      typicalPeriodLength,
+    ).isBetweenValues(minTypicalPeriodLength, maxTypicalPeriodLength),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(defaultTypicalPeriodLength),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -796,6 +880,7 @@ class $AppSettingsTable extends AppSettings
     showDetailsEnabled,
     reminderHour,
     reminderMinute,
+    typicalPeriodLength,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -875,6 +960,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('typical_period_length')) {
+      context.handle(
+        _typicalPeriodLengthMeta,
+        typicalPeriodLength.isAcceptableOrUnknown(
+          data['typical_period_length']!,
+          _typicalPeriodLengthMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -916,6 +1010,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}reminder_minute'],
       )!,
+      typicalPeriodLength: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}typical_period_length'],
+      )!,
     );
   }
 
@@ -939,6 +1037,10 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
   final bool showDetailsEnabled;
   final int reminderHour;
   final int reminderMinute;
+
+  /// Duracion habitual del periodo en dias (HU-01): 1 a 15, por defecto 5.
+  /// La usa el predictor cuando no hay periodos cerrados (P-1).
+  final int typicalPeriodLength;
   const AppSettingsRow({
     required this.id,
     required this.onboardingSeen,
@@ -948,6 +1050,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     required this.showDetailsEnabled,
     required this.reminderHour,
     required this.reminderMinute,
+    required this.typicalPeriodLength,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -962,6 +1065,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     map['show_details_enabled'] = Variable<bool>(showDetailsEnabled);
     map['reminder_hour'] = Variable<int>(reminderHour);
     map['reminder_minute'] = Variable<int>(reminderMinute);
+    map['typical_period_length'] = Variable<int>(typicalPeriodLength);
     return map;
   }
 
@@ -975,6 +1079,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       showDetailsEnabled: Value(showDetailsEnabled),
       reminderHour: Value(reminderHour),
       reminderMinute: Value(reminderMinute),
+      typicalPeriodLength: Value(typicalPeriodLength),
     );
   }
 
@@ -998,6 +1103,9 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       showDetailsEnabled: serializer.fromJson<bool>(json['showDetailsEnabled']),
       reminderHour: serializer.fromJson<int>(json['reminderHour']),
       reminderMinute: serializer.fromJson<int>(json['reminderMinute']),
+      typicalPeriodLength: serializer.fromJson<int>(
+        json['typicalPeriodLength'],
+      ),
     );
   }
   @override
@@ -1014,6 +1122,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       'showDetailsEnabled': serializer.toJson<bool>(showDetailsEnabled),
       'reminderHour': serializer.toJson<int>(reminderHour),
       'reminderMinute': serializer.toJson<int>(reminderMinute),
+      'typicalPeriodLength': serializer.toJson<int>(typicalPeriodLength),
     };
   }
 
@@ -1026,6 +1135,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     bool? showDetailsEnabled,
     int? reminderHour,
     int? reminderMinute,
+    int? typicalPeriodLength,
   }) => AppSettingsRow(
     id: id ?? this.id,
     onboardingSeen: onboardingSeen ?? this.onboardingSeen,
@@ -1036,6 +1146,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     showDetailsEnabled: showDetailsEnabled ?? this.showDetailsEnabled,
     reminderHour: reminderHour ?? this.reminderHour,
     reminderMinute: reminderMinute ?? this.reminderMinute,
+    typicalPeriodLength: typicalPeriodLength ?? this.typicalPeriodLength,
   );
   AppSettingsRow copyWithCompanion(AppSettingsCompanion data) {
     return AppSettingsRow(
@@ -1061,6 +1172,9 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       reminderMinute: data.reminderMinute.present
           ? data.reminderMinute.value
           : this.reminderMinute,
+      typicalPeriodLength: data.typicalPeriodLength.present
+          ? data.typicalPeriodLength.value
+          : this.typicalPeriodLength,
     );
   }
 
@@ -1076,7 +1190,8 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
           )
           ..write('showDetailsEnabled: $showDetailsEnabled, ')
           ..write('reminderHour: $reminderHour, ')
-          ..write('reminderMinute: $reminderMinute')
+          ..write('reminderMinute: $reminderMinute, ')
+          ..write('typicalPeriodLength: $typicalPeriodLength')
           ..write(')'))
         .toString();
   }
@@ -1091,6 +1206,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     showDetailsEnabled,
     reminderHour,
     reminderMinute,
+    typicalPeriodLength,
   );
   @override
   bool operator ==(Object other) =>
@@ -1104,7 +1220,8 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
               this.fertileWindowRemindersEnabled &&
           other.showDetailsEnabled == this.showDetailsEnabled &&
           other.reminderHour == this.reminderHour &&
-          other.reminderMinute == this.reminderMinute);
+          other.reminderMinute == this.reminderMinute &&
+          other.typicalPeriodLength == this.typicalPeriodLength);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
@@ -1116,6 +1233,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
   final Value<bool> showDetailsEnabled;
   final Value<int> reminderHour;
   final Value<int> reminderMinute;
+  final Value<int> typicalPeriodLength;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
@@ -1125,6 +1243,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     this.showDetailsEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
+    this.typicalPeriodLength = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -1135,6 +1254,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     this.showDetailsEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
+    this.typicalPeriodLength = const Value.absent(),
   });
   static Insertable<AppSettingsRow> custom({
     Expression<int>? id,
@@ -1145,6 +1265,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     Expression<bool>? showDetailsEnabled,
     Expression<int>? reminderHour,
     Expression<int>? reminderMinute,
+    Expression<int>? typicalPeriodLength,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1159,6 +1280,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
         'show_details_enabled': showDetailsEnabled,
       if (reminderHour != null) 'reminder_hour': reminderHour,
       if (reminderMinute != null) 'reminder_minute': reminderMinute,
+      if (typicalPeriodLength != null)
+        'typical_period_length': typicalPeriodLength,
     });
   }
 
@@ -1171,6 +1294,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     Value<bool>? showDetailsEnabled,
     Value<int>? reminderHour,
     Value<int>? reminderMinute,
+    Value<int>? typicalPeriodLength,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -1183,6 +1307,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
       showDetailsEnabled: showDetailsEnabled ?? this.showDetailsEnabled,
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
+      typicalPeriodLength: typicalPeriodLength ?? this.typicalPeriodLength,
     );
   }
 
@@ -1217,6 +1342,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     if (reminderMinute.present) {
       map['reminder_minute'] = Variable<int>(reminderMinute.value);
     }
+    if (typicalPeriodLength.present) {
+      map['typical_period_length'] = Variable<int>(typicalPeriodLength.value);
+    }
     return map;
   }
 
@@ -1232,7 +1360,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
           )
           ..write('showDetailsEnabled: $showDetailsEnabled, ')
           ..write('reminderHour: $reminderHour, ')
-          ..write('reminderMinute: $reminderMinute')
+          ..write('reminderMinute: $reminderMinute, ')
+          ..write('typicalPeriodLength: $typicalPeriodLength')
           ..write(')'))
         .toString();
   }
@@ -1265,6 +1394,7 @@ typedef $$DailyLogsTableCreateCompanionBuilder =
       Value<Mood?> mood,
       Value<String?> notes,
       Value<bool> periodDayExplicit,
+      Value<PeriodEndSource?> periodEnd,
       Value<int> rowid,
     });
 typedef $$DailyLogsTableUpdateCompanionBuilder =
@@ -1275,6 +1405,7 @@ typedef $$DailyLogsTableUpdateCompanionBuilder =
       Value<Mood?> mood,
       Value<String?> notes,
       Value<bool> periodDayExplicit,
+      Value<PeriodEndSource?> periodEnd,
       Value<int> rowid,
     });
 
@@ -1318,6 +1449,12 @@ class $$DailyLogsTableFilterComposer
     column: $table.periodDayExplicit,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnWithTypeConverterFilters<PeriodEndSource?, PeriodEndSource, String>
+  get periodEnd => $composableBuilder(
+    column: $table.periodEnd,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 }
 
 class $$DailyLogsTableOrderingComposer
@@ -1358,6 +1495,11 @@ class $$DailyLogsTableOrderingComposer
     column: $table.periodDayExplicit,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get periodEnd => $composableBuilder(
+    column: $table.periodEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DailyLogsTableAnnotationComposer
@@ -1390,6 +1532,9 @@ class $$DailyLogsTableAnnotationComposer
     column: $table.periodDayExplicit,
     builder: (column) => column,
   );
+
+  GeneratedColumnWithTypeConverter<PeriodEndSource?, String> get periodEnd =>
+      $composableBuilder(column: $table.periodEnd, builder: (column) => column);
 }
 
 class $$DailyLogsTableTableManager
@@ -1429,6 +1574,7 @@ class $$DailyLogsTableTableManager
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> periodDayExplicit = const Value.absent(),
+                Value<PeriodEndSource?> periodEnd = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyLogsCompanion(
                 date: date,
@@ -1437,6 +1583,7 @@ class $$DailyLogsTableTableManager
                 mood: mood,
                 notes: notes,
                 periodDayExplicit: periodDayExplicit,
+                periodEnd: periodEnd,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1447,6 +1594,7 @@ class $$DailyLogsTableTableManager
                 Value<Mood?> mood = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> periodDayExplicit = const Value.absent(),
+                Value<PeriodEndSource?> periodEnd = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyLogsCompanion.insert(
                 date: date,
@@ -1455,6 +1603,7 @@ class $$DailyLogsTableTableManager
                 mood: mood,
                 notes: notes,
                 periodDayExplicit: periodDayExplicit,
+                periodEnd: periodEnd,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1646,6 +1795,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> showDetailsEnabled,
       Value<int> reminderHour,
       Value<int> reminderMinute,
+      Value<int> typicalPeriodLength,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -1657,6 +1807,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> showDetailsEnabled,
       Value<int> reminderHour,
       Value<int> reminderMinute,
+      Value<int> typicalPeriodLength,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -1705,6 +1856,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get reminderMinute => $composableBuilder(
     column: $table.reminderMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get typicalPeriodLength => $composableBuilder(
+    column: $table.typicalPeriodLength,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1757,6 +1913,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.reminderMinute,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get typicalPeriodLength => $composableBuilder(
+    column: $table.typicalPeriodLength,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -1805,6 +1966,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.reminderMinute,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get typicalPeriodLength => $composableBuilder(
+    column: $table.typicalPeriodLength,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -1847,6 +2013,7 @@ class $$AppSettingsTableTableManager
                 Value<bool> showDetailsEnabled = const Value.absent(),
                 Value<int> reminderHour = const Value.absent(),
                 Value<int> reminderMinute = const Value.absent(),
+                Value<int> typicalPeriodLength = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 onboardingSeen: onboardingSeen,
@@ -1856,6 +2023,7 @@ class $$AppSettingsTableTableManager
                 showDetailsEnabled: showDetailsEnabled,
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
+                typicalPeriodLength: typicalPeriodLength,
               ),
           createCompanionCallback:
               ({
@@ -1868,6 +2036,7 @@ class $$AppSettingsTableTableManager
                 Value<bool> showDetailsEnabled = const Value.absent(),
                 Value<int> reminderHour = const Value.absent(),
                 Value<int> reminderMinute = const Value.absent(),
+                Value<int> typicalPeriodLength = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 onboardingSeen: onboardingSeen,
@@ -1877,6 +2046,7 @@ class $$AppSettingsTableTableManager
                 showDetailsEnabled: showDetailsEnabled,
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
+                typicalPeriodLength: typicalPeriodLength,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

@@ -17,6 +17,15 @@ String _fixtureText() => File('test/fixtures/backup_v3.json')
 Map<String, dynamic> _fixtureMap() =>
     jsonDecode(_fixtureText()) as Map<String, dynamic>;
 
+/// test/fixtures/backup_v4.json: respaldo v4 con datos inventados (un
+/// cierre inferred, uno declared y una duracion habitual distinta de 5).
+String _fixtureV4Text() => File('test/fixtures/backup_v4.json')
+    .readAsStringSync()
+    .replaceAll('\r\n', '\n');
+
+Map<String, dynamic> _fixtureV4Map() =>
+    jsonDecode(_fixtureV4Text()) as Map<String, dynamic>;
+
 List<int> _bytes(Object json) => utf8.encode(jsonEncode(json));
 
 BackupParseResult _decodeMap(Map<String, dynamic> map) =>
@@ -75,11 +84,174 @@ void main() {
       );
     });
 
+    test('no trae period_end y la duracion habitual queda en 5', () {
+      final data = _expectSuccess(decodeBackup(utf8.encode(_fixtureText())));
+      expect(data.days.map((d) => d.periodEnd), everyElement(isNull));
+      expect(data.settings.typicalPeriodLength, 5);
+    });
+
+    test(
+        'al volver a codificarlo sale en el formato actual, con los mismos '
+        'datos', () {
+      final data = _expectSuccess(decodeBackup(utf8.encode(_fixtureText())));
+      final again =
+          _expectSuccess(decodeBackup(utf8.encode(encodeBackup(data))));
+      expect(again.days, data.days);
+      expect(again.settings, data.settings);
+    });
+  });
+
+  group('fixture backup_v4.json', () {
+    test('se importa con period_end y la duracion habitual', () {
+      final data =
+          _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
+      expect(data.schemaVersion, 4);
+      expect(data.days, hasLength(8));
+      expect(data.symptomCount, 3);
+      expect(
+        {
+          for (final d in data.days)
+            if (d.periodEnd != null) d.date: d.periodEnd,
+        },
+        {
+          '2026-06-05': PeriodEndSource.inferred,
+          '2026-07-02': PeriodEndSource.declared,
+        },
+      );
+      expect(data.settings.typicalPeriodLength, 4);
+      expect(data.settings.reminderHour, 8);
+    });
+
     test('ida y vuelta exacta: decodificar y volver a codificar da el mismo '
         'texto, byte a byte', () {
-      final text = _fixtureText();
+      final text = _fixtureV4Text();
       final data = _expectSuccess(decodeBackup(utf8.encode(text)));
       expect(encodeBackup(data), text);
+    });
+  });
+
+  group('validacion v4', () {
+    void expectDamagedV4(void Function(Map<String, dynamic> map) change) {
+      final map = _fixtureV4Map();
+      change(map);
+      _expectFailure(_decodeMap(map), BackupError.damaged);
+    }
+
+    test('periodEnd desconocido',
+        () => expectDamagedV4((m) => _firstDay(m)['periodEnd'] = 'pronto'));
+    test('periodEnd en un dia sin sangrado', () {
+      expectDamagedV4((m) {
+        final day = (((m['data'] as Map)['dailyLogs'] as List)[6]) as Map;
+        expect(day['isPeriodDay'], isFalse);
+        day['periodEnd'] = 'declared';
+      });
+    });
+    test('falta la clave periodEnd',
+        () => expectDamagedV4((m) => _firstDay(m).remove('periodEnd')));
+    test('falta typicalPeriodLength', () {
+      expectDamagedV4((m) => _settings(m).remove('typicalPeriodLength'));
+    });
+    test('typicalPeriodLength 0',
+        () => expectDamagedV4((m) => _settings(m)['typicalPeriodLength'] = 0));
+    test('typicalPeriodLength 16',
+        () => expectDamagedV4((m) => _settings(m)['typicalPeriodLength'] = 16));
+    test('typicalPeriodLength no entero', () {
+      expectDamagedV4((m) => _settings(m)['typicalPeriodLength'] = '5');
+    });
+    test('acepta typicalPeriodLength 1 y 15', () {
+      for (final valid in [1, 15]) {
+        final map = _fixtureV4Map();
+        _settings(map)['typicalPeriodLength'] = valid;
+        expect(_expectSuccess(_decodeMap(map)).settings.typicalPeriodLength,
+            valid);
+      }
+    });
+    test(
+        'un respaldo v3 con una clave periodEnd la ignora (clave '
+        'desconocida en v3)', () {
+      final map = _fixtureMap();
+      _firstDay(map)['periodEnd'] = 'declared';
+      _settings(map)['typicalPeriodLength'] = 9;
+      final data = _expectSuccess(_decodeMap(map));
+      expect(data.days.first.periodEnd, isNull);
+      expect(data.settings.typicalPeriodLength, 5);
+    });
+  });
+
+  group('upgradeBackupData (respaldo v3 -> v4, regla D-2)', () {
+    BackupData v3With(List<BackupDay> days) => BackupData(
+          schemaVersion: 3,
+          appVersion: '1.0.1',
+          exportedAt: '2026-10-04T10:15:00-03:00',
+          days: days,
+          settings: const BackupSettings(
+            onboardingSeen: true,
+            notificationsEnabled: false,
+            periodReminderEnabled: true,
+            fertileWindowRemindersEnabled: false,
+            showDetailsEnabled: false,
+            reminderHour: 9,
+            reminderMinute: 0,
+          ),
+        );
+    BackupDay p(String date) =>
+        BackupDay(date: date, isPeriodDay: true, periodDayExplicit: false);
+
+    test('fixture v3: pasa a schema 4 sin ningun cierre (H-5)', () {
+      final v3 = _expectSuccess(decodeBackup(utf8.encode(_fixtureText())));
+      final v4 = upgradeBackupData(v3, today: '2026-10-04');
+      expect(v4.schemaVersion, currentBackupSchemaVersion);
+      expect(v4.days, v3.days);
+      expect(v4.settings, v3.settings);
+      expect(v4.appVersion, v3.appVersion);
+      expect(v4.exportedAt, v3.exportedAt);
+    });
+
+    test('cierra con inferred solo el ultimo dia de los periodos que cumplen '
+        'D-2, sin cambiar ningun otro dato', () {
+      final v3 = v3With([
+        BackupDay(
+          date: '2026-08-01',
+          isPeriodDay: true,
+          periodDayExplicit: false,
+          flow: FlowIntensity.moderado,
+          symptoms: const [Symptom.acne],
+        ),
+        BackupDay(
+          date: '2026-08-02',
+          isPeriodDay: true,
+          periodDayExplicit: false,
+          flow: FlowIntensity.ligero,
+          mood: Mood.feliz,
+          notes: 'nota',
+          symptoms: const [Symptom.cansancio],
+        ),
+        p('2026-09-01'), // un solo dia: abierto
+      ]);
+      final v4 = upgradeBackupData(v3, today: '2026-10-07');
+      expect(v4.days[1], v3.days[1].withPeriodEnd(PeriodEndSource.inferred));
+      expect(v4.days[0], v3.days[0]);
+      expect(v4.days[2], v3.days[2]);
+    });
+
+    test('"hoy" decide si el periodo mas reciente puede seguir', () {
+      final v3 = v3With([p('2026-09-28'), p('2026-09-29')]);
+      expect(
+          upgradeBackupData(v3, today: '2026-10-06')
+              .days
+              .map((d) => d.periodEnd),
+          [null, null]);
+      expect(
+          upgradeBackupData(v3, today: '2026-10-07')
+              .days
+              .map((d) => d.periodEnd),
+          [null, PeriodEndSource.inferred]);
+    });
+
+    test('un respaldo del schema actual se devuelve sin cambios', () {
+      final v4 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
+      expect(identical(upgradeBackupData(v4, today: '2026-10-07'), v4),
+          isTrue);
     });
   });
 
@@ -102,7 +274,7 @@ void main() {
     );
 
     BackupData dataWith(List<BackupDay> days) => BackupData(
-          schemaVersion: 3,
+          schemaVersion: currentBackupSchemaVersion,
           appVersion: '1.0.1',
           exportedAt: '2026-10-04T10:15:00-03:00',
           days: days,

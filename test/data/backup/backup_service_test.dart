@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -445,4 +446,99 @@ void main() {
         .existsSync(), isFalse);
     expect(Directory(p.join(temp.path, 'share_plus')).existsSync(), isFalse);
   });
+  group('respaldo v4', () {
+    BackupData v3With(List<String> periodDays) => BackupData(
+          schemaVersion: 3,
+          appVersion: '1.0.1',
+          exportedAt: '2026-09-20T10:15:00-03:00',
+          days: [
+            for (final d in periodDays)
+              BackupDay(date: d, isPeriodDay: true, periodDayExplicit: false),
+          ],
+          settings: const BackupSettings(
+            onboardingSeen: true,
+            notificationsEnabled: false,
+            periodReminderEnabled: true,
+            fertileWindowRemindersEnabled: false,
+            showDetailsEnabled: false,
+            reminderHour: 9,
+            reminderMinute: 0,
+          ),
+        );
+
+    test(
+        'importar un respaldo v3 aplica D-2 con "hoy" = el dia de la '
+        'importacion', () async {
+      final respaldo = v3With(['2026-09-01', '2026-09-02', '2026-09-25',
+          '2026-09-26']);
+
+      now = DateTime(2026, 10, 3, 12); // 7 dias despues del 09-26
+      await service.importBackup(respaldo);
+      expect((await repo.getDay('2026-09-02'))!.periodEnd,
+          PeriodEndSource.inferred);
+      expect((await repo.getDay('2026-09-26'))!.periodEnd, isNull,
+          reason: 'el mas reciente puede seguir');
+
+      now = DateTime(2026, 10, 4, 12); // 8 dias despues
+      await service.importBackup(respaldo);
+      expect((await repo.getDay('2026-09-26'))!.periodEnd,
+          PeriodEndSource.inferred);
+      expect(await repo.getTypicalPeriodLength(), 5);
+    });
+
+    test('importar backup_v4.json conserva sus cierres y su duracion habitual',
+        () async {
+      final v4 = (decodeBackup(
+                  File('test/fixtures/backup_v4.json').readAsBytesSync())
+              as BackupParseSuccess)
+          .data;
+
+      await service.importBackup(v4);
+
+      expect((await repo.getDay('2026-06-05'))!.periodEnd,
+          PeriodEndSource.inferred);
+      expect((await repo.getDay('2026-07-02'))!.periodEnd,
+          PeriodEndSource.declared);
+      expect(await repo.getTypicalPeriodLength(), 4);
+      final exportado =
+          await repo.readBackupData(appVersion: 'x', exportedAt: 'x');
+      expect(exportado.days, v4.days);
+      expect(exportado.settings.typicalPeriodLength, 4);
+    });
+
+    test('deshacer restaura period_end y la duracion habitual de antes',
+        () async {
+      await repo.markPeriodDays(['2026-08-01', '2026-08-02']);
+      await db.into(db.dailyLogs).insertOnConflictUpdate(
+            DailyLogsCompanion.insert(
+              date: '2026-08-02',
+              isPeriodDay: const Value(true),
+              periodEnd: const Value(PeriodEndSource.declared),
+            ),
+          );
+      await repo.setTypicalPeriodLength(7);
+      await repo.setOnboardingSeen(true);
+      final antes = await currentDataJson();
+
+      await service.importBackup(_fixture());
+      await service.undoLastImport();
+
+      expect(await currentDataJson(), antes);
+    });
+
+    test(
+        'deshacer con una copia previa v3 (de antes de actualizar) la '
+        'convierte con D-2', () async {
+      preImportFile()
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(
+            encodeBackup(v3With(['2026-08-01', '2026-08-02'])));
+
+      await service.undoLastImport();
+
+      expect((await repo.getDay('2026-08-02'))!.periodEnd,
+          PeriodEndSource.inferred);
+    });
+  });
 }
+

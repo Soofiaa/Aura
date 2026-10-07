@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/backup_codec.dart';
 import '../../domain/cycle_deriver.dart';
+import '../../domain/cycle_predictor.dart';
 import '../../domain/notification_planner.dart';
 import '../database/app_database.dart';
 import '../models/day_enums.dart';
@@ -38,8 +39,10 @@ class CycleRepository {
   ///   "si" (add_cycle_screen prellena desde el dato existente) y lo
   ///   apago a proposito -- es una correccion deliberada, equivalente a
   ///   "Quitar marca" del calendario. is_period_day pasa a false, flow a
-  ///   null (el CHECK de la tabla lo exige igual) y period_day_explicit
-  ///   a true.
+  ///   null (el CHECK de la tabla lo exige igual), period_end a null (su
+  ///   CHECK tambien: un dia sin sangrado no puede ser el fin de un
+  ///   periodo) y period_day_explicit a true. El periodo sigue cerrado por
+  ///   ese "no" explicito.
   /// - Si [isPeriodDaySwitch] es false y el dia NO estaba en true (sin
   ///   fila previa, o ya en false): es el default del formulario, no una
   ///   declaracion -- is_period_day se queda en false (o se crea en
@@ -64,6 +67,7 @@ class CycleRepository {
       final bool effectiveIsPeriodDay;
       final FlowIntensity? effectiveFlow;
       final bool? explicitOverride;
+      var clearPeriodEnd = false;
 
       if (isPeriodDaySwitch) {
         effectiveIsPeriodDay = true;
@@ -73,6 +77,7 @@ class CycleRepository {
         effectiveIsPeriodDay = false;
         effectiveFlow = null;
         explicitOverride = true;
+        clearPeriodEnd = true;
       } else {
         effectiveIsPeriodDay = existing?.isPeriodDay ?? false;
         effectiveFlow = existing?.flow;
@@ -89,6 +94,8 @@ class CycleRepository {
               periodDayExplicit: explicitOverride == null
                   ? const Value.absent()
                   : Value(explicitOverride),
+              periodEnd:
+                  clearPeriodEnd ? const Value(null) : const Value.absent(),
             ),
           );
 
@@ -107,7 +114,8 @@ class CycleRepository {
   }
 
   /// Marca [date] como dia de sangrado (calendar_screen). No toca flow,
-  /// mood, notes ni sintomas de un dia existente. Devuelve false si el
+  /// mood, notes, sintomas ni period_end de un dia existente (marcar el
+  /// dia siguiente a un fin reabre el periodo sin borrar la marca, R-4). Devuelve false si el
   /// dia ya estaba marcado (para mostrar "ya estaba registrado" como
   /// antes).
   Future<bool> markPeriodDay(String date) async {
@@ -125,7 +133,9 @@ class CycleRepository {
   /// hoy?" en Inicio, o "Quitar marca" en el calendario) -- NUNCA desde
   /// el formulario general (ese usa [upsertDay]). Siempre marca
   /// period_day_explicit=true, sea que [isPeriodDay] confirme true o
-  /// false. No toca mood, notes ni sintomas.
+  /// false. No toca mood, notes ni sintomas. Con [isPeriodDay] false
+  /// limpia period_end (lo exige su CHECK); el periodo sigue cerrado por
+  /// el "no" explicito que queda guardado.
   Future<void> setPeriodDayExplicitly(
     String date, {
     required bool isPeriodDay,
@@ -139,6 +149,8 @@ class CycleRepository {
             // deja de tener sentido (y el CHECK de la tabla lo exige).
             flow: Value(isPeriodDay ? existing?.flow : null),
             periodDayExplicit: const Value(true),
+            periodEnd:
+                isPeriodDay ? const Value.absent() : const Value(null),
           ),
         );
   }
@@ -180,6 +192,7 @@ class CycleRepository {
             mood: Value(snapshot.mood),
             notes: Value(snapshot.notes),
             periodDayExplicit: Value(snapshot.periodDayExplicit),
+            periodEnd: Value(snapshot.periodEnd),
           ),
         );
   }
@@ -207,7 +220,12 @@ class CycleRepository {
     final explicitNonPeriodDays = [
       for (final r in rows) if (!r.isPeriodDay && r.periodDayExplicit) r.date,
     ];
-    return deriveCycles(periodDays, explicitNonPeriodDays: explicitNonPeriodDays);
+    final periodEnds = {
+      for (final r in rows)
+        if (r.periodEnd != null) r.date: r.periodEnd!,
+    };
+    return deriveCycles(periodDays,
+        explicitNonPeriodDays: explicitNonPeriodDays, periodEnds: periodEnds);
   }
 
   Future<List<CycleSummary>> getDerivedCycles() async {
@@ -231,6 +249,33 @@ class CycleRepository {
   /// stream.
   Stream<List<CycleSummary>> watchDerivedCycles() {
     return _db.select(_db.dailyLogs).watch().map(_deriveFromRows);
+  }
+
+  /// Lo que necesita predictCycle: los ciclos derivados y la duracion
+  /// habitual del periodo. Emite de nuevo cuando cambian los dias
+  /// (daily_logs) O los ajustes (app_settings), y lee ambos en la misma
+  /// transaccion. Igual que [watchDerivedCycles], no calcula la
+  /// prediccion: "hoy" lo decide quien escucha.
+  Stream<PredictionInputs> watchPredictionInputs() {
+    return _db
+        .customSelect('SELECT 1',
+            readsFrom: {_db.dailyLogs, _db.appSettings})
+        .watch()
+        .asyncMap((_) => getPredictionInputs());
+  }
+
+  Future<PredictionInputs> getPredictionInputs() {
+    return _db.transaction(() async {
+      final rows = await _db.select(_db.dailyLogs).get();
+      final settings = await (_db.select(_db.appSettings)
+            ..where((t) => t.id.equals(0)))
+          .getSingleOrNull();
+      return PredictionInputs(
+        cycles: _deriveFromRows(rows),
+        typicalPeriodLengthDays:
+            settings?.typicalPeriodLength ?? defaultTypicalPeriodLength,
+      );
+    });
   }
 
   Future<bool> hasAnyLog() async {
@@ -372,6 +417,26 @@ class CycleRepository {
         );
   }
 
+  /// Duracion habitual del periodo (HU-01). Vuelve a
+  /// [defaultTypicalPeriodLength] tras "Borrar todos los datos".
+  Future<int> getTypicalPeriodLength() async =>
+      (await _ensureSettingsRow()).typicalPeriodLength;
+
+  /// Lanza [ArgumentError] fuera de [minTypicalPeriodLength] a
+  /// [maxTypicalPeriodLength] (la base tambien lo impide con un CHECK).
+  Future<void> setTypicalPeriodLength(int days) async {
+    if (days < minTypicalPeriodLength || days > maxTypicalPeriodLength) {
+      throw ArgumentError.value(days, 'days',
+          'debe estar entre $minTypicalPeriodLength y $maxTypicalPeriodLength');
+    }
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            typicalPeriodLength: Value(days),
+          ),
+        );
+  }
+
   Future<void> setReminderTime({required int hour, required int minute}) async {
     await _db.into(_db.appSettings).insertOnConflictUpdate(
           AppSettingsCompanion(
@@ -424,7 +489,9 @@ class CycleRepository {
       }
       final settings = await _ensureSettingsRow();
       return BackupData(
-        schemaVersion: _db.schemaVersion,
+        // El schema del formato que se escribe (un test exige que sea el
+        // de la base).
+        schemaVersion: currentBackupSchemaVersion,
         appVersion: appVersion,
         exportedAt: exportedAt,
         days: [
@@ -433,6 +500,7 @@ class CycleRepository {
               date: log.date,
               isPeriodDay: log.isPeriodDay,
               periodDayExplicit: log.periodDayExplicit,
+              periodEnd: log.periodEnd,
               flow: log.flow,
               mood: log.mood,
               notes: log.notes,
@@ -449,6 +517,7 @@ class CycleRepository {
           showDetailsEnabled: settings.showDetailsEnabled,
           reminderHour: settings.reminderHour,
           reminderMinute: settings.reminderMinute,
+          typicalPeriodLength: settings.typicalPeriodLength,
         ),
       );
     });
@@ -467,9 +536,18 @@ class CycleRepository {
   ///
   /// El interruptor general de notificaciones NO se importa: depende del
   /// permiso de ESTE telefono, asi que conserva su valor actual. El resto
-  /// de los ajustes de recordatorios si se importa. onboardingSeen queda
-  /// en true: quien importa ya esta usando la app.
+  /// de los ajustes de recordatorios si se importa, y la duracion
+  /// habitual del periodo tambien. onboardingSeen queda en true: quien
+  /// importa ya esta usando la app.
+  ///
+  /// [data] tiene que estar en el schema actual: un respaldo anterior se
+  /// convierte antes con upgradeBackupData (regla D-2), para que ningun
+  /// camino importe datos v3 sin aplicarla.
   Future<void> replaceAllWithBackup(BackupData data) async {
+    if (data.schemaVersion != currentBackupSchemaVersion) {
+      throw ArgumentError.value(data.schemaVersion, 'data.schemaVersion',
+          'convertir con upgradeBackupData antes de importar');
+    }
     await _db.transaction(() async {
       final current = await _ensureSettingsRow();
       await _db.delete(_db.dailyLogSymptoms).go();
@@ -487,6 +565,7 @@ class CycleRepository {
               mood: Value(day.mood),
               notes: Value(day.notes),
               periodDayExplicit: Value(day.periodDayExplicit),
+              periodEnd: Value(day.periodEnd),
             ),
         ]);
         batch.insertAll(_db.dailyLogSymptoms, [
@@ -507,6 +586,7 @@ class CycleRepository {
             showDetailsEnabled: Value(s.showDetailsEnabled),
             reminderHour: Value(s.reminderHour),
             reminderMinute: Value(s.reminderMinute),
+            typicalPeriodLength: Value(s.typicalPeriodLength),
           ),
         );
       });
@@ -524,6 +604,21 @@ class CycleRepository {
       await _db.delete(_db.appSettings).go();
     });
   }
+}
+
+/// Entradas de predictCycle que vienen de la base (ver
+/// [CycleRepository.watchPredictionInputs]).
+class PredictionInputs {
+  final List<CycleSummary> cycles;
+  final int typicalPeriodLengthDays;
+
+  const PredictionInputs({
+    required this.cycles,
+    required this.typicalPeriodLengthDays,
+  });
+
+  PredictionConfig get config =>
+      PredictionConfig(typicalPeriodLengthDays: typicalPeriodLengthDays);
 }
 
 /// Resultado combinado de [CycleRepository.watchStats] (y equivalente a
