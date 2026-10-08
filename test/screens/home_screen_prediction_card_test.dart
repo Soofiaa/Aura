@@ -11,8 +11,10 @@ import 'package:aura/utils/day_key.dart';
 /// Tarjeta de prediccion de Inicio. CP1 de HU-05 fijo los textos; el CP3
 /// cambia a proposito lo que se ve con confianza baja (sin ovulacion ni
 /// ventana fertil, H5-1 A), con un periodo atrasado (sin fase) y con
-/// datos viejos. Datos inventados; todos los periodos duran 5 dias y
-/// estan abiertos. Las fechas se ven como dd/MM/yyyy.
+/// datos viejos. El CP5d-1 quita tambien la ovulacion, la ventana y su
+/// aviso con un periodo atrasado (visibleFertileMarks). Datos inventados;
+/// todos los periodos duran 5 dias y estan abiertos. Las fechas se ven
+/// como dd/MM/yyyy.
 void main() {
   late AppDatabase db;
   late CycleRepository repo;
@@ -237,14 +239,61 @@ void main() {
       expect(find.text('Confianza: Media'), findsOneWidget);
     });
 
+    // CP5d-1: con el periodo atrasado ya no se ven la ovulacion, la
+    // ventana ni su aviso (antes si).
     testHome('3 dias: plural', (tester) async {
       await seedPeriods(tresCiclos);
       await pumpHome(tester, '2026-04-28');
       expect(find.text('Período atrasado por 3 días'), findsOneWidget);
       sinFase();
-      expect(find.textContaining('Ovulación estimada:'), findsOneWidget);
-      expect(find.text(avisoTarjeta), findsOneWidget);
+      sinOvulacionNiVentana();
     });
+  });
+
+  // HU-05, CP5d-1: la ovulacion y la ventana salen de visibleFertileMarks,
+  // que tambien las oculta con el periodo atrasado.
+  group('CP5d-1 - periodo atrasado con el interruptor encendido', () {
+    // Ultimo inicio 26/03; rango 21/04 - 25/04; el 26/04 es 1 dia de
+    // atraso. tresCiclos da confianza media; con 04/12 delante, alta.
+    for (final (nombre, inicios, confianza) in [
+      ('media', tresCiclos, 'Confianza: Media'),
+      ('alta', ['2025-12-04', ...tresCiclos], 'Confianza: Alta'),
+    ]) {
+      testHome('$nombre: sin ovulacion, ventana ni aviso de la tarjeta; si '
+          'el banner, el proximo periodo con su rango y el aviso del pie',
+          (tester) async {
+        await seedPeriods(inicios);
+        await repo.setShowFertileWindow(true);
+        await pumpHome(tester, '2026-04-26');
+
+        expect(find.text(confianza), findsOneWidget);
+        sinOvulacionNiVentana();
+        expect(find.text(masCiclos), findsNothing);
+        expect(find.text(variabilidad), findsNothing);
+        expect(find.text('Período atrasado por 1 día'), findsOneWidget);
+        expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+            findsOneWidget);
+        expect(find.text('Estimado: 23/04/2026'), findsOneWidget);
+        expect(find.text(avisoPie), findsOneWidget);
+        sinFase();
+      });
+
+      testHome('$nombre: el ultimo dia del rango (no atrasado) sigue igual',
+          (tester) async {
+        await seedPeriods(inicios);
+        await repo.setShowFertileWindow(true);
+        await pumpHome(tester, '2026-04-25');
+
+        expect(find.text(confianza), findsOneWidget);
+        expect(find.textContaining('Período atrasado'), findsNothing);
+        expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+        expect(find.text('Días de mayor probabilidad de fertilidad '
+                '(estimación):\n04/04/2026 - 09/04/2026'),
+            findsOneWidget);
+        avisoJustoDespuesDeLaVentana(tester);
+        expect(find.text('Fase lútea'), findsOneWidget);
+      });
+    }
   });
 
   testHome('datos viejos (mas de 60 dias): nuevo cuerpo, sin fase ni '

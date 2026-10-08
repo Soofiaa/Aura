@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/domain/notification_planner.dart';
 
@@ -428,6 +429,58 @@ void main() {
       expect((off.id, off.date, off.hour, off.minute, off.title, off.body),
           (on.id, on.date, on.hour, on.minute, on.title, on.body));
       expect(plan(false, periodo: false), isEmpty);
+    });
+  });
+
+  // HU-05, CP5d-1: con el periodo atrasado Inicio ya no muestra la
+  // ventana. El planificador no cambia: la ventana empieza antes del
+  // extremo tardio del rango, asi que ya paso (_isStillPending).
+  group('HU-05 CP5d-1 - periodo atrasado', () {
+    test('confianza alta, interruptor y recordatorio fertil encendidos: no '
+        'planifica el fertil (su fecha ya paso)', () {
+      // 4 ciclos de 28; ultimo inicio 26/03; rango 21/04 - 25/04; el
+      // 26/04 es 1 dia de atraso. Ventana desde el 04/04.
+      final prediction = predictCycle(
+        cycles: [
+          for (final (start, length) in [
+            ('2025-12-04', 28),
+            ('2026-01-01', 28),
+            ('2026-01-29', 28),
+            ('2026-02-26', 28),
+            ('2026-03-26', null),
+          ])
+            CycleSummary(
+              startDate: start,
+              periodLengthDays: 5,
+              cycleLengthDays: length,
+            ),
+        ],
+        today: '2026-04-26',
+      ) as ActivePrediction;
+      expect(prediction.isPeriodLate, isTrue);
+      expect(prediction.confidence, PredictionConfidence.high);
+      expect(prediction.fertileWindowStartDate, '2026-04-04');
+
+      for (final detalles in [true, false]) {
+        final plan = planNotifications(
+          prediction: prediction,
+          settings: NotificationSettings(
+            notificationsEnabled: true,
+            periodReminderEnabled: true,
+            fertileWindowRemindersEnabled: true,
+            showDetailsEnabled: detalles,
+            reminderHour: 9,
+            reminderMinute: 0,
+            showFertileWindow: true,
+          ),
+          today: '2026-04-26',
+          nowMinutesOfDay: 8 * 60,
+        );
+        expect(
+            plan.any((n) => n.kind == NotificationKind.fertileWindowReminder),
+            isFalse,
+            reason: 'detalles: $detalles');
+      }
     });
   });
 }

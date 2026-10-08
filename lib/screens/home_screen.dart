@@ -6,6 +6,7 @@ import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
+import '../domain/fertile_marks.dart';
 import '../utils/colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
@@ -424,17 +425,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ]);
   }
 
-  /// Tarjeta de prediccion (HU-05, H5-1 A). Con confianza baja no se
-  /// muestran la ovulacion, la ventana fertil ni la fase ovulatoria, que
-  /// dependen de un promedio poco confiable; se explica por que en una
-  /// linea gris. Con "Mostrar ovulacion y ventana fertil" apagado
-  /// ([mostrarFertilidad], H5-3) tampoco, y sin la linea gris. Con un
-  /// periodo atrasado no se muestra ninguna fase: el ciclo real ya supero
-  /// lo estimado. El predictor no cambia: esto es solo lo que se muestra.
+  /// Tarjeta de prediccion (HU-05). La ovulacion, la ventana fertil y su
+  /// aviso se muestran segun visibleFertileMarks, la misma regla que usa
+  /// el Calendario: no con confianza baja (H5-1 A), ni con "Mostrar
+  /// ovulacion y ventana fertil" apagado ([mostrarFertilidad], H5-3), ni
+  /// con el periodo atrasado. Sin ellas tampoco se muestra la fase
+  /// ovulatoria. Con confianza baja se explica por que en una linea gris
+  /// (solo si el interruptor esta encendido). Con un periodo atrasado no
+  /// se muestra ninguna fase: el ciclo real ya supero lo estimado. El
+  /// predictor no cambia: esto es solo lo que se muestra.
   Widget _buildActiveCard(ActivePrediction p,
       {required bool mostrarFertilidad}) {
     final confianzaBaja = p.confidence == PredictionConfidence.low;
-    final mostrarFertil = mostrarFertilidad && !confianzaBaja;
+    final mostrarFertil =
+        visibleFertileMarks(p, showFertileWindow: mostrarFertilidad) != null;
     final valorPorDefecto = p.completeCyclesConsidered <
         const PredictionConfig().minCompleteCyclesForMedium;
     final mostrarFase = !p.isPeriodLate &&
@@ -513,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Solo con confianza media o alta (ver _buildActiveCard).
+  /// Solo si visibleFertileMarks la deja ver (ver _buildActiveCard).
   Widget _buildFertileWindow(ActivePrediction p) {
     return Text(
       "Días de mayor probabilidad de fertilidad (estimación):\n"
