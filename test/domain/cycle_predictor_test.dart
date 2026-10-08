@@ -685,4 +685,218 @@ void main() {
           p.averagePeriodLengthDays);
     });
   });
+
+  // HU-05, CP1: tests de caracterizacion. Fijan lo que el predictor hace
+  // HOY (no lo que deberia hacer). Datos inventados.
+  group('HU-05 CP1 - caracterizacion del comportamiento actual', () {
+    /// Ciclos completos con las duraciones [lengths] (de mas viejo a mas
+    /// nuevo) desde [start], mas un periodo actual abierto al final.
+    /// Todos los periodos duran [periodLength] dias y estan abiertos, asi
+    /// que la duracion de periodo del predictor es la habitual (5).
+    List<CycleSummary> cyclesFrom(String start, List<int> lengths,
+        {int periodLength = 5}) {
+      final result = <CycleSummary>[];
+      var day = start;
+      for (final length in lengths) {
+        result.add(_cycle(day, periodLength, length));
+        day = DayKey.addDays(day, length);
+      }
+      result.add(_cycle(day, periodLength, null));
+      return result;
+    }
+
+    String lastStart(List<CycleSummary> cycles) => cycles.last.startDate;
+
+    ActivePrediction twoDaysAfterLastStart(List<CycleSummary> cycles) =>
+        predictCycle(
+            cycles: cycles,
+            today: DayKey.addDays(lastStart(cycles), 2)) as ActivePrediction;
+
+    double ratio(ActivePrediction p) =>
+        p.cycleLengthStdDevDays / p.averageCycleLengthDays;
+
+    group('a) umbral de confianza 0,18 (desviacion / promedio)', () {
+      // Calculo (pesos 1..n, igual que _weightedMeanAndStdDev), hecho con
+      // un script que recorrio todas las combinaciones de 20 a 45 dias:
+      // - [20, 23, 23, 32]: media 26,3; desviacion 4,7339; razon
+      //   0,179997 (la mas cercana a 0,18 por debajo con 4 ciclos).
+      // - [32, 37, 25]: media 30,1667; desviacion 5,4288; razon 0,179961
+      //   (la mas cercana por debajo con 3 ciclos).
+      // - [20, 31, 23, 20]: media 23,1; desviacion 4,1581; razon
+      //   0,180005 (la mas cercana por encima con 4 ciclos).
+      // - [22, 34, 22, 34, 22, 34]: media 28,857; desviacion 5,9385;
+      //   razon 0,2058.
+      test('4 ciclos justo por debajo de 0,18: confianza alta', () {
+        final p = twoDaysAfterLastStart(
+            cyclesFrom('2026-01-01', [20, 23, 23, 32]));
+        expect(p.completeCyclesConsidered, 4);
+        expect(ratio(p), lessThan(0.18));
+        expect(ratio(p), greaterThan(0.1799));
+        expect(p.confidence, PredictionConfidence.high);
+        expect(p.confidenceReasons, isEmpty);
+      });
+
+      test('3 ciclos justo por debajo de 0,18: confianza media', () {
+        final p =
+            twoDaysAfterLastStart(cyclesFrom('2026-01-01', [32, 37, 25]));
+        expect(p.completeCyclesConsidered, 3);
+        expect(ratio(p), lessThan(0.18));
+        expect(ratio(p), greaterThan(0.1799));
+        expect(p.confidence, PredictionConfidence.medium);
+        expect(p.confidenceReasons, isEmpty);
+      });
+
+      test('4 ciclos justo por encima de 0,18: confianza baja con el motivo '
+          '(el porcentaje se redondea: dice 18)', () {
+        final p = twoDaysAfterLastStart(
+            cyclesFrom('2026-01-01', [20, 31, 23, 20]));
+        expect(p.completeCyclesConsidered, 4);
+        expect(ratio(p), greaterThan(0.18));
+        expect(ratio(p), lessThan(0.1801));
+        expect(p.confidence, PredictionConfidence.low);
+        expect(p.confidenceReasons,
+            ['Variabilidad alta entre ciclos (±18% del promedio).']);
+      });
+
+      test('6 ciclos con variabilidad alta: baja aunque la cantidad '
+          'alcance para alta', () {
+        final p = twoDaysAfterLastStart(
+            cyclesFrom('2026-01-01', [22, 34, 22, 34, 22, 34]));
+        expect(p.completeCyclesConsidered, 6);
+        expect(p.confidence, PredictionConfidence.low);
+        expect(p.confidenceReasons,
+            ['Variabilidad alta entre ciclos (±21% del promedio).']);
+      });
+    });
+
+    group('b) limites de ciclo valido (15 a 60, ambos incluidos)', () {
+      // Cada caso: el ciclo en el limite primero y dos ciclos de 28.
+      ActivePrediction withFirst(int length) =>
+          twoDaysAfterLastStart(cyclesFrom('2026-01-01', [length, 28, 28]));
+
+      const motivo =
+          'Se excluyeron 1 ciclo(s) fuera del rango válido (15-60 días).';
+
+      Iterable<String> exclusionReasons(ActivePrediction p) =>
+          p.confidenceReasons.where((r) => r.startsWith('Se excluyeron'));
+
+      test('14 dias: excluido, con el motivo', () {
+        final p = withFirst(14);
+        expect(p.excludedCyclesCount, 1);
+        expect(p.completeCyclesConsidered, 2);
+        expect(p.confidenceReasons, contains(motivo));
+      });
+
+      test('15 dias: valido, sin motivo', () {
+        final p = withFirst(15);
+        expect(p.excludedCyclesCount, 0);
+        expect(p.completeCyclesConsidered, 3);
+        expect(exclusionReasons(p), isEmpty);
+      });
+
+      test('60 dias: valido, sin motivo', () {
+        final p = withFirst(60);
+        expect(p.excludedCyclesCount, 0);
+        expect(p.completeCyclesConsidered, 3);
+        expect(exclusionReasons(p), isEmpty);
+      });
+
+      test('61 dias: excluido, con el motivo', () {
+        final p = withFirst(61);
+        expect(p.excludedCyclesCount, 1);
+        expect(p.completeCyclesConsidered, 2);
+        expect(p.confidenceReasons, contains(motivo));
+      });
+    });
+
+    test('c) exactamente 1 ciclo completo valido: promedio 28 (no el del '
+        'ciclo), semiancho 3, confianza baja y el motivo', () {
+      // Un ciclo completo de 32 dias y el periodo actual: el 32 se ignora
+      // porque hacen falta 2 ciclos (minCompleteCyclesForMedium).
+      final cycles = cyclesFrom('2026-01-01', [32]);
+      final start = lastStart(cycles);
+      final p = twoDaysAfterLastStart(cycles);
+      expect(p.completeCyclesConsidered, 1);
+      expect(p.averageCycleLengthDays, 28.0);
+      expect(p.cycleLengthStdDevDays, 0.0);
+      expect(p.nextPeriodExpectedDate, DayKey.addDays(start, 28));
+      expect(p.nextPeriodEarliestDate, DayKey.addDays(start, 25));
+      expect(p.nextPeriodLatestDate, DayKey.addDays(start, 31));
+      expect(p.confidence, PredictionConfidence.low);
+      expect(p.confidenceReasons, [
+        'Menos de 2 ciclos completos registrados; se usa un promedio por '
+            'defecto de 28 días.'
+      ]);
+    });
+
+    group('d) fases con promedios de 15, 20, 28 y 45 dias (periodo de 5)',
+        () {
+      // Tres ciclos identicos de A dias (desviacion 0, promedio A) y el
+      // periodo actual abierto de 5 dias: fin menstrual = max(5, 5) = 5.
+      // Ovulacion = inicio + A - 14, asi que el dia de ovulacion del
+      // ciclo es A - 13; la ovulatoria va de A - 14 a A - 12. El orden de
+      // las reglas es menstrual, ovulatoria, folicular, lutea.
+      List<CycleSummary> identical(int average) =>
+          cyclesFrom('2026-01-01', [average, average, average]);
+
+      List<CyclePhase> phases(int average) {
+        final cycles = identical(average);
+        final start = lastStart(cycles);
+        return [
+          for (var day = 1; day <= average; day++)
+            (predictCycle(
+                    cycles: cycles, today: DayKey.addDays(start, day - 1))
+                as ActivePrediction)
+                .currentPhase,
+        ];
+      }
+
+      int ovulationDay(int average) {
+        final cycles = identical(average);
+        final start = lastStart(cycles);
+        final p =
+            predictCycle(cycles: cycles, today: start) as ActivePrediction;
+        return DayKey.diffInDays(start, p.estimatedOvulationDate) + 1;
+      }
+
+      const m = CyclePhase.menstrual;
+      const f = CyclePhase.folicular;
+      const o = CyclePhase.ovulatoria;
+      const l = CyclePhase.lutea;
+
+      test('15: ovulacion el dia 2, la ovulatoria queda tapada por la '
+          'menstrual y despues del dia 5 pasa directo a lutea', () {
+        expect(ovulationDay(15), 2);
+        expect(phases(15), [...List.filled(5, m), ...List.filled(10, l)]);
+      });
+
+      test('20: sin fase folicular (la ovulatoria empieza el dia 6)', () {
+        expect(ovulationDay(20), 7);
+        expect(phases(20), [...List.filled(5, m), o, o, o, ...List.filled(12, l)]);
+        expect(phases(20), isNot(contains(f)));
+      });
+
+      test('28: referencia (folicular 6-13, ovulatoria 14-16, lutea 17-28)',
+          () {
+        expect(ovulationDay(28), 15);
+        expect(phases(28), [
+          ...List.filled(5, m),
+          ...List.filled(8, f),
+          o, o, o,
+          ...List.filled(12, l),
+        ]);
+      });
+
+      test('45: ovulacion el dia 32, folicular del 6 al 30, ovulatoria 31-33 '
+          'y lutea desde el 34', () {
+        expect(ovulationDay(45), 32);
+        expect(phases(45), [
+          ...List.filled(5, m),
+          ...List.filled(25, f),
+          o, o, o,
+          ...List.filled(12, l),
+        ]);
+      });
+    });
+  });
 }
