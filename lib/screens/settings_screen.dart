@@ -270,6 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             "Son estimaciones, no un método anticonceptivo. Si lo apagas, "
             "Inicio solo muestra tu próximo período.",
           ),
+          activeThumbColor: const Color(0xFFA8D8EA),
           value: _mostrarFertil,
           onChanged: _cambiarMostrarFertil,
         ),
@@ -379,7 +380,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               "Interruptor general. Actívalo para habilitar los "
               "recordatorios de abajo.",
             ),
-            activeColor: const Color(0xFFA8D8EA),
+            activeThumbColor: const Color(0xFFA8D8EA),
             value: _notificaciones,
             onChanged: (val) => _cambiarNotificacionesGeneral(val),
           ),
@@ -389,7 +390,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text(
               "Un aviso el día antes del inicio estimado de tu período.",
             ),
-            activeColor: const Color(0xFFA8D8EA),
+            activeThumbColor: const Color(0xFFA8D8EA),
             value: _recordatorioPeriodo,
             onChanged: _notificaciones
                 ? (val) => _cambiarRecordatorioPeriodo(val)
@@ -423,7 +424,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ],
                   ),
-            activeColor: const Color(0xFFA8D8EA),
+            activeThumbColor: const Color(0xFFA8D8EA),
             value: _recordatorioFertil && _mostrarFertil,
             onChanged: _notificaciones && _mostrarFertil
                 ? (val) => _cambiarRecordatorioFertil(val)
@@ -437,7 +438,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               "El detalle puede verse en relojes u otros dispositivos "
               "conectados.",
             ),
-            activeColor: const Color(0xFFA8D8EA),
+            activeThumbColor: const Color(0xFFA8D8EA),
             value: _mostrarDetalles,
             onChanged:
                 _notificaciones ? (val) => _cambiarMostrarDetalles(val) : null,
