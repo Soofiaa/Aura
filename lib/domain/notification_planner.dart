@@ -23,6 +23,10 @@ class NotificationSettings {
   final int reminderHour;
   final int reminderMinute;
 
+  /// "Mostrar ovulacion y ventana fertil" (HU-05). Todavia no lo usa
+  /// [planNotifications] (CP5b).
+  final bool showFertileWindow;
+
   const NotificationSettings({
     required this.notificationsEnabled,
     required this.periodReminderEnabled,
@@ -30,6 +34,7 @@ class NotificationSettings {
     required this.showDetailsEnabled,
     required this.reminderHour,
     required this.reminderMinute,
+    this.showFertileWindow = true,
   });
 }
 

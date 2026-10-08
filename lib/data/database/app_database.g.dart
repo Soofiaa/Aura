@@ -870,6 +870,21 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(defaultTypicalPeriodLength),
   );
+  static const VerificationMeta _showFertileWindowMeta = const VerificationMeta(
+    'showFertileWindow',
+  );
+  @override
+  late final GeneratedColumn<bool> showFertileWindow = GeneratedColumn<bool>(
+    'show_fertile_window',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_fertile_window" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -881,6 +896,7 @@ class $AppSettingsTable extends AppSettings
     reminderHour,
     reminderMinute,
     typicalPeriodLength,
+    showFertileWindow,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -969,6 +985,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('show_fertile_window')) {
+      context.handle(
+        _showFertileWindowMeta,
+        showFertileWindow.isAcceptableOrUnknown(
+          data['show_fertile_window']!,
+          _showFertileWindowMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1014,6 +1039,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}typical_period_length'],
       )!,
+      showFertileWindow: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_fertile_window'],
+      )!,
     );
   }
 
@@ -1041,6 +1070,11 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
   /// Duracion habitual del periodo en dias (HU-01): 1 a 15, por defecto 5.
   /// La usa el predictor cuando no hay periodos cerrados (P-1).
   final int typicalPeriodLength;
+
+  /// Mostrar la ovulacion y la ventana fertil estimadas (HU-05, H5-3):
+  /// un solo interruptor para las dos. Por defecto activado; una base
+  /// migrada desde v4 queda activada (sin cambio visible).
+  final bool showFertileWindow;
   const AppSettingsRow({
     required this.id,
     required this.onboardingSeen,
@@ -1051,6 +1085,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     required this.reminderHour,
     required this.reminderMinute,
     required this.typicalPeriodLength,
+    required this.showFertileWindow,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1066,6 +1101,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     map['reminder_hour'] = Variable<int>(reminderHour);
     map['reminder_minute'] = Variable<int>(reminderMinute);
     map['typical_period_length'] = Variable<int>(typicalPeriodLength);
+    map['show_fertile_window'] = Variable<bool>(showFertileWindow);
     return map;
   }
 
@@ -1080,6 +1116,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       reminderHour: Value(reminderHour),
       reminderMinute: Value(reminderMinute),
       typicalPeriodLength: Value(typicalPeriodLength),
+      showFertileWindow: Value(showFertileWindow),
     );
   }
 
@@ -1106,6 +1143,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       typicalPeriodLength: serializer.fromJson<int>(
         json['typicalPeriodLength'],
       ),
+      showFertileWindow: serializer.fromJson<bool>(json['showFertileWindow']),
     );
   }
   @override
@@ -1123,6 +1161,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       'reminderHour': serializer.toJson<int>(reminderHour),
       'reminderMinute': serializer.toJson<int>(reminderMinute),
       'typicalPeriodLength': serializer.toJson<int>(typicalPeriodLength),
+      'showFertileWindow': serializer.toJson<bool>(showFertileWindow),
     };
   }
 
@@ -1136,6 +1175,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     int? reminderHour,
     int? reminderMinute,
     int? typicalPeriodLength,
+    bool? showFertileWindow,
   }) => AppSettingsRow(
     id: id ?? this.id,
     onboardingSeen: onboardingSeen ?? this.onboardingSeen,
@@ -1147,6 +1187,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     reminderHour: reminderHour ?? this.reminderHour,
     reminderMinute: reminderMinute ?? this.reminderMinute,
     typicalPeriodLength: typicalPeriodLength ?? this.typicalPeriodLength,
+    showFertileWindow: showFertileWindow ?? this.showFertileWindow,
   );
   AppSettingsRow copyWithCompanion(AppSettingsCompanion data) {
     return AppSettingsRow(
@@ -1175,6 +1216,9 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
       typicalPeriodLength: data.typicalPeriodLength.present
           ? data.typicalPeriodLength.value
           : this.typicalPeriodLength,
+      showFertileWindow: data.showFertileWindow.present
+          ? data.showFertileWindow.value
+          : this.showFertileWindow,
     );
   }
 
@@ -1191,7 +1235,8 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
           ..write('showDetailsEnabled: $showDetailsEnabled, ')
           ..write('reminderHour: $reminderHour, ')
           ..write('reminderMinute: $reminderMinute, ')
-          ..write('typicalPeriodLength: $typicalPeriodLength')
+          ..write('typicalPeriodLength: $typicalPeriodLength, ')
+          ..write('showFertileWindow: $showFertileWindow')
           ..write(')'))
         .toString();
   }
@@ -1207,6 +1252,7 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
     reminderHour,
     reminderMinute,
     typicalPeriodLength,
+    showFertileWindow,
   );
   @override
   bool operator ==(Object other) =>
@@ -1221,7 +1267,8 @@ class AppSettingsRow extends DataClass implements Insertable<AppSettingsRow> {
           other.showDetailsEnabled == this.showDetailsEnabled &&
           other.reminderHour == this.reminderHour &&
           other.reminderMinute == this.reminderMinute &&
-          other.typicalPeriodLength == this.typicalPeriodLength);
+          other.typicalPeriodLength == this.typicalPeriodLength &&
+          other.showFertileWindow == this.showFertileWindow);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
@@ -1234,6 +1281,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
   final Value<int> reminderHour;
   final Value<int> reminderMinute;
   final Value<int> typicalPeriodLength;
+  final Value<bool> showFertileWindow;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.onboardingSeen = const Value.absent(),
@@ -1244,6 +1292,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
     this.typicalPeriodLength = const Value.absent(),
+    this.showFertileWindow = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -1255,6 +1304,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
     this.typicalPeriodLength = const Value.absent(),
+    this.showFertileWindow = const Value.absent(),
   });
   static Insertable<AppSettingsRow> custom({
     Expression<int>? id,
@@ -1266,6 +1316,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     Expression<int>? reminderHour,
     Expression<int>? reminderMinute,
     Expression<int>? typicalPeriodLength,
+    Expression<bool>? showFertileWindow,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1282,6 +1333,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
       if (reminderMinute != null) 'reminder_minute': reminderMinute,
       if (typicalPeriodLength != null)
         'typical_period_length': typicalPeriodLength,
+      if (showFertileWindow != null) 'show_fertile_window': showFertileWindow,
     });
   }
 
@@ -1295,6 +1347,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     Value<int>? reminderHour,
     Value<int>? reminderMinute,
     Value<int>? typicalPeriodLength,
+    Value<bool>? showFertileWindow,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -1308,6 +1361,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
       typicalPeriodLength: typicalPeriodLength ?? this.typicalPeriodLength,
+      showFertileWindow: showFertileWindow ?? this.showFertileWindow,
     );
   }
 
@@ -1345,6 +1399,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
     if (typicalPeriodLength.present) {
       map['typical_period_length'] = Variable<int>(typicalPeriodLength.value);
     }
+    if (showFertileWindow.present) {
+      map['show_fertile_window'] = Variable<bool>(showFertileWindow.value);
+    }
     return map;
   }
 
@@ -1361,7 +1418,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
           ..write('showDetailsEnabled: $showDetailsEnabled, ')
           ..write('reminderHour: $reminderHour, ')
           ..write('reminderMinute: $reminderMinute, ')
-          ..write('typicalPeriodLength: $typicalPeriodLength')
+          ..write('typicalPeriodLength: $typicalPeriodLength, ')
+          ..write('showFertileWindow: $showFertileWindow')
           ..write(')'))
         .toString();
   }
@@ -1796,6 +1854,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> reminderHour,
       Value<int> reminderMinute,
       Value<int> typicalPeriodLength,
+      Value<bool> showFertileWindow,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -1808,6 +1867,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int> reminderHour,
       Value<int> reminderMinute,
       Value<int> typicalPeriodLength,
+      Value<bool> showFertileWindow,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -1861,6 +1921,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get typicalPeriodLength => $composableBuilder(
     column: $table.typicalPeriodLength,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showFertileWindow => $composableBuilder(
+    column: $table.showFertileWindow,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1918,6 +1983,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.typicalPeriodLength,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get showFertileWindow => $composableBuilder(
+    column: $table.showFertileWindow,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -1971,6 +2041,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.typicalPeriodLength,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get showFertileWindow => $composableBuilder(
+    column: $table.showFertileWindow,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -2014,6 +2089,7 @@ class $$AppSettingsTableTableManager
                 Value<int> reminderHour = const Value.absent(),
                 Value<int> reminderMinute = const Value.absent(),
                 Value<int> typicalPeriodLength = const Value.absent(),
+                Value<bool> showFertileWindow = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 onboardingSeen: onboardingSeen,
@@ -2024,6 +2100,7 @@ class $$AppSettingsTableTableManager
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
                 typicalPeriodLength: typicalPeriodLength,
+                showFertileWindow: showFertileWindow,
               ),
           createCompanionCallback:
               ({
@@ -2037,6 +2114,7 @@ class $$AppSettingsTableTableManager
                 Value<int> reminderHour = const Value.absent(),
                 Value<int> reminderMinute = const Value.absent(),
                 Value<int> typicalPeriodLength = const Value.absent(),
+                Value<bool> showFertileWindow = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 onboardingSeen: onboardingSeen,
@@ -2047,6 +2125,7 @@ class $$AppSettingsTableTableManager
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
                 typicalPeriodLength: typicalPeriodLength,
+                showFertileWindow: showFertileWindow,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

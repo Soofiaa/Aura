@@ -287,8 +287,113 @@ i1.GeneratedColumn<int> _column_17(String aliasedName) =>
           'NOT NULL DEFAULT 5 CHECK (typical_period_length BETWEEN 1 AND 15)',
       defaultValue: const i1.CustomExpression('5'),
     );
+
+final class Schema5 extends i0.VersionedSchema {
+  Schema5({required super.database}) : super(version: 5);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    dailyLogs,
+    dailyLogSymptoms,
+    appSettings,
+  ];
+  late final Shape0 dailyLogs = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'daily_logs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(date)',
+        'CHECK((flow IS NULL)OR(is_period_day = 1))',
+      ],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 dailyLogSymptoms = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'daily_log_symptoms',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(log_date, symptom)',
+        'FOREIGN KEY(log_date)REFERENCES daily_logs(date)ON DELETE CASCADE',
+      ],
+      columns: [_column_7, _column_8],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 appSettings = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'app_settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)', 'CHECK(id = 0)'],
+      columns: [
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+}
+
+class Shape3 extends i0.VersionedTable {
+  Shape3({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get onboardingSeen =>
+      columnsByName['onboarding_seen']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get notificationsEnabled =>
+      columnsByName['notifications_enabled']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get periodReminderEnabled =>
+      columnsByName['period_reminder_enabled']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get fertileWindowRemindersEnabled =>
+      columnsByName['fertile_window_reminders_enabled']!
+          as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get showDetailsEnabled =>
+      columnsByName['show_details_enabled']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get reminderHour =>
+      columnsByName['reminder_hour']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get reminderMinute =>
+      columnsByName['reminder_minute']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get typicalPeriodLength =>
+      columnsByName['typical_period_length']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get showFertileWindow =>
+      columnsByName['show_fertile_window']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<int> _column_18(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'show_fertile_window',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints:
+          'NOT NULL DEFAULT 1 CHECK (show_fertile_window IN (0, 1))',
+      defaultValue: const i1.CustomExpression('1'),
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
+  required Future<void> Function(i1.Migrator m, Schema5 schema) from4To5,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -297,6 +402,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from3To4(migrator, schema);
         return 4;
+      case 4:
+        final schema = Schema5(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from4To5(migrator, schema);
+        return 5;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -305,6 +415,7 @@ i0.MigrationStepWithVersion migrationSteps({
 
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
+  required Future<void> Function(i1.Migrator m, Schema5 schema) from4To5,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from3To4: from3To4),
+  step: migrationSteps(from3To4: from3To4, from4To5: from4To5),
 );

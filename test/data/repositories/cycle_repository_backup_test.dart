@@ -298,6 +298,86 @@ void main() {
       expect(despues.settings, antes.settings);
     });
   });
+
+  // HU-05, CP5a: "Mostrar ovulacion y ventana fertil" (schema 5).
+  group('HU-05 CP5a - showFertileWindow', () {
+    BackupData fixtureFile(String name) {
+      final result = decodeBackup(
+          utf8.encode(File('test/fixtures/$name').readAsStringSync()));
+      return upgradeBackupData((result as BackupParseSuccess).data,
+          today: '2026-10-07');
+    }
+
+    test('base nueva: activado; el setter lo cambia y lo ven los tres '
+        'lectores', () async {
+      expect(await repo.getShowFertileWindow(), isTrue);
+      expect((await repo.getPredictionInputs()).showFertileWindow, isTrue);
+      expect((await repo.getNotificationSettings()).showFertileWindow, isTrue);
+
+      await repo.setShowFertileWindow(false);
+      expect(await repo.getShowFertileWindow(), isFalse);
+      expect((await repo.getPredictionInputs()).showFertileWindow, isFalse);
+      expect(
+          (await repo.getNotificationSettings()).showFertileWindow, isFalse);
+    });
+
+    test('ida y vuelta de respaldo con el interruptor en true y en false',
+        () async {
+      for (final value in [true, false]) {
+        await repo.setShowFertileWindow(value);
+        final exported = await repo.readBackupData(
+            appVersion: '1.1.0', exportedAt: '2026-10-07T10:00:00-03:00');
+        expect(exported.settings.showFertileWindow, value);
+
+        // Pasa por el texto del archivo, como en la app.
+        final parsed = decodeBackup(utf8.encode(encodeBackup(exported)));
+        final data = (parsed as BackupParseSuccess).data;
+
+        final other = AppDatabase.forTesting(
+            NativeDatabase.memory(setup: enableForeignKeys));
+        final otherRepo = CycleRepository(other);
+        await otherRepo.setShowFertileWindow(!value);
+        await otherRepo.replaceAllWithBackup(data);
+        expect(await otherRepo.getShowFertileWindow(), value,
+            reason: 'valor $value');
+        await other.close();
+      }
+    });
+
+    test('importar backup_v5.json deja el interruptor apagado', () async {
+      await repo.replaceAllWithBackup(fixtureFile('backup_v5.json'));
+      expect(await repo.getShowFertileWindow(), isFalse);
+    });
+
+    test('respaldos v3 y v4 se restauran con true', () async {
+      for (final name in ['backup_v3.json', 'backup_v4.json']) {
+        await repo.setShowFertileWindow(false);
+        await repo.replaceAllWithBackup(fixtureFile(name));
+        expect(await repo.getShowFertileWindow(), isTrue, reason: name);
+      }
+    });
+
+    test('"Borrar todos los datos" lo devuelve a true (default de la '
+        'columna)', () async {
+      await repo.setShowFertileWindow(false);
+      await repo.deleteAllData();
+      expect(await repo.getShowFertileWindow(), isTrue);
+      expect((await repo.getPredictionInputs()).showFertileWindow, isTrue);
+    });
+
+    test('watchPredictionInputs emite de nuevo al cambiarlo', () async {
+      final emitted = <bool>[];
+      final sub = repo
+          .watchPredictionInputs()
+          .listen((i) => emitted.add(i.showFertileWindow));
+      await pumpEventQueue();
+      await repo.setShowFertileWindow(false);
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(emitted.first, isTrue);
+      expect(emitted.last, isFalse);
+    });
+  });
 }
 
 extension on BackupData {

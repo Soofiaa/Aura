@@ -17,12 +17,14 @@ import 'legacy_period_ends.dart';
 /// - v4: `periodEnd` en cada dia (null, "declared" o "inferred") y
 ///   `typicalPeriodLength` en los ajustes. El envoltorio no cambia, asi
 ///   que `formatVersion` sigue en 1.
+/// - v5: `showFertileWindow` en los ajustes (HU-05, H5-3). `formatVersion`
+///   sigue en 1.
 const String backupFormatId = 'aura-backup';
 const int backupFormatVersion = 1;
 
 /// Schema drift actual (AppDatabase.schemaVersion). Duplicado aca para
 /// que el dominio no importe drift; un test compara ambos valores.
-const int currentBackupSchemaVersion = 4;
+const int currentBackupSchemaVersion = 5;
 
 /// Primer schema que pudo exportar respaldos (la funcion nace en v3):
 /// un `schemaVersion` menor no puede venir de Aura.
@@ -117,6 +119,7 @@ class BackupSettings {
     required this.reminderHour,
     required this.reminderMinute,
     this.typicalPeriodLength = defaultTypicalPeriodLength,
+    this.showFertileWindow = true,
   });
 
   final bool onboardingSeen;
@@ -131,6 +134,10 @@ class BackupSettings {
   /// usa el valor por defecto.
   final int typicalPeriodLength;
 
+  /// Mostrar ovulacion y ventana fertil (HU-05). Un respaldo v3 o v4 no
+  /// lo trae: se usa el valor por defecto (activado).
+  final bool showFertileWindow;
+
   @override
   bool operator ==(Object other) =>
       other is BackupSettings &&
@@ -141,7 +148,8 @@ class BackupSettings {
       other.showDetailsEnabled == showDetailsEnabled &&
       other.reminderHour == reminderHour &&
       other.reminderMinute == reminderMinute &&
-      other.typicalPeriodLength == typicalPeriodLength;
+      other.typicalPeriodLength == typicalPeriodLength &&
+      other.showFertileWindow == showFertileWindow;
 
   @override
   int get hashCode => Object.hash(
@@ -152,7 +160,8 @@ class BackupSettings {
       showDetailsEnabled,
       reminderHour,
       reminderMinute,
-      typicalPeriodLength);
+      typicalPeriodLength,
+      showFertileWindow);
 }
 
 /// Contenido completo de un respaldo, ya validado.
@@ -262,6 +271,8 @@ String encodeBackup(BackupData data) {
         'reminderHour': s.reminderHour,
         'reminderMinute': s.reminderMinute,
         'typicalPeriodLength': s.typicalPeriodLength,
+        // Solo desde v5: un respaldo v4 se escribe tal como lo haria la v4.
+        if (data.schemaVersion >= 5) 'showFertileWindow': s.showFertileWindow,
       },
     },
     'counts': {
@@ -482,6 +493,9 @@ BackupSettings _parseSettings(Map<String, dynamic> raw, int schemaVersion) {
     reminderHour: hour,
     reminderMinute: minute,
     typicalPeriodLength: typical,
+    // v3 y v4 no lo tienen: vale el predeterminado (activado).
+    showFertileWindow:
+        schemaVersion >= 5 ? _bool(raw, 'showFertileWindow') : true,
   );
 }
 
@@ -489,10 +503,21 @@ BackupSettings _parseSettings(Map<String, dynamic> raw, int schemaVersion) {
 /// convierte con la MISMA regla D-2 que la migracion de la base
 /// ([inferLegacyPeriodEnds]), con [today] = el dia de la importacion: asi
 /// importar un respaldo v3 da el mismo resultado que haber tenido esos
-/// datos en el telefono al actualizar. Uno del schema actual se devuelve
-/// tal cual (sus cierres ya vienen decididos). Funcion pura.
+/// datos en el telefono al actualizar. Uno v4 ya trae sus cierres: solo
+/// cambia el numero de schema (el ajuste nuevo de v5 ya vino del parseo
+/// con su valor por defecto). Uno del schema actual se devuelve tal cual.
+/// Funcion pura.
 BackupData upgradeBackupData(BackupData data, {required String today}) {
   if (data.schemaVersion == currentBackupSchemaVersion) return data;
+  if (data.schemaVersion == 4) {
+    return BackupData(
+      schemaVersion: currentBackupSchemaVersion,
+      appVersion: data.appVersion,
+      exportedAt: data.exportedAt,
+      days: data.days,
+      settings: data.settings,
+    );
+  }
   if (data.schemaVersion != 3) {
     throw ArgumentError.value(
         data.schemaVersion, 'schemaVersion', 'no se puede convertir');

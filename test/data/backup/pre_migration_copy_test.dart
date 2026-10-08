@@ -84,7 +84,7 @@ void main() {
       final db = AppDatabase.forTesting(NativeDatabase(dbFile));
       await db.customSelect('SELECT 1').get();
       await db.close();
-      withRaw(dbFile, (raw) => expect(raw.userVersion, 4));
+      withRaw(dbFile, (raw) => expect(raw.userVersion, 5));
 
       ensurePreMigrationCopy(database: dbFile, backupsDir: backups);
 
@@ -190,7 +190,7 @@ void main() {
 
       expect(rows.map((r) => r.periodEnd),
           [null, PeriodEndSource.inferred]);
-      withRaw(dbFile, (raw) => expect(raw.userVersion, 4));
+      withRaw(dbFile, (raw) => expect(raw.userVersion, 5));
       withRaw(copyFile(), (raw) => expect(raw.userVersion, 3));
       expect(columns(copyFile(), 'daily_logs'), isNot(contains('period_end')));
     });

@@ -170,7 +170,7 @@ void main() {
       final settings = await db.select(db.appSettings).getSingle();
       await db.close();
 
-      expect(schema.rawDatabase.userVersion, 4);
+      expect(schema.rawDatabase.userVersion, 5);
       expect(rows, hasLength(7));
       expect(symptoms, hasLength(9));
       for (var i = 0; i < rows.length; i++) {
@@ -214,7 +214,7 @@ void main() {
       expect(await repo.getDerivedCycles(), isEmpty);
       expect(await repo.getTypicalPeriodLength(), 5);
       await db.close();
-      expect(schema.rawDatabase.userVersion, 4);
+      expect(schema.rawDatabase.userVersion, 5);
       expect(_columns(schema, 'daily_logs'), contains('period_end'));
       expect(_columns(schema, 'app_settings'),
           contains('typical_period_length'));
@@ -358,7 +358,7 @@ void main() {
         // Al reintentar sin el fallo, migra bien.
         expect(await _migrateAndReadEnds(schema),
             {'2026-08-02': PeriodEndSource.inferred});
-        expect(schema.rawDatabase.userVersion, 4);
+        expect(schema.rawDatabase.userVersion, 5);
       });
     }
   });
@@ -366,8 +366,8 @@ void main() {
   group('user_version despues de confirmar la transaccion', () {
     test(
         'fallo en beforeOpen (transaccion ya confirmada): user_version ya es '
-        '4, porque el paso lo escribe dentro de la transaccion; al reabrir no '
-        'se repite nada', () async {
+        'el actual (5), porque cada paso lo escribe dentro de la transaccion; '
+        'al reabrir no se repite nada', () async {
       final schema = await _v3([_p('2026-08-01'), _p('2026-08-02')]);
 
       await _openExpectingFailure(_open(schema, hook: (p) async {
@@ -376,7 +376,7 @@ void main() {
         }
       }));
 
-      expect(schema.rawDatabase.userVersion, 4);
+      expect(schema.rawDatabase.userVersion, 5);
       expect(_columns(schema, 'daily_logs'), contains('period_end'));
       expect(await _migrateAndReadEnds(schema),
           {'2026-08-02': PeriodEndSource.inferred});
@@ -411,7 +411,7 @@ void main() {
       expect(await repo.getTypicalPeriodLength(), 7);
       await db.close();
 
-      expect(raw.userVersion, 4);
+      expect(raw.userVersion, 5);
       expect(ends, {
         '2026-08-02': PeriodEndSource.inferred,
         '2026-09-02': PeriodEndSource.declared,

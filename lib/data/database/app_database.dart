@@ -116,6 +116,12 @@ class AppSettings extends Table {
           minTypicalPeriodLength, maxTypicalPeriodLength))
       .withDefault(const Constant(defaultTypicalPeriodLength))();
 
+  /// Mostrar la ovulacion y la ventana fertil estimadas (HU-05, H5-3):
+  /// un solo interruptor para las dos. Por defecto activado; una base
+  /// migrada desde v4 queda activada (sin cambio visible).
+  BoolColumn get showFertileWindow =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 
@@ -149,7 +155,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<void> Function(MigrationTestPoint point)? _migrationTestHook;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,7 +176,7 @@ class AppDatabase extends _$AppDatabase {
           await m.runMigrationSteps(
             from: math.max(from, 3),
             to: to,
-            steps: migrationSteps(from3To4: _from3To4),
+            steps: migrationSteps(from3To4: _from3To4, from4To5: _from4To5),
           );
         }),
         // PRAGMA foreign_keys se activaba solo via el `setup` del
@@ -272,6 +278,32 @@ class AppDatabase extends _$AppDatabase {
     // Paso 8: runMigrationSteps escribe user_version = 4 al volver.
   }
 
+  /// Migracion 4 -> 5 (HU-05, H5-3): solo agrega show_fertile_window
+  /// (todas las filas quedan en 1, activado); ningun otro dato cambia.
+  /// Corre dentro de la transaccion de onUpgrade. Tolera la columna ya
+  /// existente, igual que [_from3To4].
+  Future<void> _from4To5(Migrator m, Schema5 schema) async {
+    final counts = {
+      for (final table in _allTables) table: await _count(table),
+    };
+    if (!await _hasColumn('app_settings', 'show_fertile_window')) {
+      await m.addColumn(
+          schema.appSettings, schema.appSettings.showFertileWindow);
+    }
+    await _migrationTestHook?.call(MigrationTestPoint.afterV5Column);
+
+    // Verificacion antes de confirmar: mismas filas en todas las tablas.
+    for (final table in _allTables) {
+      if (await _count(table) != counts[table]) {
+        throw StateError('migracion v5: cambio la cantidad de filas de '
+            '$table');
+      }
+    }
+    // runMigrationSteps escribe user_version = 5 al volver.
+  }
+
+  static const _allTables = ['daily_logs', 'daily_log_symptoms', 'app_settings'];
+
   Future<bool> _hasColumn(String table, String column) async {
     final columns = await customSelect('PRAGMA table_info($table)').get();
     return columns.any((c) => c.read<String>('name') == column);
@@ -320,6 +352,10 @@ enum MigrationTestPoint {
   /// En beforeOpen: despues de confirmar la transaccion de onUpgrade y
   /// antes de que drift escriba user_version por su cuenta.
   beforeOpen,
+
+  /// Migracion a v5: despues de agregar show_fertile_window, dentro de la
+  /// transaccion.
+  afterV5Column,
 }
 
 LazyDatabase _openConnection() {

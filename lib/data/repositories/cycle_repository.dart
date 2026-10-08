@@ -441,6 +441,7 @@ class CycleRepository {
         cycles: _deriveFromRows(rows),
         typicalPeriodLengthDays:
             settings?.typicalPeriodLength ?? defaultTypicalPeriodLength,
+        showFertileWindow: settings?.showFertileWindow ?? true,
       );
     });
   }
@@ -604,6 +605,20 @@ class CycleRepository {
         );
   }
 
+  /// "Mostrar ovulacion y ventana fertil" (HU-05). Vuelve a true tras
+  /// "Borrar todos los datos".
+  Future<bool> getShowFertileWindow() async =>
+      (await _ensureSettingsRow()).showFertileWindow;
+
+  Future<void> setShowFertileWindow(bool value) async {
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(0),
+            showFertileWindow: Value(value),
+          ),
+        );
+  }
+
   Future<void> setReminderTime({required int hour, required int minute}) async {
     await _db.into(_db.appSettings).insertOnConflictUpdate(
           AppSettingsCompanion(
@@ -622,6 +637,7 @@ class CycleRepository {
         showDetailsEnabled: row.showDetailsEnabled,
         reminderHour: row.reminderHour,
         reminderMinute: row.reminderMinute,
+        showFertileWindow: row.showFertileWindow,
       );
 
   Future<NotificationSettings> getNotificationSettings() async =>
@@ -685,6 +701,7 @@ class CycleRepository {
           reminderHour: settings.reminderHour,
           reminderMinute: settings.reminderMinute,
           typicalPeriodLength: settings.typicalPeriodLength,
+          showFertileWindow: settings.showFertileWindow,
         ),
       );
     });
@@ -705,7 +722,8 @@ class CycleRepository {
   /// permiso de ESTE telefono, asi que conserva su valor actual. El resto
   /// de los ajustes de recordatorios si se importa, y la duracion
   /// habitual del periodo tambien. onboardingSeen queda en true: quien
-  /// importa ya esta usando la app.
+  /// importa ya esta usando la app. "Mostrar ovulacion y ventana fertil"
+  /// tambien se importa (un respaldo v3 o v4 lo trae activado).
   ///
   /// [data] tiene que estar en el schema actual: un respaldo anterior se
   /// convierte antes con upgradeBackupData (regla D-2), para que ningun
@@ -754,6 +772,7 @@ class CycleRepository {
             reminderHour: Value(s.reminderHour),
             reminderMinute: Value(s.reminderMinute),
             typicalPeriodLength: Value(s.typicalPeriodLength),
+            showFertileWindow: Value(s.showFertileWindow),
           ),
         );
       });
@@ -761,7 +780,9 @@ class CycleRepository {
   }
 
   /// Borra TODAS las tablas (daily_logs, daily_log_symptoms,
-  /// app_settings), incluidos los ajustes. Usado por
+  /// app_settings), incluidos los ajustes: al recrearse la fila, cada
+  /// ajuste vuelve al valor por defecto de su columna (ej.
+  /// show_fertile_window vuelve a activado). Usado por
   /// BackupService.deleteAllData() (que ademas borra los archivos de
   /// respaldo) tras confirmacion explicita del usuario.
   Future<void> deleteAllData() async {
@@ -779,9 +800,13 @@ class PredictionInputs {
   final List<CycleSummary> cycles;
   final int typicalPeriodLengthDays;
 
+  /// "Mostrar ovulacion y ventana fertil" (HU-05). Lo usa Inicio.
+  final bool showFertileWindow;
+
   const PredictionInputs({
     required this.cycles,
     required this.typicalPeriodLengthDays,
+    this.showFertileWindow = true,
   });
 
   PredictionConfig get config =>

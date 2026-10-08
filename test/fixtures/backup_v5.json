@@ -1,0 +1,113 @@
+{
+  "format": "aura-backup",
+  "formatVersion": 1,
+  "schemaVersion": 5,
+  "app": "Aura",
+  "appVersion": "1.1.0",
+  "exportedAt": "2026-08-01T09:00:00-04:00",
+  "encryption": null,
+  "data": {
+    "dailyLogs": [
+      {
+        "date": "2026-06-02",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": null,
+        "flow": "abundante",
+        "mood": "cansada",
+        "notes": null,
+        "symptoms": [
+          "dolorAbdominal"
+        ]
+      },
+      {
+        "date": "2026-06-03",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": null,
+        "flow": null,
+        "mood": null,
+        "notes": null,
+        "symptoms": []
+      },
+      {
+        "date": "2026-06-05",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": "inferred",
+        "flow": "ligero",
+        "mood": null,
+        "notes": null,
+        "symptoms": []
+      },
+      {
+        "date": "2026-06-30",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": null,
+        "flow": "moderado",
+        "mood": null,
+        "notes": "Primer día",
+        "symptoms": []
+      },
+      {
+        "date": "2026-07-01",
+        "isPeriodDay": true,
+        "periodDayExplicit": true,
+        "periodEnd": null,
+        "flow": null,
+        "mood": "normal",
+        "notes": null,
+        "symptoms": []
+      },
+      {
+        "date": "2026-07-02",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": "declared",
+        "flow": "ligero",
+        "mood": null,
+        "notes": "",
+        "symptoms": []
+      },
+      {
+        "date": "2026-07-15",
+        "isPeriodDay": false,
+        "periodDayExplicit": false,
+        "periodEnd": null,
+        "flow": null,
+        "mood": "irritable",
+        "notes": "Solo síntomas",
+        "symptoms": [
+          "antojos",
+          "hinchazon"
+        ]
+      },
+      {
+        "date": "2026-07-28",
+        "isPeriodDay": true,
+        "periodDayExplicit": false,
+        "periodEnd": null,
+        "flow": null,
+        "mood": null,
+        "notes": null,
+        "symptoms": []
+      }
+    ],
+    "settings": {
+      "onboardingSeen": true,
+      "notificationsEnabled": false,
+      "periodReminderEnabled": true,
+      "fertileWindowRemindersEnabled": false,
+      "showDetailsEnabled": true,
+      "reminderHour": 8,
+      "reminderMinute": 15,
+      "typicalPeriodLength": 4,
+      "showFertileWindow": false
+    }
+  },
+  "counts": {
+    "dailyLogs": 8,
+    "symptoms": 3
+  }
+}

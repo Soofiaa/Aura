@@ -79,7 +79,7 @@ void main() {
             'antes de esta version; default false es correcto');
     expect(dayRow.periodEnd, isNull,
         reason: 'un periodo de 1 solo dia queda abierto (D-2)');
-    expect(raw.userVersion, 4);
+    expect(raw.userVersion, 5);
 
     await db.close();
   });
@@ -136,7 +136,7 @@ void main() {
     expect(dayRow.isPeriodDay, isFalse, reason: 'dato viejo preservado');
     expect(dayRow.periodDayExplicit, isFalse);
     expect(dayRow.periodEnd, isNull);
-    expect(raw.userVersion, 4);
+    expect(raw.userVersion, 5);
 
     await db.close();
   });

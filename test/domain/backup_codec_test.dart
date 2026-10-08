@@ -26,6 +26,15 @@ String _fixtureV4Text() => File('test/fixtures/backup_v4.json')
 Map<String, dynamic> _fixtureV4Map() =>
     jsonDecode(_fixtureV4Text()) as Map<String, dynamic>;
 
+/// test/fixtures/backup_v5.json: el mismo contenido que backup_v4.json en
+/// schema 5, con "Mostrar ovulacion y ventana fertil" apagado.
+String _fixtureV5Text() => File('test/fixtures/backup_v5.json')
+    .readAsStringSync()
+    .replaceAll('\r\n', '\n');
+
+Map<String, dynamic> _fixtureV5Map() =>
+    jsonDecode(_fixtureV5Text()) as Map<String, dynamic>;
+
 List<int> _bytes(Object json) => utf8.encode(jsonEncode(json));
 
 BackupParseResult _decodeMap(Map<String, dynamic> map) =>
@@ -249,8 +258,8 @@ void main() {
     });
 
     test('un respaldo del schema actual se devuelve sin cambios', () {
-      final v4 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
-      expect(identical(upgradeBackupData(v4, today: '2026-10-07'), v4),
+      final v5 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
+      expect(identical(upgradeBackupData(v5, today: '2026-10-07'), v5),
           isTrue);
     });
   });
@@ -513,5 +522,113 @@ void main() {
     final map = _fixtureMap()..['comentario'] = 'agregado a mano';
     _firstDay(map)['extra'] = true;
     _expectSuccess(_decodeMap(map));
+  });
+
+  // HU-05, CP5a: schema 5 ("Mostrar ovulacion y ventana fertil").
+  group('HU-05 CP5a - respaldo v5', () {
+    test('fixture v5: se importa con el interruptor apagado y el resto igual '
+        'que el v4', () {
+      final v5 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
+      final v4 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
+      expect(v5.schemaVersion, 5);
+      expect(v5.settings.showFertileWindow, isFalse);
+      expect(v5.days, v4.days);
+      expect(v5.settings.typicalPeriodLength, v4.settings.typicalPeriodLength);
+    });
+
+    test('fixture v5: ida y vuelta exacta, byte a byte', () {
+      final text = _fixtureV5Text();
+      expect(encodeBackup(_expectSuccess(decodeBackup(utf8.encode(text)))),
+          text);
+    });
+
+    test('ida y vuelta con el interruptor en true y en false', () {
+      final base =
+          _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
+      for (final value in [true, false]) {
+        final s = base.settings;
+        final data = BackupData(
+          schemaVersion: currentBackupSchemaVersion,
+          appVersion: base.appVersion,
+          exportedAt: base.exportedAt,
+          days: base.days,
+          settings: BackupSettings(
+            onboardingSeen: s.onboardingSeen,
+            notificationsEnabled: s.notificationsEnabled,
+            periodReminderEnabled: s.periodReminderEnabled,
+            fertileWindowRemindersEnabled: s.fertileWindowRemindersEnabled,
+            showDetailsEnabled: s.showDetailsEnabled,
+            reminderHour: s.reminderHour,
+            reminderMinute: s.reminderMinute,
+            typicalPeriodLength: s.typicalPeriodLength,
+            showFertileWindow: value,
+          ),
+        );
+        final again =
+            _expectSuccess(decodeBackup(utf8.encode(encodeBackup(data))));
+        expect(again.settings.showFertileWindow, value);
+        expect(again.settings, data.settings);
+        expect(again.days, data.days);
+      }
+    });
+
+    test('v3 y v4 se restauran con true (aunque traigan la clave)', () {
+      final v3Map = _fixtureMap();
+      final v4Map = _fixtureV4Map();
+      for (final map in [v3Map, v4Map]) {
+        expect(_expectSuccess(_decodeMap(map)).settings.showFertileWindow,
+            isTrue);
+        _settings(map)['showFertileWindow'] = false;
+        expect(_expectSuccess(_decodeMap(map)).settings.showFertileWindow,
+            isTrue);
+      }
+    });
+
+    test('upgradeBackupData: v4 pasa a schema 5 sin tocar dias ni ajustes',
+        () {
+      final v4 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
+      final up = upgradeBackupData(v4, today: '2026-10-07');
+      expect(up.schemaVersion, 5);
+      expect(up.days, v4.days);
+      expect(up.settings, v4.settings);
+      expect(up.settings.showFertileWindow, isTrue);
+      expect(up.appVersion, v4.appVersion);
+      expect(up.exportedAt, v4.exportedAt);
+    });
+
+    test('upgradeBackupData: v3 pasa a schema 5 con true', () {
+      final v3 = _expectSuccess(decodeBackup(utf8.encode(_fixtureText())));
+      final up = upgradeBackupData(v3, today: '2026-10-04');
+      expect(up.schemaVersion, 5);
+      expect(up.settings.showFertileWindow, isTrue);
+    });
+
+    test('un v4 se sigue escribiendo como v4 (sin la clave nueva)', () {
+      final text = _fixtureV4Text();
+      final again =
+          encodeBackup(_expectSuccess(decodeBackup(utf8.encode(text))));
+      expect(again, text);
+      expect(again, isNot(contains('showFertileWindow')));
+    });
+
+    test('v5 sin showFertileWindow: danado', () {
+      final map = _fixtureV5Map();
+      _settings(map).remove('showFertileWindow');
+      _expectFailure(_decodeMap(map), BackupError.damaged);
+    });
+
+    test('v5 con showFertileWindow no booleano: danado', () {
+      for (final bad in [1, 'false', null]) {
+        final map = _fixtureV5Map();
+        _settings(map)['showFertileWindow'] = bad;
+        _expectFailure(_decodeMap(map), BackupError.damaged);
+      }
+    });
+
+    test('un schema posterior al actual (6) se rechaza como version mas '
+        'nueva, igual que la v4 rechaza un v5', () {
+      final map = _fixtureV5Map()..['schemaVersion'] = 6;
+      _expectFailure(_decodeMap(map), BackupError.newerVersion);
+    });
   });
 }
