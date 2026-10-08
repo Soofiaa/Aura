@@ -284,6 +284,82 @@ void main() {
     });
   });
 
+  group('HU-05 CP3 - textos exactos del aviso fertil', () {
+    PlannedNotification fertil(bool detalles,
+        {PredictionConfidence confidence = PredictionConfidence.high}) {
+      final plan = planNotifications(
+        prediction: _prediction(confidence: confidence),
+        settings: NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: false,
+          fertileWindowRemindersEnabled: true,
+          showDetailsEnabled: detalles,
+          reminderHour: 9,
+          reminderMinute: 0,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      return plan.singleWhere(
+          (n) => n.kind == NotificationKind.fertileWindowReminder);
+    }
+
+    test('con detalles: aclara que no es un metodo anticonceptivo', () {
+      final n = fertil(true);
+      expect(n.title, 'Ventana de mayor fertilidad (estimación)');
+      expect(
+          n.body,
+          'Según la estimación de tu ciclo, hoy comienza tu ventana de mayor '
+          'probabilidad de fertilidad. No es un método anticonceptivo.');
+    });
+
+    test('sin detalles: "Abre la app" (sin voseo)', () {
+      final n = fertil(false);
+      expect(n.title, 'Aura: recordatorio');
+      expect(n.body, 'Abre la app para ver el detalle.');
+    });
+
+    test('recordatorio de periodo sin detalles: "Abre la app" (sin voseo)',
+        () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: const NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: true,
+          fertileWindowRemindersEnabled: false,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      final n = plan
+          .singleWhere((n) => n.kind == NotificationKind.periodReminder);
+      expect(n.title, 'Aura: recordatorio');
+      expect(n.body, 'Abre la app para ver el detalle.');
+    });
+
+    test('con confianza baja sigue sin planificarse, con y sin detalles', () {
+      for (final detalles in [true, false]) {
+        final plan = planNotifications(
+          prediction: _prediction(confidence: PredictionConfidence.low),
+          settings: NotificationSettings(
+            notificationsEnabled: true,
+            periodReminderEnabled: false,
+            fertileWindowRemindersEnabled: true,
+            showDetailsEnabled: detalles,
+            reminderHour: 9,
+            reminderMinute: 0,
+          ),
+          today: '2026-04-01',
+          nowMinutesOfDay: 8 * 60,
+        );
+        expect(plan, isEmpty, reason: 'detalles: $detalles');
+      }
+    });
+  });
+
   test('ids estables por tipo (reprogramar reemplaza, no acumula)', () {
     final plan = planNotifications(
       prediction: _prediction(),

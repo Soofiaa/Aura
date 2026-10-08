@@ -97,9 +97,8 @@ List<PlannedNotification> planNotifications({
   // Confianza baja => no se manda: la estimacion de ovulacion ya depende
   // de la del proximo periodo (se le resta la fase lutea), asi que es
   // menos confiable todavia. Mandar un aviso de "ventana fertil" ahi
-  // seria la falsa precision que la UI de la fase 3 ya evita atenuando
-  // la ventana en vez de ocultarla; para una notificacion push, la
-  // decision es directamente no mandarla.
+  // seria falsa precision: Inicio tampoco muestra la ovulacion ni la
+  // ventana con confianza baja (HU-05, H5-1 A).
   if (settings.fertileWindowRemindersEnabled &&
       prediction.confidence != PredictionConfidence.low) {
     final date = prediction.fertileWindowStartDate;
@@ -137,7 +136,7 @@ PlannedNotification _periodReminder(String date, NotificationSettings s) {
     title: detailed ? 'Tu período podría estar por comenzar' : 'Aura: recordatorio',
     body: detailed
         ? 'Según la estimación de tu ciclo, tu período podría empezar pronto.'
-        : 'Abrí la app para ver el detalle.',
+        : 'Abre la app para ver el detalle.',
   );
 }
 
@@ -152,7 +151,7 @@ PlannedNotification _fertileWindowReminder(String date, NotificationSettings s) 
     title: detailed ? 'Ventana de mayor fertilidad (estimación)' : 'Aura: recordatorio',
     body: detailed
         ? 'Según la estimación de tu ciclo, hoy comienza tu ventana de mayor '
-            'probabilidad de fertilidad.'
-        : 'Abrí la app para ver el detalle.',
+            'probabilidad de fertilidad. No es un método anticonceptivo.'
+        : 'Abre la app para ver el detalle.',
   );
 }

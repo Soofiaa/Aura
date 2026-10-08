@@ -412,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 8),
       Text(
-        "Tu último registro fue el ${_formatDate(p.lastPeriodStartDate)} "
+        "Tu último período empezó el ${_formatDate(p.lastPeriodStartDate)} "
         "(hace ${p.daysSinceLastPeriodStart} días). "
         "Registra un nuevo día para volver a ver una predicción.",
         textAlign: TextAlign.center,
@@ -421,15 +421,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ]);
   }
 
+  /// Tarjeta de prediccion (HU-05, H5-1 A). Con confianza baja no se
+  /// muestran la ovulacion, la ventana fertil ni la fase ovulatoria, que
+  /// dependen de un promedio poco confiable; se explica por que en una
+  /// linea gris. Con un periodo atrasado no se muestra ninguna fase: el
+  /// ciclo real ya supero lo estimado. El predictor no cambia: esto es
+  /// solo lo que se muestra.
   Widget _buildActiveCard(ActivePrediction p) {
+    final confianzaBaja = p.confidence == PredictionConfidence.low;
+    final valorPorDefecto = p.completeCyclesConsidered <
+        const PredictionConfig().minCompleteCyclesForMedium;
+    final mostrarFase = !p.isPeriodLate &&
+        !(confianzaBaja && p.currentPhase == CyclePhase.ovulatoria);
     return _buildCardShell(children: [
       if (p.isPeriodLate) _buildLateBanner(p),
       const Icon(Icons.favorite, color: Colors.pinkAccent, size: 50),
-      const SizedBox(height: 10),
-      Text(
-        p.currentPhase.label,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
+      if (mostrarFase) ...[
+        const SizedBox(height: 10),
+        Text(
+          p.currentPhase.label,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ],
       const SizedBox(height: 15),
       Text(
         "Próximo período: ${_formatDate(p.nextPeriodEarliestDate)} - "
@@ -439,16 +452,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 4),
       Text(
-        "Estimado: ${_formatDate(p.nextPeriodExpectedDate)}",
+        "Estimado: ${_formatDate(p.nextPeriodExpectedDate)}"
+        "${valorPorDefecto ? ' (valor por defecto)' : ''}",
         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
       ),
       const SizedBox(height: 15),
-      Text(
-        "Ovulación estimada: ${_formatDate(p.estimatedOvulationDate)}",
-        style: const TextStyle(fontSize: 15),
-      ),
-      const SizedBox(height: 10),
-      _buildFertileWindow(p),
+      if (confianzaBaja)
+        Text(
+          valorPorDefecto
+              ? "Con más ciclos registrados podremos estimar tu ventana "
+                  "fértil."
+              : "Tus ciclos varían mucho, así que no mostramos tu ventana "
+                  "fértil.",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+        )
+      else ...[
+        Text(
+          "Ovulación estimada: ${_formatDate(p.estimatedOvulationDate)}",
+          style: const TextStyle(fontSize: 15),
+        ),
+        const SizedBox(height: 10),
+        _buildFertileWindow(p),
+        const SizedBox(height: 4),
+        Text(
+          "Estimación; no es un método anticonceptivo.",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[700],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
       const SizedBox(height: 15),
       _buildConfidenceBadge(p),
     ]);
@@ -471,33 +507,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Solo con confianza media o alta (ver _buildActiveCard).
   Widget _buildFertileWindow(ActivePrediction p) {
-    final isLowConfidence = p.confidence == PredictionConfidence.low;
-    return Opacity(
-      opacity: isLowConfidence ? 0.5 : 1.0,
-      child: Column(
-        children: [
-          Text(
-            "Días de mayor probabilidad de fertilidad (estimación):\n"
-            "${_formatDate(p.fertileWindowStartDate)} - ${_formatDate(p.fertileWindowEndDate)}",
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14),
-          ),
-          if (isLowConfidence)
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text(
-                "Confianza baja: esta ventana puede no ser precisa.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-        ],
-      ),
+    return Text(
+      "Días de mayor probabilidad de fertilidad (estimación):\n"
+      "${_formatDate(p.fertileWindowStartDate)} - ${_formatDate(p.fertileWindowEndDate)}",
+      textAlign: TextAlign.center,
+      style: const TextStyle(fontSize: 14),
     );
   }
 
@@ -534,14 +550,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildDisclaimer() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Text(
         "Esta es una estimación, no un método anticonceptivo.",
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey,
+          color: Colors.grey[700],
           fontStyle: FontStyle.italic,
         ),
       ),
