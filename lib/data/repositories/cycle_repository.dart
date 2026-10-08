@@ -180,12 +180,6 @@ class CycleRepository {
         .watchSingleOrNull();
   }
 
-  /// Deshace una escritura anterior restaurando exactamente la fila que
-  /// habia antes (o borrandola si no existia ninguna). La app ya no lo
-  /// usa: los "Deshacer" restauran con [restoreDaysSnapshot].
-  Future<void> restoreDaySnapshot(String date, DailyLogRow? snapshot) =>
-      _writeSnapshotRow(date, snapshot);
-
   Future<void> _writeSnapshotRow(String date, DailyLogRow? snapshot) async {
     if (snapshot == null) {
       await (_db.delete(_db.dailyLogs)..where((t) => t.date.equals(date)))

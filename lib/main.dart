@@ -15,8 +15,9 @@ import 'screens/update_error_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // calendar_screen.dart y date_utils.dart formatean fechas en español
-  // ('es_ES' / 'es'); sin esto, DateFormat/TableCalendar tiran
+  // calendar_screen.dart, backup_section.dart, period_end_messages.dart
+  // y period_start_sheet.dart formatean fechas en español ('es_ES' /
+  // 'es'); sin esto, DateFormat/TableCalendar tiran
   // LocaleDataException la primera vez que se usan.
   await initializeDateFormatting();
 

@@ -199,39 +199,6 @@ void main() {
     });
   });
 
-  group('restoreDaySnapshot (Deshacer)', () {
-    test('restaura la fila exacta de antes si existia', () async {
-      await repo.markPeriodDay('2026-06-01');
-      await repo.upsertDay(
-        date: '2026-06-01',
-        isPeriodDaySwitch: true,
-        flow: FlowIntensity.ligero,
-        mood: Mood.normal,
-      );
-      final snapshot = await repo.getDay('2026-06-01');
-
-      await repo.setPeriodDayExplicitly('2026-06-01', isPeriodDay: false);
-      expect((await repo.getDay('2026-06-01'))!.isPeriodDay, isFalse);
-
-      await repo.restoreDaySnapshot('2026-06-01', snapshot);
-
-      final restored = await repo.getDay('2026-06-01');
-      expect(restored!.isPeriodDay, isTrue);
-      expect(restored.flow, FlowIntensity.ligero);
-      expect(restored.mood, Mood.normal);
-      expect(restored.periodDayExplicit, isFalse);
-    });
-
-    test('borra la fila si no existia ninguna antes', () async {
-      await repo.setPeriodDayExplicitly('2026-06-02', isPeriodDay: false);
-      expect(await repo.getDay('2026-06-02'), isNotNull);
-
-      await repo.restoreDaySnapshot('2026-06-02', null);
-
-      expect(await repo.getDay('2026-06-02'), isNull);
-    });
-  });
-
   group('watchDay', () {
     test('emite de nuevo cuando cambia la fila de esa fecha', () async {
       final emissions = <bool?>[];
@@ -513,19 +480,6 @@ void main() {
           date: '2026-03-03', isPeriodDaySwitch: true, mood: Mood.feliz);
       expect((await repo.getDay('2026-03-03'))!.periodEnd,
           PeriodEndSource.declared);
-    });
-
-    test('"Deshacer" restaura period_end', () async {
-      await closedPeriod(PeriodEndSource.inferred);
-      final before = await repo.getDay('2026-03-03');
-
-      await repo.setPeriodDayExplicitly('2026-03-03', isPeriodDay: false);
-      await repo.restoreDaySnapshot('2026-03-03', before);
-
-      final day = await repo.getDay('2026-03-03');
-      expect(day!.isPeriodDay, isTrue);
-      expect(day.periodEnd, PeriodEndSource.inferred);
-      expect(day.periodDayExplicit, isFalse);
     });
 
     test(
