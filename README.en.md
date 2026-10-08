@@ -10,9 +10,10 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 
 - Logs bleeding days, flow intensity, mood, symptoms and notes.
 - Derives cycles from those logs (cycles are never created by hand).
-- Predicts next period, ovulation and fertile window, with a **range** and a confidence level (low / medium / high).
-- Shows the current phase: menstrual, follicular, ovulatory and luteal.
-- Calendar showing logged days, the estimated days of the current period (dotted border) and multi-day selection; cycle-length statistics.
+- Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late, and can be hidden in Settings.
+- Shows the current phase: menstrual, follicular, ovulatory and luteal (none while the period is late).
+- Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under the same conditions as Home) and multi-day selection.
+- Statistics with "Your cycles": typical cycle length, shortest and longest cycle, regularity and typical period length.
 - Optional local reminders, with discreet text by default.
 - Lets you mark the end of a period and remove marks.
 - Backup and restore to a JSON file from Settings → "Your data", with "Undo" after importing.
@@ -45,13 +46,17 @@ flowchart LR
 ```
 lib/
 ├── domain/        # pure logic, no Flutter or database
+│   ├── backup_codec.dart
+│   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
-│   └── notification_planner.dart
+│   ├── notification_planner.dart
+│   └── range_selection.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
-│   ├── database/        # drift (schema v4)
+│   ├── database/        # drift (schema v5)
 │   ├── repositories/    # CycleRepository
 │   └── notifications/   # reconciler + scheduler
 ├── screens/       # home, calendar, add entry, stats, settings, onboarding
@@ -64,7 +69,7 @@ lib/
 
 **Derived cycles, not stored.** Only bleeding days are stored. A new cycle starts when the previous bleeding day is more than 7 days earlier. This gives a single source of truth, and editing one day recomputes everything consistently.
 
-**A pure, testable prediction engine.** Linearly weighted average of the last 6 complete cycles (recent ones weigh more), with a weighted standard deviation. The uncertainty range is `max(1.5·σ, 2 days)` (3 days with fewer than 2 cycles). Ovulation = next period − 14 days; fertile window = ovulation −5 … ovulation. Cycles of 15–60 days are considered valid. After more than 60 days without data, the app shows "stale data" instead of a false prediction.
+**A pure, testable prediction engine.** Linearly weighted average of the last 6 complete cycles (recent ones weigh more), with a weighted standard deviation. The uncertainty range is `max(1.5·σ, 2 days)` (3 days with fewer than 2 cycles). Ovulation = next period − 14 days; fertile window = ovulation −5 … ovulation. Cycles of 15–60 days are considered valid. Confidence is low with fewer than 2 cycles or when the deviation exceeds 18% of the average; then ovulation and the fertile window are not shown. After more than 60 days without data, the app shows "stale data" instead of a false prediction.
 
 **Pure notification planner + reconciler.** `planNotifications` computes what should be scheduled (a pure function tested with fixed dates). The reconciler diffs that against what's already scheduled and applies the change. A `NotificationScheduler` interface allows a fake in tests.
 

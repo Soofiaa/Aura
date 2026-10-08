@@ -10,9 +10,10 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 
 - Registra días de sangrado, intensidad del flujo, ánimo, síntomas y notas.
 - Deriva los ciclos a partir de esos registros (no se "crean" ciclos a mano).
-- Predice próximo período, ovulación y ventana fértil, con un **rango** y un nivel de confianza (baja / media / alta).
-- Muestra la fase actual: menstrual, folicular, ovulatoria y lútea.
-- Calendario con los días registrados, los días estimados del período en curso (borde punteado) y selección de varios días; estadísticas de duración de ciclos.
+- Predice el próximo período con un **rango** y un nivel de confianza (baja / media / alta). La ovulación y la ventana fértil estimadas solo se muestran con confianza media o alta y sin período atrasado, y se pueden ocultar desde Ajustes.
+- Muestra la fase actual: menstrual, folicular, ovulatoria y lútea (ninguna con el período atrasado).
+- Calendario con los días registrados, los días estimados del período en curso (borde punteado), la ventana fértil y la ovulación estimadas (con las mismas condiciones que Inicio) y selección de varios días.
+- Estadísticas con "Tus ciclos": duración típica del ciclo, el más corto y el más largo, regularidad y duración típica del período.
 - Recordatorios locales (opcionales) con texto discreto por defecto.
 - Permite marcar el fin del período y quitar marcas.
 - Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con "Deshacer" tras importar.
@@ -45,13 +46,17 @@ flowchart LR
 ```
 lib/
 ├── domain/        # lógica pura, sin Flutter ni base de datos
+│   ├── backup_codec.dart
+│   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
-│   └── notification_planner.dart
+│   ├── notification_planner.dart
+│   └── range_selection.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
-│   ├── database/        # drift (esquema v4)
+│   ├── database/        # drift (esquema v5)
 │   ├── repositories/    # CycleRepository
 │   └── notifications/   # reconciler + scheduler
 ├── screens/       # home, calendario, registro, estadísticas, ajustes, onboarding
@@ -64,7 +69,7 @@ lib/
 
 **Ciclos derivados, no almacenados.** Solo se guardan los días de sangrado. Un nuevo ciclo empieza cuando el día de sangrado anterior está a más de 7 días. Así hay una única fuente de verdad y editar un día recalcula todo de forma consistente.
 
-**Motor de predicción puro y testeable.** Promedio ponderado linealmente de los últimos 6 ciclos completos (los recientes pesan más), con desviación ponderada. El rango de incertidumbre es `max(1,5·σ, 2 días)` (3 días con menos de 2 ciclos). Ovulación = próximo período − 14 días; ventana fértil = ovulación −5 … ovulación. Se aceptan ciclos de 15 a 60 días. Si pasan más de 60 días sin datos, se muestra "datos desactualizados" en vez de una predicción falsa.
+**Motor de predicción puro y testeable.** Promedio ponderado linealmente de los últimos 6 ciclos completos (los recientes pesan más), con desviación ponderada. El rango de incertidumbre es `max(1,5·σ, 2 días)` (3 días con menos de 2 ciclos). Ovulación = próximo período − 14 días; ventana fértil = ovulación −5 … ovulación. Se aceptan ciclos de 15 a 60 días. La confianza es baja con menos de 2 ciclos o si la desviación supera el 18 % del promedio; entonces no se muestran la ovulación ni la ventana fértil. Si pasan más de 60 días sin datos, se muestra "datos desactualizados" en vez de una predicción falsa.
 
 **Planificador de notificaciones puro + reconciliador.** `planNotifications` calcula qué debe estar programado (función pura, testeada con fechas fijas). El reconciliador compara con lo ya programado y aplica la diferencia. Una interfaz `NotificationScheduler` permite usar un doble en los tests.
 

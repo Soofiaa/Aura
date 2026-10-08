@@ -17,6 +17,9 @@
   - **Deshacer** en el mensaje de éxito vuelve a los datos que tenías antes de importar. El mensaje no se cierra solo.
 - Nueva sección **"Tus datos"** en Ajustes, con las dos opciones de respaldo antes de "Borrar todos los datos".
 - La confirmación de importar cuenta los **días con registro (M de período)**: los días marcados como "no hubo sangrado" cuentan como registro, pero no como período.
+- **"Tus ciclos"** en Estadísticas: cuántos ciclos se consideran, la duración típica del ciclo, el más corto y el más largo, la regularidad ("Regular", "Algo variable" o "Muy variable") y la duración típica del período, indicando si sale de tus períodos o de tu ajuste. Avisa cuántos ciclos no se cuentan por durar menos de 15 o más de 60 días. La duración típica del ciclo es el mismo número que usa la predicción.
+- **"Mostrar ovulación y ventana fértil"** en Ajustes → "Tu ciclo", activado por defecto. Si lo apagas, Inicio y el Calendario no las muestran y no se envía el aviso de la ventana fértil; ese aviso conserva su valor y vuelve cuando enciendes el interruptor.
+- **Ovulación y ventana fértil en el Calendario:** una barra bajo el número en los días de la ventana, y la barra más un punto en el de la ovulación. La leyenda suma "Ventana fértil estimada" y "Ovulación estimada", con el aviso "Estimación; no es un método anticonceptivo.". Solo aparecen cuando Inicio también las muestra, y no se dibujan sobre un día seleccionado, registrado o estimado.
 - **Copia de seguridad al actualizar:** antes de convertir tus datos al formato nuevo, Aura guarda una copia dentro del teléfono. Si no puede guardarla, no convierte nada y muestra "No se pudo actualizar Aura" con el botón "Reintentar"; si falta espacio, lo dice. La copia se borra cuando guardas un respaldo en el teléfono, al abrir la app si tiene más de 30 días, o con "Borrar todos los datos".
 
 ### Cambiado
@@ -31,6 +34,12 @@
 - "Borrar todos los datos" también borra la copia guardada antes de la última importación, la copia guardada antes de actualizar y los archivos temporales del respaldo.
 - La duración del período que se usa para estimar la fase menstrual solo cuenta períodos terminados: registrar solo el primer día ya no la acorta. Si no hay ningún período terminado, se usa la duración habitual de Ajustes (5 días si no la cambias).
 - Al actualizar, los períodos que ya tenías se marcan como terminados solo cuando se puede deducir con seguridad: dos o más días marcados, sin huecos de más de un día y, si es el más reciente, terminado hace más de 7 días. Los demás quedan abiertos. Ningún día ni síntoma cambia.
+- Con confianza baja, Inicio ya no muestra la ovulación, la ventana fértil ni la fase ovulatoria: muestra el próximo período con su rango ("(valor por defecto)" si hay menos de 2 ciclos) y una línea que explica por qué no hay ventana.
+- Con el período atrasado, Inicio no muestra ninguna fase, ni la ovulación ni la ventana fértil, y el Calendario no las marca.
+- La tarjeta de Inicio dice "Estimación; no es un método anticonceptivo." justo debajo de la ventana fértil, y la notificación de la ventana fértil con detalles termina en "No es un método anticonceptivo.". Sin detalles, los avisos dicen "Abre la app para ver el detalle." en vez de "Abrí la app…".
+- Con datos de hace más de 60 días, Inicio dice "Tu último período empezó el …" en vez de "Tu último registro fue el …".
+- Los números de los días futuros del Calendario se ven en un gris más oscuro, más fácil de leer.
+- Los datos pasan a un formato nuevo (v5) que guarda el interruptor de la ovulación y la ventana fértil; no cambia ningún día ni síntoma. Los respaldos nuevos lo incluyen, y los anteriores se restauran con el interruptor activado. Una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos, y no puede abrir los datos ya actualizados: hay que seguir con esta versión o una más nueva.
 - Los respaldos nuevos usan un formato que incluye el fin de cada período. Los respaldos anteriores se siguen pudiendo restaurar; una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos.
 
 ## 1.0.1

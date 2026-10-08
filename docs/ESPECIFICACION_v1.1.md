@@ -2,7 +2,7 @@
 
 > Documento de requisitos para la versión 1.1 (y el alcance previsto de la 1.2).
 > Autora: Sofia Menzel · Estado: borrador para aprobación · Base: Aura v1.0 (`main`, schema drift v3)
-> Avance: implementado hasta schema v4.
+> Avance: implementado hasta schema v5.
 > Mockups de referencia: lienzo "Aura v1.1 — Mockups" (pantallas numeradas 1 a 6 en este documento).
 
 ## 1. Contexto y objetivo
@@ -31,6 +31,7 @@ Hechos comprobados leyendo `main` (no supuestos). Condicionan el diseño.
 4. `CycleSummary.periodConfirmedEnded` es `true` solo si existe un día **explícitamente sin sangrado** (`period_day_explicit = true`, `is_period_day = false`) dentro de los 7 días posteriores al último día de sangrado. Marcar un rango en el calendario **no** activa este indicador. **En la v4** un período también queda cerrado si su último día tiene `period_end` (ver D-1 en la sección 10).
 5. `predictCycle` calcula `averagePeriodLengthDays` con el promedio ponderado de `periodLengthDays` de los ciclos completos **válidos (15–60 días)** de la ventana (máx. 6). **No filtra por `periodConfirmedEnded`.** **Resuelto en la v4:** ver P-1 en la sección 10.
 6. Estadísticas (`stats_screen.dart`): flujo promedio como texto en `Colors.pinkAccent`, barras de síntomas con un solo color (`0xFFFAD4D8` escrito a mano, igual a `AppColors.secondary`) y torta de ánimo con `Colors.primaries` (`Colors.pinkAccent` y `Colors.primaries` están fuera de la paleta `AppColors`). No muestra duración ni regularidad de ciclos, aunque `getDerivedCycles()` ya entrega esos datos.
+   **Resuelto en HU-05** ("Tus ciclos", HU-05b); la paleta de síntomas y ánimo sigue igual.
 
 ### Riesgo detectado (hallazgo 5) — confirmado por ejecución
 
@@ -211,8 +212,9 @@ bloquea con un mensaje. Un período de 1 día pide confirmación. Todas las acci
 
 **Criterios de aceptación**
 1. El calendario muestra los dos botones sin necesidad de abrir menús.
-2. La leyenda distingue **período registrado** (relleno) y **estimado sin confirmar** (borde punteado). El calendario no muestra
-   ventana fértil ni ovulación, así que la leyenda no las incluye (decisión 9B de la Etapa A); siguen en la tarjeta de Inicio.
+2. La leyenda distingue **período registrado** (relleno) y **estimado sin confirmar** (borde punteado). En HU-04 el calendario no
+   mostraba ventana fértil ni ovulación, así que la leyenda no las incluía (decisión 9B de la Etapa A). **Desde HU-05d** el
+   calendario las marca y la leyenda agrega sus dos entradas, solo cuando hay marcas.
 3. Los días estimados no se pueden confundir con los registrados (borde punteado vs. relleno).
 4. "Confirmar días" equivale a HU-03 usando como día de término el último día estimado: los estimados pasan a registrados y el período queda cerrado, tras una confirmación explícita.
 5. La selección de rango existente conserva su confirmación para rangos largos (`longRangeConfirmationThreshold`).
@@ -251,12 +253,12 @@ fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 18. Un rango puede cruzar de mes; si supera los 10 días, el resumen del panel lo advierte en ese momento.
 
 **Etapa A de HU-04:** ya no decide qué hacer, solo cómo: los textos exactos del panel; el SnackBar "Marca quitada · Deshacer", que
-hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene fijo, y qué conviene); y los casos límite
-(rango que cruza de mes, tocar el mismo día dos veces, fechas futuras).
+no se cerraba solo (**resuelto**: ver hallazgo S-1, se cierra a los 8 segundos); y los casos límite (rango que cruza de mes,
+tocar el mismo día dos veces, fechas futuras).
 
 ---
 
-### HU-05 · Entender mis ciclos en Estadísticas
+### HU-05 · Entender mis ciclos y una predicción honesta
 **Como** usuaria **quiero** ver qué tan regulares son mis ciclos **para** saber si mi predicción es confiable.
 **Mockup:** 4.
 
@@ -269,6 +271,129 @@ hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene 
 6. Con la base de datos vacía se mantiene el estado vacío actual.
 
 **Reglas de negocio:** "ciclo válido" sigue siendo el de la v1.0 (15 a 60 días). La dispersión se calcula con la misma desviación estándar ponderada del predictor, para que Estadísticas y predicción no se contradigan.
+
+**Estado:** implementada en la rama `feature/hu05-prediccion-honesta`, en cuatro partes (HU-05a, HU-05b, HU-05c y HU-05d) más
+una regla compartida, con las decisiones H5-1 a H5-4 de la sección 10. La historia creció: además de Estadísticas, corrige lo que
+Inicio, el Calendario y las notificaciones muestran de la ovulación y la ventana fértil.
+
+Reemplazados (descartados):
+- Criterio 1: el "±" de dispersión lo reemplazan el ciclo más corto y el más largo, y la regularidad.
+- Criterio 3: el mensaje aparece con menos de **2** ciclos completos (no 3), coherente con el predictor, que con menos de 2 usa
+  el promedio por defecto.
+
+Pospuestos:
+- Criterio 2: gráfico de duración de los ciclos.
+- Criterio 4: paleta de síntomas y ánimo (siguen `Colors.pinkAccent`, `0xFFFAD4D8` escrito a mano y `Colors.primaries` en
+  `stats_screen.dart`).
+
+#### HU-05a · Predicción honesta (Inicio y notificaciones)
+
+- **Confianza baja:** la tarjeta de Inicio muestra el próximo período con su rango y la fecha estimada, con "(valor por defecto)"
+  si hay menos de 2 ciclos completos válidos (se usa un ciclo de 28 días). No muestra la ovulación, la ventana fértil ni la fase
+  ovulatoria. Con el interruptor de HU-05c encendido, una línea gris explica por qué: "Con más ciclos registrados podremos estimar
+  tu ventana fértil." (pocos ciclos) o "Tus ciclos varían mucho, así que no mostramos tu ventana fértil." (variabilidad alta).
+- **Confianza media o alta:** muestra la ovulación estimada y la ventana fértil, y justo debajo "Estimación; no es un método
+  anticonceptivo.". El aviso del pie de Inicio ("Esta es una estimación, no un método anticonceptivo.") se mantiene siempre.
+- **Período atrasado** (hoy es posterior al extremo tardío del rango): Inicio muestra "Período atrasado por N días" y el próximo
+  período con su rango, pero ninguna fase, ni la ovulación ni la ventana fértil. El Calendario tampoco las marca (HU-05d).
+- **Datos viejos** (más de 60 días desde el último inicio): "Tu último período empezó el dd/MM/yyyy (hace N días). Registra un
+  nuevo día para volver a ver una predicción.", sin fase ni predicción.
+- **Notificación de la ventana fértil:** con "Mostrar detalles", el cuerpo termina en "No es un método anticonceptivo."; sin
+  detalles, dice "Abre la app para ver el detalle." (igual que el recordatorio de período). No se programa con confianza baja ni
+  con el interruptor de HU-05c apagado. Con el período atrasado tampoco se envía: el inicio de la ventana ya pasó, así que
+  `planNotifications` lo descarta como fecha pasada.
+
+**Regla única de lo que se muestra.** `visibleFertileMarks` (`lib/domain/fertile_marks.dart`) decide si se muestran la
+ovulación y la ventana fértil, y la usan Inicio y el Calendario. Devuelve las fechas solo si se cumplen todas: hay una
+predicción activa (no datos viejos), el interruptor de HU-05c está encendido, la confianza es media o alta y el período no está
+atrasado. El predictor no cambia: siempre calcula las fechas, y la regla solo decide qué se ve. Las notificaciones no usan esta
+función; `planNotifications` llega al mismo resultado con sus propias condiciones (ver HU-05a).
+
+#### HU-05b · "Tus ciclos" en Estadísticas
+
+Sección arriba de Estadísticas, visible cuando hay algún registro (si no, sigue el estado vacío "Aún no hay registros guardados
+🩷"). Se actualiza sola con cada cambio en los días o los ajustes.
+
+- Sin ciclos completos: "Registra al menos dos períodos para ver tus ciclos."
+- Con ciclos completos: "Ciclos considerados: N", con "(los más recientes)" cuando N llega al máximo de 6.
+- Con 2 o más ciclos considerados: "Duración típica del ciclo: N días", "Más corto y más largo: A a B días" (un solo valor si son
+  iguales) y "Regularidad: Regular", "Algo variable" o "Muy variable".
+- Con 1 ciclo considerado: "Tu único ciclo completo: N días" y "Con dos ciclos o más calculamos tu duración típica y tu
+  regularidad." (esta última línea también aparece si ningún ciclo cuenta porque todos quedaron fuera de rango).
+- Siempre: "Duración típica del período: N días (según tus períodos)" o "(según tu ajuste)", con la misma duración de P-1. Esto
+  cierra R-7.
+- Si hay ciclos fuera de 15 a 60 días, en gris: "1 ciclo no se cuenta" o "N ciclos no se cuentan", "por durar menos de 15 o
+  más de 60 días."
+
+**Un solo número de duración de ciclo:** `estimateCycleLength` lo calcula y lo usan `predictCycle` y Estadísticas, así que la
+duración típica que se ve es la misma que usa la predicción. La regularidad (`cycleRegularity`) usa la misma desviación estándar
+ponderada.
+
+#### HU-05c · Ocultar la ovulación y la ventana fértil
+
+- Interruptor **"Mostrar ovulación y ventana fértil"** en Ajustes → "Tu ciclo", activado por defecto, con la ayuda "Son
+  estimaciones, no un método anticonceptivo. Si lo apagas, no se muestran en Inicio ni en el Calendario."
+- Apagado oculta, en Inicio, la ovulación, la ventana, su aviso, la línea gris de confianza baja y la fase ovulatoria; en el
+  Calendario, las marcas y sus entradas de la leyenda. Además, el aviso de la ventana fértil no se programa.
+- **Relación con "Ventana fértil"** (Ajustes → Notificaciones): el aviso necesita los dos encendidos. Apagar el interruptor no
+  cambia el valor guardado de "Ventana fértil"; al volver a encenderlo, el aviso recupera ese valor. Con el interruptor apagado,
+  "Ventana fértil" se ve apagado y deshabilitado, con la ayuda "Para usarlo, activa «Mostrar ovulación y ventana fértil» en Tu
+  ciclo."
+- **Datos:** schema **v5**, con la columna `show_fertile_window` en `app_settings` (activada por defecto). La migración v4→v5
+  (`_from4To5`) solo agrega la columna, dentro de la transacción de la migración, y comprueba que no cambie la cantidad de filas
+  de ninguna tabla. No se hace copia previa: la de M-2 es solo para bases anteriores a la v4.
+- **Respaldo:** `schemaVersion` 5, con `showFertileWindow` en los ajustes; `formatVersion` sigue en 1. Los respaldos v3 y v4 se
+  importan con el interruptor activado. Una app v4 rechaza un respaldo v5 como de una versión más nueva, sin tocar nada.
+- "Borrar todos los datos" lo devuelve a activado.
+
+#### HU-05d · Ovulación y ventana fértil en el Calendario
+
+- Se marcan solo cuando `visibleFertileMarks` las deja ver, con la misma predicción que Inicio.
+- **Ventana** (6 días, de la ovulación − 5 a la ovulación): una barra corta bajo el número. **Ovulación:** esa barra más un
+  punto relleno sobre el número. No depende solo del color: la forma, la etiqueta y la leyenda las distinguen. El color es
+  `AppColors.fertile`, con contraste de al menos 3:1 sobre el fondo de la app y sobre blanco (lo fija un test).
+- **Prioridad:** selección > período (registrado o estimado) > ventana u ovulación. Un día seleccionado, registrado o estimado no
+  lleva la marca de la ventana ni de la ovulación.
+- **Lector de pantalla:** "ventana fértil estimada" y, en el día de la ovulación, "ovulación estimada". Van en la capa de
+  `rangeHighlightBuilder`, como "estimado", porque `table_calendar` excluye las etiquetas del contenido de la celda.
+- **Leyenda:** "Ventana fértil estimada" y "Ovulación estimada", con sus muestras, y debajo "Estimación; no es un método
+  anticonceptivo.", solo cuando hay marcas.
+- El número de los días futuros pasa a `AppColors.textSecondary` (antes, el gris claro por defecto de `table_calendar`), para que
+  se lea bien donde suele caer la ventana.
+- Solo se marcan la ovulación y la ventana de la predicción vigente, las del ciclo en curso antes del próximo período: el
+  predictor no calcula ciclos pasados, así que los meses anteriores no tienen marcas.
+
+#### Umbrales
+
+Son decisiones de producto, no criterios clínicos. Están en `PredictionConfig` (`lib/domain/cycle_predictor.dart`).
+
+| Umbral | Valor |
+|---|---|
+| Ciclo válido | De 15 a 60 días; los demás no cuentan |
+| Ciclos que entran al promedio | Los 6 más recientes, ponderados (los recientes pesan más) |
+| Confianza baja | Menos de 2 ciclos considerados, o desviación / promedio > 0,18 |
+| Confianza media | 2 o 3 ciclos considerados, con desviación / promedio ≤ 0,18 |
+| Confianza alta | 4 ciclos o más, con desviación / promedio ≤ 0,18 |
+| Regularidad | "Regular" si desviación / promedio ≤ 0,10; "Algo variable" hasta 0,18; "Muy variable" por encima. El 0,10 es una elección de producto; el 0,18 es el mismo que baja la confianza. Sin regularidad con menos de 2 ciclos |
+| Datos viejos | Más de 60 días desde el último inicio |
+| Ovulación y ventana | Ovulación = próximo período esperado − 14 días; ventana = ovulación − 5 hasta la ovulación |
+
+#### Casos extremos (H5-4, se dejan como están)
+
+Con un período de 5 días (la duración por defecto), y comprobado en `test/domain/cycle_predictor_test.dart` (grupo "HU-05 CP1",
+casos d):
+- Con un ciclo promedio de 20 días o menos no aparece la fase folicular: la ovulatoria empieza justo después de la menstrual (con
+  20 días, el día 6).
+- Con un promedio de 15 a 17 días, la fase ovulatoria queda tapada por la menstrual (con 15, la ovulación cae el día 2 y después
+  del día 5 se pasa directo a la lútea).
+
+Con un período más corto, estos límites cambian.
+
+#### Compatibilidad entre versiones
+
+No se admite instalar una versión anterior de la app sobre los datos de una más nueva. Una app v4 no puede abrir una base v5: los
+datos quedan intactos, pero la app no arranca (muestra "No se pudo actualizar Aura") hasta volver a una versión compatible:
+cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.dart`) y en la pantalla `UpdateErrorScreen`.
 
 ---
 
@@ -289,6 +414,9 @@ hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene 
   en los ajustes. `formatVersion` sigue en 1 (el envoltorio no cambia). Un respaldo v3 se sigue aceptando y, al importarlo, se le
   aplica la regla D-2; uno v4 se importa tal cual. La app anterior (schema v3) rechaza un respaldo v4 como de una versión más nueva,
   sin tocar nada (ver HU6-7 en la sección 10).
+- **Respaldo v5 (con HU-05c):** el archivo pasa a `schemaVersion` 5, con `showFertileWindow` en los ajustes. `formatVersion`
+  sigue en 1. Los respaldos v3 y v4 se importan con el interruptor activado. Una app v4 rechaza un respaldo v5 como de una
+  versión más nueva, sin tocar nada.
 - **HU-06b (contraseña / cifrado del respaldo): pendiente.** Completa el criterio 7 (ver decisiones HU6-2 y HU6-3 en la sección
   10). Bloquea la publicación de la v1.1.
 
@@ -318,7 +446,7 @@ hoy no se cierra solo (revisar si es porque tiene acción y Flutter lo mantiene 
 5. Si el ciclo más reciente es hormonal, Inicio explica que la predicción natural no aplica, en vez de mostrar fechas.
 6. Editar o eliminar un método recalcula las marcas de los ciclos afectados.
 
-**Datos:** nueva tabla `contraceptive_periods`; **schema v5** con migración y test. Requiere actualizar la política de privacidad y la declaración de datos si se publica en Google Play.
+**Datos:** nueva tabla `contraceptive_periods`; **un schema nuevo (v6 o posterior; la v5 la usó HU-05c)** con migración y test. Requiere actualizar la política de privacidad y la declaración de datos si se publica en Google Play.
 
 ---
 
@@ -411,13 +539,14 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 3. **Modelo de período cerrado** (D-1, D-2, P-1): columna `period_end`, migración v4 (incluye `typical_period_length`), cambio en el predictor y ajuste de duración habitual en el repositorio, **sin interfaz**.
    **Hecho**, junto con la copia previa a la migración y la pantalla de error al actualizar (M-1 a M-4 en la sección 10).
 4. Interfaz de HU-01 a HU-04 (HU-04 incluye la mejora U-1).
-5. HU-05 (estadísticas, que consume el modelo ya corregido) y los íconos T-02 (ícono de notificación, obligatorio antes de publicar la v1.1) y T-03 (ícono monocromo).
+5. HU-05 (estadísticas, que consume el modelo ya corregido; **hecha**, ver HU-05) y los íconos T-02 (ícono de notificación, obligatorio antes de publicar la v1.1) y T-03 (ícono monocromo).
 6. Release v1.1.0 y, después, HU-07 como v1.2.0.
 
 ## 10. Registro de decisiones
 
 Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03),
-tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H) y durante la implementación de la migración v4 (M-1 a M-4 y HU6-7).
+tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7)
+y en HU-05 (H5-1 a H5-4).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -432,7 +561,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **R-4** | Marcar un día a continuación de un fin declarado **reabre** el período, sin borrar la marca anterior (queda en un día interior y deja de contar). | Es la opción conservadora, y si después se quita ese día el fin declarado vuelve a valer. **Nota (por diseño):** un `period_end` que quedó en un día interior es un dato obsoleto que se conserva a propósito: `deriveCycles` solo lee el `period_end` del último día de cada período, así que el interior se ignora; no se borra al marcar (Inicio, Calendario, rangos o formulario), el respaldo lo exporta tal cual y "Deshacer" lo restaura. Si el período vuelve a cerrarse en otro día, ese nuevo fin es el que cuenta. |
 | **R-5** | El respaldo (HU-06) se implementa **antes** de la migración v4. | `allowBackup="false"` y la build de release impiden copiar la base del teléfono; sin exportación no hay forma de respaldar los datos reales antes de migrar. |
 | **R-6** | No se agrega `typical_cycle_length`. | Decisión de producto; se quita el criterio correspondiente de HU-01 y la v4 solo agrega `typical_period_length`. |
-| **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |
+| **R-7** | Estadísticas muestra "Según tu ajuste" cuando no hay períodos cerrados, y no muestra el origen `inferred`. **Implementada en HU-05b:** "Duración típica del período: N días (según tu ajuste)" o "(según tus períodos)". | Ser transparente sobre de dónde sale el número sin exponer un detalle técnico. |
 | **R-8** | El aviso suave de D-4 (cuando nunca se toca "Terminó") queda fuera de la v1.1. | Reducir el alcance; el período abierto ya queda fuera del promedio sin afectar la regularidad. |
 | **M-1** | La migración 3→4 corre dentro de una transacción explícita y, antes de confirmar, comprueba que no cambió la cantidad de días ni de síntomas, que `foreign_key_check` no informa nada y que ningún `period_end` quedó en un día sin sangrado. Tolera columnas ya existentes. `drift_dev make-migrations` guarda los volcados de los schemas v3 y v4 en `drift_schemas/aura/` y, a partir de ellos, genera el andamiaje del paso a paso (`app_database.steps.dart`: `Schema4` y `migrationSteps`) y los schemas de prueba (`test/drift/aura/generated/`; el test `test/drift/aura/migration_test.dart` parte de su plantilla y está adaptado a mano); el contenido del paso 3→4 (`_from3To4`) está escrito a mano. Las migraciones v1→v3 siguen escritas a mano, antes del paso a paso. | drift no envuelve `onUpgrade` en una transacción: sin ella, un fallo a mitad de camino dejaría columnas nuevas con el `user_version` viejo y la app no volvería a abrir. Con la transacción, SQLite revierte todo, incluido `user_version`. La tolerancia cubre una base v4 abierta por una app v3, que queda con `user_version` 3 y las columnas ya puestas. |
 | **M-2** | Antes de que drift abra una base con `user_version` entre 1 y 3, se guarda una copia del archivo en `respaldos/antes_de_migrar_v4.sqlite`, dentro del almacenamiento privado de la app, con `VACUUM INTO` a un archivo temporal que después se renombra. No se crea en una instalación nueva ni en una base ya v4, y no se sobrescribe si ya existe. Si no se puede escribir, la base no se abre ni se migra. Se borra: tras un "Guardar en el teléfono" exitoso (no al compartir; si el borrado falla, se ignora y queda para los otros dos casos); al abrir la app, si tiene más de 30 días según su fecha de modificación (ver M-3); y siempre con "Borrar todos los datos", que borra la carpeta `respaldos/` completa. | R-5: red de seguridad para los datos reales durante la migración. Tras guardar en el teléfono la usuaria ya tiene una copia completa y más reciente fuera de la app. Compartir no basta, porque `share_plus` puede devolver `unavailable` sin que se haya enviado nada (HU6-R5). |
@@ -448,6 +577,10 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **HU6-4** | "Crear respaldo" ofrece la **hoja de compartir** del sistema y un botón **"Guardar en el teléfono"** (el "Guardar como" del sistema). | Guardar en el propio teléfono no debería obligar a pasar por otra app. Además, `share_plus` puede devolver `unavailable` en vez de `dismissed` según el dispositivo o la versión de Android, así que no se puede garantizar que siempre se detecte el cierre de la hoja de compartir. En el teléfono de prueba (Xiaomi, HyperOS) el cierre sí se detectó (verificado en el release real, 2026-10-04). "Guardar en el teléfono" informa si se guardó o se canceló. |
 | **HU6-5** | **"Deshacer"** está en el mensaje de éxito de la importación, sin un botón permanente en Ajustes. | Deshacer sirve justo después de importar; un botón permanente invitaría a restaurar una copia vieja por error. |
 | **HU6-6** | Se importan los **ajustes de recordatorios**, salvo el **interruptor general** de notificaciones. | Ese interruptor depende del permiso de notificaciones del teléfono donde se importa, así que conserva su valor actual. |
+| **H5-1** | Con confianza baja, Inicio no muestra la ovulación, la ventana fértil ni la fase ovulatoria; sí el próximo período con su rango, y una línea gris que explica por qué. El aviso de la ventana fértil tampoco se envía. | La ovulación se calcula restando la fase lútea al próximo período, así que con un promedio poco confiable es todavía menos confiable: mostrarla sería falsa precisión. |
+| **H5-2** | "Tus ciclos" en Estadísticas usa la misma función que el predictor para la duración del ciclo (`estimateCycleLength`), y la regularidad usa el mismo umbral de 0,18 que baja la confianza. | Que Estadísticas y la predicción no se contradigan. |
+| **H5-3** | Un solo interruptor, "Mostrar ovulación y ventana fértil", para las dos, en "Tu ciclo" y activado por defecto. Columna `show_fertile_window` (schema v5), sin copia previa a la migración, incluido en el respaldo. "Ventana fértil" (Notificaciones) necesita los dos encendidos y conserva su valor. Con el interruptor apagado se oculta también la línea gris de confianza baja. | Decisión de producto. La migración solo agrega una columna con valor por defecto, sin tocar datos, por eso no hace falta copia previa. |
+| **H5-4** | Las fases con promedios de ciclo cortos se dejan como están (ver "Casos extremos" en HU-05). | Decisión de producto: quedan documentados en vez de cambiar las reglas de las fases. |
 | **HU6-7** | Con la migración v4, el respaldo pasa a `schemaVersion` 4: cada día lleva `periodEnd` (`null`, `"declared"` o `"inferred"`) y los ajustes llevan `typicalPeriodLength` (de 1 a 15). `formatVersion` sigue en 1. Un respaldo v3 se acepta y se convierte con la regla D-2 ("hoy" = el día de la importación); si trae una clave `periodEnd`, se ignora. La duración habitual de un respaldo v3 queda en 5. Un respaldo v4 se importa tal cual, incluida su duración habitual. La importación solo acepta datos ya convertidos al schema actual. La app v3 rechaza un respaldo v4 como de una versión más nueva, sin tocar nada. | `formatVersion` versiona el envoltorio (cambiará con el cifrado de HU-06b) y `schemaVersion` los datos. Convertir siempre antes de importar impide que algún camino importe datos v3 sin aplicar D-2. |
 
 **Ajustes obligatorios de HU-06** (aprobados con la Etapa A):
