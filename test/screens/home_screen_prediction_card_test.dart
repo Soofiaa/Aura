@@ -272,4 +272,119 @@ void main() {
     expect(find.text('Hace tiempo que no registras...'), findsNothing);
     expect(find.textContaining('Próximo período:'), findsOneWidget);
   });
+
+  // HU-05, CP5b: "Mostrar ovulacion y ventana fertil" (H5-3).
+  group('interruptor "Mostrar ovulacion y ventana fertil"', () {
+    // Cinco periodos cada 28 dias: 4 ciclos iguales (confianza alta).
+    // Ultimo inicio 26/03; esperado 23/04, rango 21/04 - 25/04
+    // (semiancho minimo 2); ovulacion 09/04.
+    const cuatroCiclos = ['2025-12-04', ...tresCiclos];
+
+    testHome('apagado + confianza alta: sin ovulacion, ventana ni aviso de '
+        'la tarjeta, y SI el proximo periodo con su rango', (tester) async {
+      await seedPeriods(cuatroCiclos);
+      await repo.setShowFertileWindow(false);
+      await pumpHome(tester, '2026-03-28');
+
+      expect(find.text('Confianza: Alta'), findsOneWidget);
+      expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+          findsOneWidget);
+      expect(find.text('Estimado: 23/04/2026'), findsOneWidget);
+      sinOvulacionNiVentana();
+      expect(find.text(masCiclos), findsNothing);
+      expect(find.text(variabilidad), findsNothing);
+      expect(find.text('Fase menstrual'), findsOneWidget);
+      expect(find.text(avisoPie), findsOneWidget);
+    });
+
+    testHome('apagado + confianza alta en dia ovulatorio: sin fase '
+        'ovulatoria', (tester) async {
+      await seedPeriods(cuatroCiclos);
+      await repo.setShowFertileWindow(false);
+      await pumpHome(tester, '2026-04-09');
+      sinFase();
+      expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+          findsOneWidget);
+    });
+
+    testHome('apagado + confianza baja (pocos datos): sin la linea gris',
+        (tester) async {
+      await seedPeriods(['2026-02-01']);
+      await repo.setShowFertileWindow(false);
+      await pumpHome(tester, '2026-02-03');
+      expect(find.text('Confianza: Baja'), findsOneWidget);
+      expect(find.text('Próximo período: 26/02/2026 - 04/03/2026'),
+          findsOneWidget);
+      expect(find.text(masCiclos), findsNothing);
+      expect(find.text(variabilidad), findsNothing);
+      sinOvulacionNiVentana();
+    });
+
+    testHome('apagado + confianza baja (variabilidad): sin la linea gris',
+        (tester) async {
+      await seedPeriods(
+          ['2026-01-01', '2026-01-21', '2026-02-21', '2026-03-16', '2026-04-05']);
+      await repo.setShowFertileWindow(false);
+      await pumpHome(tester, '2026-04-07');
+      expect(find.text('Estimado: 28/04/2026'), findsOneWidget);
+      expect(find.text(variabilidad), findsNothing);
+      expect(find.text(masCiclos), findsNothing);
+    });
+
+    testHome('encendido + confianza baja: la linea gris como hoy',
+        (tester) async {
+      await seedPeriods(['2026-02-01']);
+      await repo.setShowFertileWindow(true);
+      await pumpHome(tester, '2026-02-03');
+      expect(find.text(masCiclos), findsOneWidget);
+      sinOvulacionNiVentana();
+    });
+
+    testHome('encendido + confianza media y alta: ventana y aviso de la '
+        'tarjeta como hoy', (tester) async {
+      await seedPeriods(tresCiclos);
+      await repo.setShowFertileWindow(true);
+      await pumpHome(tester, '2026-03-28');
+      expect(find.text('Confianza: Media'), findsOneWidget);
+      expect(find.textContaining('Ovulación estimada:'), findsOneWidget);
+      avisoJustoDespuesDeLaVentana(tester);
+
+      await repo.deleteAllData();
+      await seedPeriods(cuatroCiclos);
+      await tester.pumpAndSettle();
+      expect(find.text('Confianza: Alta'), findsOneWidget);
+      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+      avisoJustoDespuesDeLaVentana(tester);
+    });
+
+    testHome('se actualiza sola al cambiar el interruptor', (tester) async {
+      await seedPeriods(cuatroCiclos);
+      await pumpHome(tester, '2026-03-28');
+      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+
+      await repo.setShowFertileWindow(false);
+      await tester.pumpAndSettle();
+      sinOvulacionNiVentana();
+
+      await repo.setShowFertileWindow(true);
+      await tester.pumpAndSettle();
+      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+    });
+
+    testHome('apagado: periodo atrasado y datos viejos no cambian',
+        (tester) async {
+      await seedPeriods(tresCiclos);
+      await repo.setShowFertileWindow(false);
+      await pumpHome(tester, '2026-04-26');
+      expect(find.text('Período atrasado por 1 día'), findsOneWidget);
+      sinFase();
+      expect(find.textContaining('Próximo período:'), findsOneWidget);
+
+      await repo.deleteAllData();
+      await repo.setShowFertileWindow(false);
+      await seedPeriods(['2026-01-01']);
+      await pumpHome(tester, '2026-03-03');
+      expect(find.text('Hace tiempo que no registras...'), findsOneWidget);
+    });
+  });
 }

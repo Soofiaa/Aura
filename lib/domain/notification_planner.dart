@@ -23,8 +23,9 @@ class NotificationSettings {
   final int reminderHour;
   final int reminderMinute;
 
-  /// "Mostrar ovulacion y ventana fertil" (HU-05). Todavia no lo usa
-  /// [planNotifications] (CP5b).
+  /// "Mostrar ovulacion y ventana fertil" (HU-05, H5-3). Apagado, no se
+  /// planifica el aviso fertil aunque [fertileWindowRemindersEnabled]
+  /// siga activado (se conserva su valor).
   final bool showFertileWindow;
 
   const NotificationSettings({
@@ -103,8 +104,10 @@ List<PlannedNotification> planNotifications({
   // de la del proximo periodo (se le resta la fase lutea), asi que es
   // menos confiable todavia. Mandar un aviso de "ventana fertil" ahi
   // seria falsa precision: Inicio tampoco muestra la ovulacion ni la
-  // ventana con confianza baja (HU-05, H5-1 A).
+  // ventana con confianza baja (HU-05, H5-1 A). Tampoco si la usuaria
+  // eligio no ver la ovulacion ni la ventana (H5-3).
   if (settings.fertileWindowRemindersEnabled &&
+      settings.showFertileWindow &&
       prediction.confidence != PredictionConfidence.low) {
     final date = prediction.fertileWindowStartDate;
     if (_isStillPending(date, settings, today, nowMinutesOfDay)) {

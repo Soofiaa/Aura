@@ -55,6 +55,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _notificaciones = false;
   bool _recordatorioPeriodo = true;
   bool _recordatorioFertil = false;
+  // "Mostrar ovulacion y ventana fertil" (HU-05, H5-3).
+  bool _mostrarFertil = true;
   bool _mostrarDetalles = false;
   int _horaRecordatorio = 9;
   int _minutoRecordatorio = 0;
@@ -115,6 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _notificaciones = settings.notificationsEnabled;
       _recordatorioPeriodo = settings.periodReminderEnabled;
       _recordatorioFertil = settings.fertileWindowRemindersEnabled;
+      _mostrarFertil = settings.showFertileWindow;
       _mostrarDetalles = settings.showDetailsEnabled;
       _horaRecordatorio = settings.reminderHour;
       _minutoRecordatorio = settings.reminderMinute;
@@ -154,6 +157,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _repository.setFertileWindowRemindersEnabled(value);
     if (!mounted) return;
     setState(() => _recordatorioFertil = value);
+  }
+
+  /// Solo guarda el ajuste: el NotificationReconciler (que escucha
+  /// app_settings) quita el aviso fertil del plan y el scheduler lo
+  /// cancela. No toca "Ventana fertil": al volver a encenderlo, ese
+  /// recordatorio vuelve a su valor guardado.
+  Future<void> _cambiarMostrarFertil(bool value) async {
+    await _repository.setShowFertileWindow(value);
+    if (!mounted) return;
+    setState(() => _mostrarFertil = value);
   }
 
   Future<void> _cambiarMostrarDetalles(bool value) async {
@@ -248,6 +261,17 @@ class _SettingsScreenState extends State<SettingsScreen>
           "después usa el promedio de los tuyos. Cambiarla no modifica "
           "tus registros.",
           style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text("Mostrar ovulación y ventana fértil"),
+          subtitle: const Text(
+            "Son estimaciones, no un método anticonceptivo. Si lo apagas, "
+            "Inicio solo muestra tu próximo período.",
+          ),
+          value: _mostrarFertil,
+          onChanged: _cambiarMostrarFertil,
         ),
       ],
     );
@@ -372,16 +396,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                 : null,
           ),
 
+          // Necesita tambien "Mostrar ovulacion y ventana fertil" (Tu
+          // ciclo). Si esta apagado, se ve apagado y deshabilitado, pero
+          // conserva su valor guardado.
           SwitchListTile(
             title: const Text("Ventana fértil"),
-            subtitle: const Text(
-              "Aviso opcional al comenzar tu ventana de mayor fertilidad "
-              "(estimación, no método anticonceptivo).",
-            ),
+            subtitle: _mostrarFertil
+                ? const Text(
+                    "Aviso opcional al comenzar tu ventana de mayor fertilidad "
+                    "(estimación, no método anticonceptivo). Solo se envía "
+                    "cuando tu estimación es confiable.",
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Aviso opcional al comenzar tu ventana de mayor "
+                        "fertilidad (estimación, no método anticonceptivo).",
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Para usarlo, activa «Mostrar ovulación y ventana "
+                        "fértil» en Tu ciclo.",
+                        style:
+                            TextStyle(fontSize: 13, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
             activeColor: const Color(0xFFA8D8EA),
-            value: _recordatorioFertil,
-            onChanged:
-                _notificaciones ? (val) => _cambiarRecordatorioFertil(val) : null,
+            value: _recordatorioFertil && _mostrarFertil,
+            onChanged: _notificaciones && _mostrarFertil
+                ? (val) => _cambiarRecordatorioFertil(val)
+                : null,
           ),
 
           SwitchListTile(

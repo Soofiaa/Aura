@@ -106,4 +106,45 @@ void main() {
     await reconciler.dispose();
     await db.close();
   });
+
+  // HU-05, CP5b: apagar "Mostrar ovulacion y ventana fertil" cancela el
+  // aviso fertil pendiente (id 101) sin tocar el de periodo ni el valor
+  // guardado de "Ventana fertil".
+  test('apagar showFertileWindow cancela el aviso fertil pendiente (101)',
+      () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
+    final repo = CycleRepository(db);
+    final scheduler = FakeNotificationScheduler();
+    final reconciler = NotificationReconciler(
+      repo,
+      scheduler,
+      clock: () => DateTime(2026, 4, 1, 8),
+    );
+
+    // Periodos cada 28 dias (3 ciclos completos, confianza media):
+    // ultimo inicio 30/03, ventana fertil desde el 08/04.
+    await repo.markPeriodDays(
+        ['2026-01-05', '2026-02-02', '2026-03-02', '2026-03-30']);
+    await repo.setNotificationsEnabled(true);
+    await repo.setFertileWindowRemindersEnabled(true);
+    reconciler.start();
+    await Future<void>.delayed(Duration.zero);
+    expect(scheduler.pendingIds, {100, 101});
+
+    await repo.setShowFertileWindow(false);
+    await Future<void>.delayed(Duration.zero);
+    expect(scheduler.pendingIds, {100});
+    expect(scheduler.cancelledIds, [101]);
+    expect(
+        (await repo.getNotificationSettings()).fertileWindowRemindersEnabled,
+        isTrue);
+
+    // Al volver a encenderlo, se agenda de nuevo.
+    await repo.setShowFertileWindow(true);
+    await Future<void>.delayed(Duration.zero);
+    expect(scheduler.pendingIds, {100, 101});
+
+    await reconciler.dispose();
+    await db.close();
+  });
 }

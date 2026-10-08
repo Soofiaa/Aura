@@ -90,6 +90,9 @@ void main() {
     await tester.tap(find.widgetWithText(SwitchListTile, 'Notificaciones'));
     await tester.pumpAndSettle();
 
+    // HU-05: el interruptor de Tu ciclo lo dejo mas abajo.
+    await tester.scrollUntilVisible(
+        find.widgetWithText(SwitchListTile, 'Ventana fértil'), 200);
     await tester.tap(find.widgetWithText(SwitchListTile, 'Ventana fértil'));
     await tester.pumpAndSettle();
 
@@ -102,6 +105,8 @@ void main() {
   testWidgets('el subtitulo de ventana fertil menciona el disclaimer',
       (tester) async {
     await pumpScreen(tester);
+    await tester.scrollUntilVisible(
+        find.textContaining('estimación, no método anticonceptivo'), 200);
     expect(
       find.textContaining('estimación, no método anticonceptivo'),
       findsOneWidget,
@@ -413,6 +418,119 @@ void main() {
           findsOneWidget);
 
       semantics.dispose();
+      await db.close();
+    });
+  });
+
+  // HU-05, CP5b: "Mostrar ovulacion y ventana fertil" (H5-3, relacion A).
+  group('Tu ciclo: mostrar ovulacion y ventana fertil (HU-05)', () {
+    const titulo = 'Mostrar ovulación y ventana fértil';
+    const subtitulo = 'Son estimaciones, no un método anticonceptivo. Si lo '
+        'apagas, Inicio solo muestra tu próximo período.';
+    const ventanaEncendido = 'Aviso opcional al comenzar tu ventana de mayor '
+        'fertilidad (estimación, no método anticonceptivo). Solo se envía '
+        'cuando tu estimación es confiable.';
+    const ventanaApagado = 'Aviso opcional al comenzar tu ventana de mayor '
+        'fertilidad (estimación, no método anticonceptivo).';
+    const ayuda = 'Para usarlo, activa «Mostrar ovulación y ventana fértil» '
+        'en Tu ciclo.';
+
+    final mostrar = find.widgetWithText(SwitchListTile, titulo);
+    final ventana = find.widgetWithText(SwitchListTile, 'Ventana fértil');
+
+    // Pantalla alta: todos los interruptores construidos sin desplazar.
+    Future<void> pumpTall(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpScreen(tester);
+    }
+
+    testWidgets('por defecto encendido, con su subtitulo, y "Ventana fertil" '
+        'dice que solo se envia con una estimacion confiable', (tester) async {
+      await repo.setNotificationsEnabled(true);
+      await pumpTall(tester);
+
+      expect(tester.widget<SwitchListTile>(mostrar).value, isTrue);
+      expect(find.text(subtitulo), findsOneWidget);
+      expect(find.text(ventanaEncendido), findsOneWidget);
+      expect(find.text(ayuda), findsNothing);
+      expect(tester.widget<SwitchListTile>(ventana).onChanged, isNotNull);
+      // Dentro de Tu ciclo: arriba de Notificaciones.
+      expect(tester.getTopLeft(mostrar).dy,
+          lessThan(tester.getTopLeft(find.text('Notificaciones').first).dy));
+      await db.close();
+    });
+
+    testWidgets('al apagarlo se guarda y "Ventana fertil" queda deshabilitado '
+        'con la ayuda en gris', (tester) async {
+      await repo.setNotificationsEnabled(true);
+      await repo.setFertileWindowRemindersEnabled(true);
+      await pumpTall(tester);
+
+      await tester.tap(mostrar);
+      await tester.pumpAndSettle();
+
+      expect(await repo.getShowFertileWindow(), isFalse);
+      expect(tester.widget<SwitchListTile>(mostrar).value, isFalse);
+      final v = tester.widget<SwitchListTile>(ventana);
+      expect(v.onChanged, isNull);
+      expect(v.value, isFalse);
+      expect(find.text(ayuda), findsOneWidget);
+      expect(find.text(ventanaApagado), findsOneWidget);
+      expect(find.text(ventanaEncendido), findsNothing);
+      final estilo = tester.widget<Text>(find.text(ayuda)).style!;
+      expect(estilo.fontSize, 13);
+      expect(estilo.color, Colors.grey[700]);
+      // El valor guardado de "Ventana fertil" no cambia.
+      expect((await repo.getNotificationSettings())
+          .fertileWindowRemindersEnabled, isTrue);
+      await db.close();
+    });
+
+    for (final previo in [true, false]) {
+      testWidgets('al volver a encenderlo, "Ventana fertil" recupera '
+          'exactamente su valor previo ($previo)', (tester) async {
+        await repo.setNotificationsEnabled(true);
+        await repo.setFertileWindowRemindersEnabled(previo);
+        await pumpTall(tester);
+        expect(tester.widget<SwitchListTile>(ventana).value, previo);
+
+        await tester.tap(mostrar);
+        await tester.pumpAndSettle();
+        expect((await repo.getNotificationSettings())
+            .fertileWindowRemindersEnabled, previo);
+
+        await tester.tap(mostrar);
+        await tester.pumpAndSettle();
+        expect(await repo.getShowFertileWindow(), isTrue);
+        final v = tester.widget<SwitchListTile>(ventana);
+        expect(v.value, previo);
+        expect(v.onChanged, isNotNull);
+        expect((await repo.getNotificationSettings())
+            .fertileWindowRemindersEnabled, previo);
+        expect(find.text(ayuda), findsNothing);
+        await db.close();
+      });
+    }
+
+    testWidgets('con el general apagado, "Ventana fertil" sigue '
+        'deshabilitado aunque el interruptor nuevo este encendido',
+        (tester) async {
+      await pumpTall(tester);
+      expect(tester.widget<SwitchListTile>(ventana).onChanged, isNull);
+      expect(find.text(ayuda), findsNothing);
+      // El interruptor nuevo no depende del general.
+      expect(tester.widget<SwitchListTile>(mostrar).onChanged, isNotNull);
+      await db.close();
+    });
+
+    testWidgets('sigue el valor guardado si cambia por fuera (importar un '
+        'respaldo)', (tester) async {
+      await pumpTall(tester);
+      await repo.setShowFertileWindow(false);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(mostrar).value, isFalse);
       await db.close();
     });
   });

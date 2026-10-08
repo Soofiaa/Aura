@@ -206,7 +206,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 20),
-                _buildPredictionCard(prediction),
+                _buildPredictionCard(prediction,
+                    mostrarFertilidad: inputs?.showFertileWindow ?? true),
                 StreamBuilder<DailyLogRow?>(
                   stream: _todayStream,
                   builder: (context, todaySnapshot) {
@@ -293,7 +294,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPredictionCard(CyclePrediction? prediction) {
+  Widget _buildPredictionCard(CyclePrediction? prediction,
+      {required bool mostrarFertilidad}) {
     if (prediction == null) {
       return _buildCardShell(children: [
         const Icon(Icons.favorite_border, color: Colors.grey, size: 50),
@@ -314,7 +316,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return switch (prediction) {
       StaleDataPrediction() => _buildStaleCard(prediction),
-      ActivePrediction() => _buildActiveCard(prediction),
+      ActivePrediction() =>
+        _buildActiveCard(prediction, mostrarFertilidad: mostrarFertilidad),
     };
   }
 
@@ -424,15 +427,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Tarjeta de prediccion (HU-05, H5-1 A). Con confianza baja no se
   /// muestran la ovulacion, la ventana fertil ni la fase ovulatoria, que
   /// dependen de un promedio poco confiable; se explica por que en una
-  /// linea gris. Con un periodo atrasado no se muestra ninguna fase: el
-  /// ciclo real ya supero lo estimado. El predictor no cambia: esto es
-  /// solo lo que se muestra.
-  Widget _buildActiveCard(ActivePrediction p) {
+  /// linea gris. Con "Mostrar ovulacion y ventana fertil" apagado
+  /// ([mostrarFertilidad], H5-3) tampoco, y sin la linea gris. Con un
+  /// periodo atrasado no se muestra ninguna fase: el ciclo real ya supero
+  /// lo estimado. El predictor no cambia: esto es solo lo que se muestra.
+  Widget _buildActiveCard(ActivePrediction p,
+      {required bool mostrarFertilidad}) {
     final confianzaBaja = p.confidence == PredictionConfidence.low;
+    final mostrarFertil = mostrarFertilidad && !confianzaBaja;
     final valorPorDefecto = p.completeCyclesConsidered <
         const PredictionConfig().minCompleteCyclesForMedium;
     final mostrarFase = !p.isPeriodLate &&
-        !(confianzaBaja && p.currentPhase == CyclePhase.ovulatoria);
+        !(!mostrarFertil && p.currentPhase == CyclePhase.ovulatoria);
     return _buildCardShell(children: [
       if (p.isPeriodLate) _buildLateBanner(p),
       const Icon(Icons.favorite, color: Colors.pinkAccent, size: 50),
@@ -457,7 +463,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
       ),
       const SizedBox(height: 15),
-      if (confianzaBaja)
+      if (mostrarFertilidad && confianzaBaja)
         Text(
           valorPorDefecto
               ? "Con más ciclos registrados podremos estimar tu ventana "
@@ -467,7 +473,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: Colors.grey[700]),
         )
-      else ...[
+      else if (mostrarFertil) ...[
         Text(
           "Ovulación estimada: ${_formatDate(p.estimatedOvulationDate)}",
           style: const TextStyle(fontSize: 15),

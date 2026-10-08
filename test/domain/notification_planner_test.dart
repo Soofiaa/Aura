@@ -374,4 +374,60 @@ void main() {
     expect(period.id, 100);
     expect(fertile.id, 101);
   });
+
+  // HU-05, CP5b: "Mostrar ovulacion y ventana fertil" (H5-3, relacion A).
+  group('HU-05 CP5b - interruptor showFertileWindow', () {
+    List<PlannedNotification> plan(
+      bool mostrar, {
+      bool fertil = true,
+      bool periodo = true,
+      bool detalles = false,
+      PredictionConfidence confidence = PredictionConfidence.high,
+    }) =>
+        planNotifications(
+          prediction: _prediction(confidence: confidence),
+          settings: NotificationSettings(
+            notificationsEnabled: true,
+            periodReminderEnabled: periodo,
+            fertileWindowRemindersEnabled: fertil,
+            showDetailsEnabled: detalles,
+            reminderHour: 9,
+            reminderMinute: 0,
+            showFertileWindow: mostrar,
+          ),
+          today: '2026-04-01',
+          nowMinutesOfDay: 8 * 60,
+        );
+
+    bool tieneFertil(List<PlannedNotification> p) =>
+        p.any((n) => n.kind == NotificationKind.fertileWindowReminder);
+
+    test('apagado + confianza alta + recordatorio fertil activo: no '
+        'planifica el fertil (con y sin detalles)', () {
+      for (final detalles in [true, false]) {
+        expect(tieneFertil(plan(false, detalles: detalles)), isFalse,
+            reason: 'detalles: $detalles');
+      }
+    });
+
+    test('encendido: igual que hoy (alta y media planifican, baja no)', () {
+      expect(tieneFertil(plan(true)), isTrue);
+      expect(
+          tieneFertil(plan(true, confidence: PredictionConfidence.medium)),
+          isTrue);
+      expect(tieneFertil(plan(true, confidence: PredictionConfidence.low)),
+          isFalse);
+      expect(tieneFertil(plan(true, fertil: false)), isFalse);
+    });
+
+    test('el recordatorio de periodo no cambia con el interruptor', () {
+      PlannedNotification periodo(bool mostrar) => plan(mostrar)
+          .singleWhere((n) => n.kind == NotificationKind.periodReminder);
+      final on = periodo(true);
+      final off = periodo(false);
+      expect((off.id, off.date, off.hour, off.minute, off.title, off.body),
+          (on.id, on.date, on.hour, on.minute, on.title, on.body));
+      expect(plan(false, periodo: false), isEmpty);
+    });
+  });
 }

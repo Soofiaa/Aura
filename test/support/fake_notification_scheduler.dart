@@ -29,10 +29,19 @@ class FakeNotificationScheduler implements NotificationScheduler {
     return permissionGranted;
   }
 
+  /// Ids agendados ahora y los cancelados, con la misma regla que
+  /// FlutterLocalNotificationsScheduler.reconcile: se cancela todo id
+  /// pendiente que no este en el plan nuevo.
+  Set<int> pendingIds = {};
+  final List<int> cancelledIds = [];
+
   @override
   Future<void> reconcile(List<PlannedNotification> plan) async {
     reconcileCallCount++;
     lastReconciledPlan = plan;
+    final planned = {for (final p in plan) p.id};
+    cancelledIds.addAll(pendingIds.difference(planned));
+    pendingIds = planned;
   }
 
   @override
