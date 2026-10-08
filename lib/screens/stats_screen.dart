@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/cycle_predictor.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -15,6 +16,11 @@ class _StatsScreenState extends State<StatsScreen> {
   // cuando cambia algo en daily_logs, sin importar si volvimos a esta
   // pestana despues de registrar un dia o marcar el calendario.
   late final Stream<StatsSnapshot> _statsStream = cycleRepository.watchStats();
+
+  // "Tus ciclos" usa las mismas entradas que la prediccion de Inicio (y
+  // se recalcula igual, con cada cambio en los dias o los ajustes).
+  late final Stream<PredictionInputs> _inputsStream =
+      cycleRepository.watchPredictionInputs();
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +56,18 @@ class _StatsScreenState extends State<StatsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                StreamBuilder<PredictionInputs>(
+                  stream: _inputsStream,
+                  builder: (context, inputs) {
+                    if (!inputs.hasData || inputs.data!.cycles.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 30),
+                      child: _CyclesSection(inputs: inputs.data!),
+                    );
+                  },
+                ),
                 const Text(
                   "Promedio de flujo",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -178,6 +196,81 @@ class _StatsScreenState extends State<StatsScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// "Tus ciclos": duracion tipica del ciclo (el mismo numero que usa la
+/// prediccion, ver [estimateCycleLength]), regularidad y duracion tipica
+/// del periodo (ver [estimatePeriodLength]).
+class _CyclesSection extends StatelessWidget {
+  const _CyclesSection({required this.inputs});
+
+  final PredictionInputs inputs;
+
+  static String _dias(int n) => n == 1 ? "1 día" : "$n días";
+
+  @override
+  Widget build(BuildContext context) {
+    final config = inputs.config;
+    final ciclo = estimateCycleLength(cycles: inputs.cycles, config: config);
+    final periodo = estimatePeriodLength(cycles: inputs.cycles, config: config);
+    final ciclosCompletos = ciclo.consideredCount + ciclo.excludedCount;
+    final regularidad = cycleRegularity(ciclo, config: config);
+
+    final filas = <String>[
+      if (ciclosCompletos == 0)
+        "Registra al menos dos períodos para ver tus ciclos."
+      else ...[
+        // Con el tope de ciclos alcanzado, aclara que hay mas registrados.
+        "Ciclos considerados: ${ciclo.consideredCount}"
+            "${ciclo.consideredCount == config.maxCyclesConsidered ? ' (los más recientes)' : ''}",
+        if (regularidad != null) ...[
+          "Duración típica del ciclo: ${_dias(ciclo.days!)}",
+          ciclo.shortestDays == ciclo.longestDays
+              ? "Más corto y más largo: ${_dias(ciclo.shortestDays!)}"
+              : "Más corto y más largo: ${ciclo.shortestDays} a "
+                  "${_dias(ciclo.longestDays!)}",
+          "Regularidad: ${regularidad.label}",
+        ] else ...[
+          if (ciclo.consideredCount == 1)
+            "Tu único ciclo completo: ${_dias(ciclo.consideredLengthsDays.single)}",
+          "Con dos ciclos o más calculamos tu duración típica y tu "
+              "regularidad.",
+        ],
+      ],
+      "Duración típica del período: ${_dias(periodo.days)} "
+          "${periodo.source == PeriodLengthSource.ownPeriods ? '(según tus períodos)' : '(según tu ajuste)'}",
+    ];
+
+    final excluidos = ciclo.excludedCount;
+    return Column(
+      children: [
+        const Text(
+          "Tus ciclos",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        for (final fila in filas)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              fila,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15),
+            ),
+          ),
+        if (excluidos > 0)
+          Text(
+            "${excluidos == 1 ? '1 ciclo no se cuenta' : '$excluidos ciclos no se cuentan'} "
+            "por durar menos de ${config.minValidCycleLengthDays} o más de "
+            "${config.maxValidCycleLengthDays} días.",
+            textAlign: TextAlign.center,
+            // grey[700] (#616161): 6,2:1 sobre blanco y 5,9:1 sobre el
+            // fondo de la app.
+            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+          ),
+      ],
     );
   }
 }

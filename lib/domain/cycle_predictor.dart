@@ -58,6 +58,11 @@ class PredictionConfig {
   /// independientemente de cuantos ciclos haya.
   final double highStdDevRelativeRatio;
 
+  /// Hasta esta fraccion (desviacion / promedio) los ciclos se muestran
+  /// como "Regular" en Estadisticas; por encima y hasta
+  /// [highStdDevRelativeRatio], "Algo variable" (ver [cycleRegularity]).
+  final double regularStdDevRelativeRatio;
+
   /// Duracion habitual del periodo (HU-01, ajuste typical_period_length).
   /// Es la duracion promedio cuando no hay ningun periodo cerrado en la
   /// ventana ni un periodo actual cerrado (P-1).
@@ -77,6 +82,7 @@ class PredictionConfig {
     this.minCompleteCyclesForMedium = 2,
     this.minCompleteCyclesForHigh = 4,
     this.highStdDevRelativeRatio = 0.18,
+    this.regularStdDevRelativeRatio = 0.10,
     this.typicalPeriodLengthDays = 5,
   });
 }
@@ -355,6 +361,98 @@ PeriodLengthEstimate estimatePeriodLength({
   );
 }
 
+/// Duracion de ciclo estimada: el unico numero de duracion de ciclo que
+/// usa toda la app (prediccion e Inicio a traves de [predictCycle], y
+/// "Tus ciclos" en Estadisticas).
+class CycleLengthEstimate {
+  const CycleLengthEstimate({
+    required this.consideredLengthsDays,
+    required this.excludedCount,
+    required this.averageDays,
+    required this.stdDevDays,
+  });
+
+  /// Duraciones de los ciclos completos y validos que entran en el
+  /// promedio (los ultimos [PredictionConfig.maxCyclesConsidered]), de
+  /// mas viejo a mas nuevo.
+  final List<int> consideredLengthsDays;
+
+  /// Ciclos completos que no cuentan por estar fuera del rango valido.
+  final int excludedCount;
+
+  /// Promedio ponderado (pesos 1..n, el mas reciente pesa mas). Null si
+  /// no hay ningun ciclo considerado.
+  final double? averageDays;
+
+  /// Desviacion estandar ponderada. Null si no hay ningun ciclo
+  /// considerado (0 con uno solo).
+  final double? stdDevDays;
+
+  int get consideredCount => consideredLengthsDays.length;
+
+  /// Dias enteros que se muestran (el mismo redondeo que usa
+  /// [predictCycle] para el proximo periodo).
+  int? get days => averageDays?.round();
+
+  int? get shortestDays =>
+      consideredLengthsDays.isEmpty ? null : consideredLengthsDays.reduce(math.min);
+
+  int? get longestDays =>
+      consideredLengthsDays.isEmpty ? null : consideredLengthsDays.reduce(math.max);
+}
+
+/// Duracion de ciclo estimada a partir de los ciclos completos con
+/// duracion valida (entre [PredictionConfig.minValidCycleLengthDays] y
+/// [PredictionConfig.maxValidCycleLengthDays]), solo los
+/// [PredictionConfig.maxCyclesConsidered] mas recientes. Funcion pura;
+/// [predictCycle] la usa (y cae al promedio por defecto cuando hay menos
+/// de [PredictionConfig.minCompleteCyclesForMedium] ciclos).
+CycleLengthEstimate estimateCycleLength({
+  required List<CycleSummary> cycles,
+  PredictionConfig config = const PredictionConfig(),
+}) {
+  final sorted = [...cycles]..sort((a, b) => DayKey.compare(a.startDate, b.startDate));
+  final valid = _windowedValidCycles(sorted, config);
+  final lengths = [for (final c in valid.windowed) c.cycleLengthDays!];
+  final stats = lengths.isEmpty ? null : _weightedMeanAndStdDev(lengths);
+  return CycleLengthEstimate(
+    consideredLengthsDays: List.unmodifiable(lengths),
+    excludedCount: valid.excluded,
+    averageDays: stats?.mean,
+    stdDevDays: stats?.stdDev,
+  );
+}
+
+enum CycleRegularity { regular, somewhatVariable, veryVariable }
+
+extension CycleRegularityLabel on CycleRegularity {
+  String get label => switch (this) {
+        CycleRegularity.regular => 'Regular',
+        CycleRegularity.somewhatVariable => 'Algo variable',
+        CycleRegularity.veryVariable => 'Muy variable',
+      };
+}
+
+/// Regularidad de los ciclos segun desviacion / promedio: hasta
+/// [PredictionConfig.regularStdDevRelativeRatio], regular; hasta
+/// [PredictionConfig.highStdDevRelativeRatio] (el mismo umbral que baja
+/// la confianza de la prediccion), algo variable; por encima, muy
+/// variable. Null con menos de
+/// [PredictionConfig.minCompleteCyclesForMedium] ciclos considerados (con
+/// menos, la prediccion tampoco usa el promedio propio).
+CycleRegularity? cycleRegularity(
+  CycleLengthEstimate estimate, {
+  PredictionConfig config = const PredictionConfig(),
+}) {
+  if (estimate.consideredCount < config.minCompleteCyclesForMedium) return null;
+  final ratio = estimate.stdDevDays! / estimate.averageDays!;
+  if (ratio <= config.regularStdDevRelativeRatio) return CycleRegularity.regular;
+  if (ratio <= config.highStdDevRelativeRatio) {
+    return CycleRegularity.somewhatVariable;
+  }
+  return CycleRegularity.veryVariable;
+}
+
 /// Motor de prediccion puro: sin DateTime.now(), sin base de datos.
 /// [today] es una clave 'yyyy-MM-dd' (igual que [CycleSummary.startDate])
 /// para reusar la aritmetica de [DayKey], que ya es segura ante los
@@ -385,8 +483,8 @@ CyclePrediction? predictCycle({
     );
   }
 
-  final valid = _windowedValidCycles(sorted, config);
-  final excludedCyclesCount = valid.excluded;
+  final cycleEstimate = estimateCycleLength(cycles: sorted, config: config);
+  final excludedCyclesCount = cycleEstimate.excludedCount;
   if (excludedCyclesCount > 0) {
     confidenceReasons.add(
       'Se excluyeron $excludedCyclesCount ciclo(s) fuera del rango válido '
@@ -394,8 +492,7 @@ CyclePrediction? predictCycle({
     );
   }
 
-  final windowed = valid.windowed;
-  final completeCyclesConsidered = windowed.length;
+  final completeCyclesConsidered = cycleEstimate.consideredCount;
 
   // Duracion del periodo (P-1): ver estimatePeriodLength.
   final averagePeriodLengthDays =
@@ -415,12 +512,10 @@ CyclePrediction? predictCycle({
       '${config.defaultCycleLengthDays} días.',
     );
   } else {
-    final cycleLengths = windowed.map((c) => c.cycleLengthDays!).toList();
-    final cycleStats = _weightedMeanAndStdDev(cycleLengths);
-    averageCycleLengthDays = cycleStats.mean;
-    cycleLengthStdDevDays = cycleStats.stdDev;
+    averageCycleLengthDays = cycleEstimate.averageDays!;
+    cycleLengthStdDevDays = cycleEstimate.stdDevDays!;
     rangeHalfWidthDays = math.max(
-      config.rangeStdDevMultiplier * cycleStats.stdDev,
+      config.rangeStdDevMultiplier * cycleLengthStdDevDays,
       config.minRangeHalfWidthDays.toDouble(),
     );
   }

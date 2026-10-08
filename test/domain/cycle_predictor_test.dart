@@ -899,4 +899,183 @@ void main() {
       });
     });
   });
+
+  // HU-05, CP4: duracion de ciclo unica y regularidad. Datos inventados.
+  group('HU-05 CP4 - estimateCycleLength', () {
+    /// Ciclos completos con las duraciones [lengths] (de mas viejo a mas
+    /// nuevo) desde [start], mas un periodo actual abierto al final.
+    List<CycleSummary> cyclesFrom(String start, List<int> lengths) {
+      final result = <CycleSummary>[];
+      var day = start;
+      for (final length in lengths) {
+        result.add(_cycle(day, 4, length));
+        day = DayKey.addDays(day, length);
+      }
+      result.add(_cycle(day, 4, null));
+      return result;
+    }
+
+    test('0 ciclos (lista vacia o un solo periodo abierto): sin numeros', () {
+      for (final cycles in [
+        <CycleSummary>[],
+        [_cycle('2026-01-01', 5, null)],
+      ]) {
+        final e = estimateCycleLength(cycles: cycles);
+        expect(e.consideredCount, 0);
+        expect(e.excludedCount, 0);
+        expect(e.averageDays, isNull);
+        expect(e.stdDevDays, isNull);
+        expect(e.days, isNull);
+        expect(e.shortestDays, isNull);
+        expect(e.longestDays, isNull);
+      }
+    });
+
+    test('1 ciclo: promedio = ese ciclo, desviacion 0', () {
+      final e = estimateCycleLength(cycles: cyclesFrom('2026-01-01', [31]));
+      expect(e.consideredCount, 1);
+      expect(e.consideredLengthsDays, [31]);
+      expect(e.averageDays, 31.0);
+      expect(e.stdDevDays, 0.0);
+      expect(e.days, 31);
+      expect(e.shortestDays, 31);
+      expect(e.longestDays, 31);
+    });
+
+    test('2 ciclos: pesos 1 y 2', () {
+      // (26*1 + 32*2) / 3 = 30; varianza (1*16 + 2*4) / 3 = 8.
+      final e = estimateCycleLength(cycles: cyclesFrom('2026-01-01', [26, 32]));
+      expect(e.consideredCount, 2);
+      expect(e.averageDays, 30.0);
+      expect(e.stdDevDays, closeTo(2.8284, 0.0001));
+      expect(e.shortestDays, 26);
+      expect(e.longestDays, 32);
+    });
+
+    test('6 ciclos: pesos 1..6, en cualquier orden de entrada', () {
+      final cycles = cyclesFrom('2026-01-01', [25, 27, 29, 31, 33, 35]);
+      final e = estimateCycleLength(cycles: cycles.reversed.toList());
+      // (25 + 54 + 87 + 124 + 165 + 210) / 21 = 665 / 21.
+      expect(e.consideredCount, 6);
+      expect(e.averageDays, closeTo(31.6667, 0.0001));
+      expect(e.days, 32);
+      expect(e.shortestDays, 25);
+      expect(e.longestDays, 35);
+    });
+
+    test('8 ciclos: solo cuentan los 6 ultimos (tambien para min y max)', () {
+      final ocho = estimateCycleLength(
+          cycles: cyclesFrom('2025-06-01', [45, 16, 25, 27, 29, 31, 33, 35]));
+      final seis = estimateCycleLength(
+          cycles: cyclesFrom('2025-06-01', [25, 27, 29, 31, 33, 35]));
+      expect(ocho.consideredCount, 6);
+      expect(ocho.consideredLengthsDays, [25, 27, 29, 31, 33, 35]);
+      expect(ocho.excludedCount, 0);
+      expect(ocho.averageDays, seis.averageDays);
+      expect(ocho.stdDevDays, seis.stdDevDays);
+      expect(ocho.shortestDays, 25);
+      expect(ocho.longestDays, 35);
+    });
+
+    test('excluidos: fuera de 15-60 no cuentan ni para min y max', () {
+      final e = estimateCycleLength(
+          cycles: cyclesFrom('2026-01-01', [14, 28, 61, 30, 15, 60]));
+      expect(e.excludedCount, 2);
+      expect(e.consideredLengthsDays, [28, 30, 15, 60]);
+      expect(e.shortestDays, 15);
+      expect(e.longestDays, 60);
+    });
+
+    test('predictCycle usa el mismo promedio y desviacion (2+ ciclos)', () {
+      for (final lengths in [
+        [26, 32],
+        [20, 23, 23, 32],
+        [22, 34, 22, 34, 22, 34],
+        [45, 16, 25, 27, 29, 31, 33, 35],
+        [14, 28, 61, 30],
+      ]) {
+        final cycles = cyclesFrom('2025-06-01', lengths);
+        final e = estimateCycleLength(cycles: cycles);
+        final p = predictCycle(
+            cycles: cycles,
+            today: DayKey.addDays(cycles.last.startDate, 2)) as ActivePrediction;
+        expect(p.averageCycleLengthDays, e.averageDays, reason: '$lengths');
+        expect(p.cycleLengthStdDevDays, e.stdDevDays, reason: '$lengths');
+        expect(p.completeCyclesConsidered, e.consideredCount);
+        expect(p.excludedCyclesCount, e.excludedCount);
+      }
+    });
+  });
+
+  group('HU-05 CP4 - cycleRegularity', () {
+    List<CycleSummary> cyclesFrom(List<int> lengths) {
+      final result = <CycleSummary>[];
+      var day = '2026-01-01';
+      for (final length in lengths) {
+        result.add(_cycle(day, 4, length));
+        day = DayKey.addDays(day, length);
+      }
+      result.add(_cycle(day, 4, null));
+      return result;
+    }
+
+    CycleRegularity? regularidad(List<int> lengths,
+            {PredictionConfig config = const PredictionConfig()}) =>
+        cycleRegularity(
+            estimateCycleLength(cycles: cyclesFrom(lengths), config: config),
+            config: config);
+
+    double razon(List<int> lengths) {
+      final e = estimateCycleLength(cycles: cyclesFrom(lengths));
+      return e.stdDevDays! / e.averageDays!;
+    }
+
+    test('con menos de 2 ciclos no hay regularidad', () {
+      expect(regularidad([]), isNull);
+      expect(regularidad([28]), isNull);
+      expect(regularidad([14, 28]), isNull); // 1 considerado, 1 excluido
+    });
+
+    test('borde 0,10: exacto y justo debajo -> regular; justo encima -> '
+        'algo variable', () {
+      // [24, 33, 30]: media 30, desviacion 3 -> razon exacta 0,10.
+      expect(razon([24, 33, 30]), 0.1);
+      expect(regularidad([24, 33, 30]), CycleRegularity.regular);
+      // [22, 29, 32, 32]: razon 0,099991.
+      expect(razon([22, 29, 32, 32]), lessThan(0.1));
+      expect(razon([22, 29, 32, 32]), greaterThan(0.0999));
+      expect(regularidad([22, 29, 32, 32]), CycleRegularity.regular);
+      // [23, 26, 32, 28]: razon 0,100007.
+      expect(razon([23, 26, 32, 28]), greaterThan(0.1));
+      expect(razon([23, 26, 32, 28]), lessThan(0.1001));
+      expect(regularidad([23, 26, 32, 28]), CycleRegularity.somewhatVariable);
+    });
+
+    test('borde 0,18 (conjuntos del CP1): debajo -> algo variable; encima '
+        '-> muy variable', () {
+      expect(regularidad([20, 23, 23, 32]), CycleRegularity.somewhatVariable);
+      expect(regularidad([32, 37, 25]), CycleRegularity.somewhatVariable);
+      expect(regularidad([20, 31, 23, 20]), CycleRegularity.veryVariable);
+      expect(regularidad([22, 34, 22, 34, 22, 34]),
+          CycleRegularity.veryVariable);
+    });
+
+    test('ciclos identicos: regular', () {
+      expect(regularidad([28, 28]), CycleRegularity.regular);
+    });
+
+    test('usa highStdDevRelativeRatio del config (no un 0,18 fijo)', () {
+      // [20, 31, 23, 20]: razon 0,180005.
+      expect(
+          regularidad([20, 31, 23, 20],
+              config: const PredictionConfig(highStdDevRelativeRatio: 0.19)),
+          CycleRegularity.somewhatVariable);
+    });
+
+    test('etiquetas', () {
+      expect(CycleRegularity.regular.label, 'Regular');
+      expect(CycleRegularity.somewhatVariable.label, 'Algo variable');
+      expect(CycleRegularity.veryVariable.label, 'Muy variable');
+    });
+  });
 }
