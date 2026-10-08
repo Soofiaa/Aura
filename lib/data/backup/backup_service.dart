@@ -427,6 +427,20 @@ class BackupService {
     }
   }
 
+  /// Bytes de un archivo ya exportado (por ejemplo, el cifrado y verificado
+  /// por [writeExportFile]) para "Guardar en el telefono".
+  Future<Uint8List> readExportFile(File file) => file.readAsBytes();
+
+  /// Borra un archivo exportado. No lanza: si falla, queda en la carpeta
+  /// temporal y se borra al abrir la app o en la proxima exportacion.
+  Future<void> deleteExportFile(File file) async {
+    try {
+      if (await file.exists()) await file.delete();
+    } on FileSystemException {
+      // Ver cleanTemporaryFiles.
+    }
+  }
+
   /// Borra las copias temporales del respaldo. Se llama al abrir la app,
   /// antes de cada exportacion y al borrar todos los datos.
   Future<void> cleanTemporaryFiles() async {

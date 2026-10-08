@@ -90,6 +90,17 @@ void main() {
   const exito =
       'Listo: se importaron 7 días.\nSi te equivocaste, toca Deshacer.';
 
+  /// HU-06b CP3: en "Proteger tu respaldo", "Continuar sin contraseña" y
+  /// confirmarlo (el camino sin cifrar, igual que antes de HU-06b).
+  Future<void> sinContrasena(WidgetTester tester) async {
+    await tester.tap(find.text('Continuar sin contraseña'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+        of: find.byType(AlertDialog).last,
+        matching: find.text('Continuar sin contraseña')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('"Tus datos" reemplaza a "Gestión de datos" con las dos '
       'opciones de respaldo antes de "Borrar todos los datos"', (tester) async {
     await pumpSettings(tester);
@@ -143,6 +154,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Compartir'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(gateway.sharedFiles, hasLength(1));
       expect(gateway.sharedFiles.single.path,
@@ -165,6 +177,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Compartir'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(gateway.sharedFiles, hasLength(1));
       expect(find.byType(SnackBar), findsNothing);
@@ -180,6 +193,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar en el teléfono'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(gateway.savedFileName, 'aura_respaldo_2026-10-04.json');
       final result = decodeBackup(gateway.savedBytes!);
@@ -199,6 +213,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar en el teléfono'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(find.byType(SnackBar), findsNothing);
       expect(backup.preMigrationCopyDeleteCount, 0);
@@ -214,6 +229,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar en el teléfono'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(find.text('No se pudo guardar el respaldo.'), findsOneWidget);
       expect(find.textContaining('detalle interno'), findsNothing);
@@ -234,6 +250,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Compartir'));
       await tester.pumpAndSettle();
+      await sinContrasena(tester);
 
       expect(
         find.text('No se pudo crear el respaldo: hay un día con una fecha '

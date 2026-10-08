@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../data/backup/backup_service.dart';
 import '../domain/backup_codec.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
+import '../widgets/protect_backup_dialog.dart';
 
 enum _AccionRespaldo { guardar, compartir }
 
@@ -68,33 +70,42 @@ class _BackupSectionState extends State<BackupSection> {
     );
     if (accion == null || !mounted || _ocupada) return;
 
+    // HU-06b CP3: con contrasena (cifrado) o, tras confirmarlo, sin ella.
+    final eleccion = await showProtectBackupDialog(context);
+    if (eleccion == null || !mounted || _ocupada) return;
+
     setState(() => _ocupada = true);
     try {
-      switch (accion) {
-        case _AccionRespaldo.compartir:
+      switch ((accion, eleccion)) {
+        case (_AccionRespaldo.compartir, ProtectWithoutPassword()):
           final file = await widget.service.writeExportFile();
-          final compartido = await _gateway.shareFile(file);
-          // Cerrar la hoja sin elegir destino no es un error: sin mensaje.
-          if (compartido) {
-            _aviso('Respaldo listo. Guárdalo en un lugar seguro.');
-          }
-        case _AccionRespaldo.guardar:
+          await _compartir(file, protegido: false);
+        case (_AccionRespaldo.compartir, ProtectWithPassword(:final password)):
+          final file = await _protegiendo(password);
+          await _compartir(file, protegido: true);
+        case (_AccionRespaldo.guardar, ProtectWithoutPassword()):
           final json = await widget.service.buildExportJson();
           final guardado = await _gateway.saveToDevice(
             fileName: widget.service.exportFileName(),
             bytes: Uint8List.fromList(utf8.encode(json)),
           );
-          // Cancelar el "Guardar como" no es un error: sin mensaje.
-          if (guardado) {
-            _aviso('Respaldo guardado.');
-            // Ya hay una copia completa fuera de la app: la copia previa a
-            // la migracion v4 deja de hacer falta. Si no se puede borrar,
-            // se reintenta a los 30 dias o al borrar los datos.
-            try {
-              await widget.service.deletePreMigrationCopy();
-            } catch (_) {}
+          await _despuesDeGuardar(guardado, protegido: false);
+        case (_AccionRespaldo.guardar, ProtectWithPassword(:final password)):
+          // Se guardan los bytes del archivo ya verificado (HU6b-10) y el
+          // temporal se borra siempre, tambien si guardar falla.
+          final file = await _protegiendo(password);
+          try {
+            final guardado = await _gateway.saveToDevice(
+              fileName: widget.service.exportFileName(protected: true),
+              bytes: await widget.service.readExportFile(file),
+            );
+            await _despuesDeGuardar(guardado, protegido: true);
+          } finally {
+            await widget.service.deleteExportFile(file);
           }
       }
+    } on BackupEncryptionException catch (e) {
+      _aviso(e.message);
     } on BackupWriteException catch (e) {
       _aviso(_mensajeNoSeCreo(e));
     } catch (_) {
@@ -106,6 +117,44 @@ class _BackupSectionState extends State<BackupSection> {
     } finally {
       if (mounted) setState(() => _ocupada = false);
     }
+  }
+
+  /// Cifra y verifica el respaldo con la pantalla bloqueada (puede tardar
+  /// unos segundos: la derivacion corre en otro isolate).
+  Future<File> _protegiendo(String password) => _conProgreso(
+        'Protegiendo tu respaldo…',
+        () => widget.service.writeExportFile(password: password),
+        detalle: 'Esto puede tardar unos segundos.',
+      );
+
+  // Con contrasena, el aviso final recuerda que no hay recuperacion
+  // (HU-06b). Sin contrasena, los mensajes de siempre.
+  static const _recuerda =
+      'Recuerda tu contraseña: Aura no puede recuperarla.';
+
+  Future<void> _compartir(File file, {required bool protegido}) async {
+    final compartido = await _gateway.shareFile(file);
+    // Cerrar la hoja sin elegir destino no es un error: sin mensaje.
+    if (compartido) {
+      _aviso(protegido
+          ? 'Respaldo protegido listo. $_recuerda'
+          : 'Respaldo listo. Guárdalo en un lugar seguro.');
+    }
+  }
+
+  Future<void> _despuesDeGuardar(bool guardado,
+      {required bool protegido}) async {
+    // Cancelar el "Guardar como" no es un error: sin mensaje.
+    if (!guardado) return;
+    _aviso(protegido
+        ? 'Respaldo protegido guardado. $_recuerda'
+        : 'Respaldo guardado.');
+    // Ya hay una copia completa fuera de la app: la copia previa a la
+    // migracion v4 deja de hacer falta. Si no se puede borrar, se
+    // reintenta a los 30 dias o al borrar los datos.
+    try {
+      await widget.service.deletePreMigrationCopy();
+    } catch (_) {}
   }
 
   String _mensajeNoSeCreo(BackupWriteException e) {
@@ -254,7 +303,8 @@ class _BackupSectionState extends State<BackupSection> {
   /// Bloquea la pantalla con un dialogo de progreso que no se puede
   /// cerrar (ni con "atras") mientras corre [tarea], para que no entren
   /// otras escrituras a mitad de camino.
-  Future<T> _conProgreso<T>(String texto, Future<T> Function() tarea) async {
+  Future<T> _conProgreso<T>(String texto, Future<T> Function() tarea,
+      {String? detalle}) async {
     final navigator = Navigator.of(context, rootNavigator: true);
     showDialog<void>(
       context: context,
@@ -267,7 +317,15 @@ class _BackupSectionState extends State<BackupSection> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(width: 20),
-              Expanded(child: Text(texto)),
+              Expanded(
+                child: detalle == null
+                    ? Text(texto)
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [Text(texto), Text(detalle)],
+                      ),
+              ),
             ],
           ),
         ),

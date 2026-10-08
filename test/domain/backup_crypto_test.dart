@@ -347,8 +347,8 @@ void main() {
 
     test('HU6b-11: no se normaliza: "ñ" compuesta no abre con "n" + tilde '
         'combinable', () async {
-      const compuesta = 'piña';
-      const descompuesta = 'piña';
+      const compuesta = 'pi\u00f1a';
+      const descompuesta = 'pin\u0303a';
       final file = await _encrypt(doc, password: compuesta);
       await _expectWrongPassword(
         decryptBackup(utf8.encode(file), descompuesta),

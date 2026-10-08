@@ -248,6 +248,28 @@ void main() {
     });
   });
 
+  group('archivos exportados (codigo real, sin dobles)', () {
+    test('readExportFile devuelve exactamente los bytes del archivo', () async {
+      final bytes = List<int>.generate(300, (i) => (i * 7) % 256);
+      final file = File(p.join(temp.path, 'exportado.json'))
+        ..writeAsBytesSync(bytes);
+      expect(await service().readExportFile(file), bytes);
+    });
+
+    test('deleteExportFile borra un archivo existente', () async {
+      final file = File(p.join(temp.path, 'exportado.json'))
+        ..writeAsStringSync('{}');
+      await service().deleteExportFile(file);
+      expect(file.existsSync(), isFalse);
+    });
+
+    test('deleteExportFile sobre un archivo inexistente no lanza', () async {
+      final file = File(p.join(temp.path, 'no-existe.json'));
+      await service().deleteExportFile(file);
+      expect(file.existsSync(), isFalse);
+    });
+  });
+
   group('importar', () {
     test('ida y vuelta: exportar cifrado, borrar, importar con la contrasena: '
         'mismos datos, por el mismo camino que un respaldo plano', () async {

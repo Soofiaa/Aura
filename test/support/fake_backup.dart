@@ -96,11 +96,45 @@ class FakeBackupService extends BackupService {
     return super.buildExportJson();
   }
 
+  /// Contrasenas que recibio writeExportFile, en orden (null = sin
+  /// contrasena). Solo en tests.
+  final List<String?> exportPasswords = [];
+
+  /// Si no es null, la exportacion cifrada espera a que se complete (para
+  /// ver el dialogo de progreso mientras tanto).
+  Completer<void>? exportGate;
+
+  /// Error que lanza la exportacion cifrada (despues de exportGate).
+  BackupEncryptionException? encryptionError;
+
+  /// Contenido simulado del archivo cifrado ya verificado.
+  static final List<int> encryptedFileBytes =
+      utf8.encode('{"format":"aura-backup","formatVersion":2}');
+
+  final List<String> readExportPaths = [];
+  final List<String> deletedExportPaths = [];
+
   @override
   Future<File> writeExportFile({String? password}) async {
+    exportPasswords.add(password);
     await buildExportJson();
-    return File('cache/aura_respaldo/${exportFileName()}');
+    if (password == null) {
+      return File('cache/aura_respaldo/${exportFileName()}');
+    }
+    if (exportGate != null) await exportGate!.future;
+    if (encryptionError != null) throw encryptionError!;
+    return File('cache/aura_respaldo/${exportFileName(protected: true)}');
   }
+
+  @override
+  Future<Uint8List> readExportFile(File file) async {
+    readExportPaths.add(file.path);
+    return Uint8List.fromList(encryptedFileBytes);
+  }
+
+  @override
+  Future<void> deleteExportFile(File file) async =>
+      deletedExportPaths.add(file.path);
 
   @override
   Future<BackupParseResult> readBackupFile(String path) async =>
