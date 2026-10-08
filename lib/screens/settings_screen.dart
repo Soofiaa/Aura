@@ -268,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: const Text("Mostrar ovulación y ventana fértil"),
           subtitle: const Text(
             "Son estimaciones, no un método anticonceptivo. Si lo apagas, "
-            "Inicio solo muestra tu próximo período.",
+            "no se muestran en Inicio ni en el Calendario.",
           ),
           activeThumbColor: const Color(0xFFA8D8EA),
           value: _mostrarFertil,

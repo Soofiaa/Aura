@@ -426,7 +426,7 @@ void main() {
   group('Tu ciclo: mostrar ovulacion y ventana fertil (HU-05)', () {
     const titulo = 'Mostrar ovulación y ventana fértil';
     const subtitulo = 'Son estimaciones, no un método anticonceptivo. Si lo '
-        'apagas, Inicio solo muestra tu próximo período.';
+        'apagas, no se muestran en Inicio ni en el Calendario.';
     const ventanaEncendido = 'Aviso opcional al comenzar tu ventana de mayor '
         'fertilidad (estimación, no método anticonceptivo). Solo se envía '
         'cuando tu estimación es confiable.';
