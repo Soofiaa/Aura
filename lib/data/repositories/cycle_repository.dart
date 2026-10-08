@@ -800,7 +800,8 @@ class PredictionInputs {
   final List<CycleSummary> cycles;
   final int typicalPeriodLengthDays;
 
-  /// "Mostrar ovulacion y ventana fertil" (HU-05). Lo usa Inicio.
+  /// "Mostrar ovulacion y ventana fertil" (HU-05). Lo usan Inicio y el
+  /// Calendario (visibleFertileMarks).
   final bool showFertileWindow;
 
   const PredictionInputs({

@@ -7,6 +7,7 @@ import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_deriver.dart';
 import '../domain/cycle_predictor.dart';
+import '../domain/fertile_marks.dart';
 import '../domain/range_selection.dart';
 import '../utils/colors.dart';
 import '../utils/day_key.dart';
@@ -52,7 +53,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // respaldo, borrar todos los datos, la pregunta de Inicio).
   StreamSubscription<List<String>>? _periodDaysSub;
 
-  // Ciclos y duracion estimada, para los dias estimados (E-1).
+  // Ciclos y duracion estimada, para los dias estimados (E-1), y la
+  // prediccion de la ventana fertil (HU-05, CP5d-2).
   PredictionInputs? _inputs;
   StreamSubscription<PredictionInputs>? _inputsSub;
 
@@ -89,6 +91,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ).days,
         today: _today,
       );
+
+  /// Dias de la ventana fertil y de la ovulacion que se marcan (HU-05,
+  /// CP5d-2), con la misma regla que Inicio (visibleFertileMarks) y la
+  /// misma prediccion (predictCycle). Vacios mientras _inputs es null.
+  /// Se calculan una vez por build, no por celda.
+  ({Set<String> ventana, Set<String> ovulacion}) _fertileDays() {
+    final inputs = _inputs;
+    if (inputs == null) return (ventana: const {}, ovulacion: const {});
+    final marks = visibleFertileMarks(
+      predictCycle(cycles: inputs.cycles, today: _today, config: inputs.config),
+      showFertileWindow: inputs.showFertileWindow,
+    );
+    if (marks == null) return (ventana: const {}, ovulacion: const {});
+    final ventana = <String>{};
+    for (var d = marks.windowStartDate;
+        !DayKey.isBefore(marks.windowEndDate, d);
+        d = DayKey.addDays(d, 1)) {
+      ventana.add(d);
+    }
+    return (ventana: ventana, ovulacion: {marks.ovulationDate});
+  }
 
   bool _esDiaFuturo(DateTime day) {
     final hoy = _clock();
@@ -379,26 +402,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   /// Marca de fondo de cada dia: el rango elegido (U-1) o, si no esta en
-  /// el rango, el borde punteado de un dia estimado. Va en
+  /// el rango, el borde punteado de un dia estimado o, si no, la marca de
+  /// la ventana fertil o de la ovulacion (CP5d-2). Prioridad: seleccion >
+  /// periodo (registrado o estimado) > ventana/ovulacion; un dia
+  /// seleccionado o registrado no lleva marca de ventana. Va en
   /// rangeHighlightBuilder porque table_calendar envuelve el contenido de
   /// cada celda en un Semantics que excluye las etiquetas de adentro, y
   /// este builder queda fuera de ese Semantics; ademas se llama para
   /// todos los dias, incluidos los futuros (deshabilitados) y hoy. Como
   /// table_calendar no recibe rangeStartDay/rangeEndDay, nunca dibuja su
   /// propio resaltado.
-  Widget? _dayMark(DateTime day, Set<String> estimated) {
+  Widget? _dayMark(
+    DateTime day,
+    Set<String> estimated,
+    Set<String> registrados,
+    ({Set<String> ventana, Set<String> ovulacion}) fertiles,
+  ) {
     final clave = DayKey.fromDate(day);
     final rango = _rangeMark(clave);
     if (rango != null) return rango;
-    if (!estimated.contains(clave)) return null;
-    return Positioned.fill(
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Semantics(
-          container: true,
-          label: 'estimado',
-          child: const CustomPaint(painter: DashedBorderPainter()),
+    if (estimated.contains(clave)) {
+      return Positioned.fill(
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Semantics(
+            container: true,
+            label: 'estimado',
+            child: const CustomPaint(painter: DashedBorderPainter()),
+          ),
         ),
+      );
+    }
+    if (!fertiles.ventana.contains(clave)) return null;
+    if (!_rangeMode && isSameDay(_selectedDay, day)) return null;
+    if (registrados.contains(clave)) return null;
+    final ovulacion = fertiles.ovulacion.contains(clave);
+    return Positioned.fill(
+      child: Semantics(
+        container: true,
+        label: ovulacion ? 'ovulación estimada' : 'ventana fértil estimada',
+        child: FertileDayMark(ovulation: ovulacion),
       ),
     );
   }
@@ -466,6 +509,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final estimated = _estimatedDays.toSet();
+    final registrados = _periodDayKeys.toSet();
+    final fertiles = _fertileDays();
     return Scaffold(
       appBar: AppBar(
         title: const Text("Calendario menstrual",
@@ -560,6 +605,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
+                // Dias futuros (deshabilitados): textSecondary (4,28:1
+                // sobre el fondo) en vez del #BFBFBF de la libreria
+                // (1,76:1); ahi caen casi siempre la ventana y la
+                // ovulacion (CP5d-2).
+                disabledTextStyle:
+                    const TextStyle(color: AppColors.textSecondary),
               ),
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
@@ -586,7 +637,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 outsideBuilder: (context, day, focusedDay) =>
                     const SizedBox.shrink(),
                 rangeHighlightBuilder: (context, day, isWithinRange) =>
-                    _dayMark(day, estimated),
+                    _dayMark(day, estimated, registrados, fertiles),
                 defaultBuilder: (context, day, focusedDay) =>
                     _registeredCell(day),
                 todayBuilder: (context, day, focusedDay) =>
@@ -594,7 +645,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const CalendarLegend(),
+            CalendarLegend(showFertile: fertiles.ventana.isNotEmpty),
             const SizedBox(height: 20),
             if (_rangeMode)
               ..._buildPanelRango()

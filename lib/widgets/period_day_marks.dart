@@ -52,15 +52,83 @@ class DashedBorderPainter extends CustomPainter {
       oldDelegate.gap != gap;
 }
 
+/// Marca de un dia de la ventana fertil estimada (HU-05, CP5d-2): barra
+/// solida corta abajo, en AppColors.fertile. En el dia de la ovulacion
+/// ([ovulation]) ademas un punto relleno arriba, para que no dependa
+/// solo del color. [inset] separa la barra y el punto del borde: en la
+/// celda (52 de alto) quedan por debajo y por encima del numero, sin
+/// tocarlo, con el texto a 1,0 y a 1,5.
+class FertileDayMark extends StatelessWidget {
+  const FertileDayMark({
+    super.key,
+    required this.ovulation,
+    this.inset = 3,
+    this.barWidth = 18,
+  });
+
+  final bool ovulation;
+  final double inset;
+  final double barWidth;
+
+  static const double barHeight = 4;
+  static const double dotDiameter = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: inset,
+          child: Center(
+            child: Container(
+              key: const ValueKey('fertile-bar'),
+              width: barWidth,
+              height: barHeight,
+              decoration: BoxDecoration(
+                color: AppColors.fertile,
+                borderRadius: BorderRadius.circular(barHeight / 2),
+              ),
+            ),
+          ),
+        ),
+        if (ovulation)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: inset,
+            child: Center(
+              child: Container(
+                key: const ValueKey('ovulation-dot'),
+                width: dotDiameter,
+                height: dotDiameter,
+                decoration: const BoxDecoration(
+                  color: AppColors.fertile,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// Leyenda del calendario (HU-04 crit. 2 y 3, decision 9B): solo lo que
-/// el calendario muestra, registrado y estimado.
+/// el calendario muestra, registrado y estimado. Con [showFertile]
+/// (hay marcas de ventana fertil, CP5d-2) agrega la ventana, la
+/// ovulacion y el aviso de que no es un metodo anticonceptivo. Los
+/// textos son Flexible: con texto grande se parten en vez de desbordar.
 class CalendarLegend extends StatelessWidget {
-  const CalendarLegend({super.key});
+  const CalendarLegend({super.key, this.showFertile = false});
+
+  final bool showFertile;
 
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(fontSize: 14, color: AppColors.textPrimary);
-    return Wrap(
+    final entradas = Wrap(
       alignment: WrapAlignment.center,
       spacing: 20,
       runSpacing: 8,
@@ -79,7 +147,7 @@ class CalendarLegend extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Text('Período registrado', style: style),
+            const Flexible(child: Text('Período registrado', style: style)),
           ],
         ),
         Row(
@@ -95,8 +163,57 @@ class CalendarLegend extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Text('Estimado sin confirmar', style: style),
+            const Flexible(
+                child: Text('Estimado sin confirmar', style: style)),
           ],
+        ),
+        if (showFertile) ...[
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: FertileDayMark(
+                      ovulation: false, inset: 2, barWidth: 16),
+                ),
+              ),
+              SizedBox(width: 8),
+              Flexible(child: Text('Ventana fértil estimada', style: style)),
+            ],
+          ),
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: FertileDayMark(
+                      ovulation: true, inset: 2, barWidth: 16),
+                ),
+              ),
+              SizedBox(width: 8),
+              Flexible(child: Text('Ovulación estimada', style: style)),
+            ],
+          ),
+        ],
+      ],
+    );
+    if (!showFertile) return entradas;
+    return Column(
+      children: [
+        entradas,
+        const SizedBox(height: 8),
+        Text(
+          'Estimación; no es un método anticonceptivo.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[700],
+            fontStyle: FontStyle.italic,
+          ),
         ),
       ],
     );
