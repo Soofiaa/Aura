@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../domain/backup_codec.dart';
+import '../../domain/backup_crypto.dart';
 import '../../utils/app_version.dart';
 import '../../utils/day_key.dart';
 import '../repositories/cycle_repository.dart';
@@ -91,6 +95,155 @@ class BackupUndoUnavailableException implements Exception {
   String toString() => 'BackupUndoUnavailableException: $detail';
 }
 
+/// Ejecuta un trabajo pesado (derivar la clave, cifrar, descifrar) fuera
+/// del hilo de la interfaz. En la app es [runInIsolate]; los tests usan
+/// [runInSameIsolate]. Lo que el trabajo captura tiene que poder viajar a
+/// otro isolate: textos, bytes, parametros y funciones de nivel superior,
+/// nunca el servicio ni el repositorio.
+typedef BackupTaskRunner = Future<R> Function<R>(FutureOr<R> Function() task);
+
+/// [BackupTaskRunner] de la app: Isolate.run.
+Future<R> runInIsolate<R>(FutureOr<R> Function() task) => Isolate.run(task);
+
+/// [BackupTaskRunner] para tests: corre en el mismo isolate.
+Future<R> runInSameIsolate<R>(FutureOr<R> Function() task) async => task();
+
+/// Cifra el documento de `formatVersion` 1. Tiene que ser una funcion de
+/// nivel superior o estatica: viaja al isolate. Inyectable para probar
+/// que la verificacion de HU6b-10 detecta un cifrador defectuoso.
+typedef BackupEncryptFunction = Future<String> Function(
+    String documentV1Json, String password, Argon2idParams params);
+
+/// [BackupEncryptFunction] de la app: [encryptBackup] (sal y nonce de
+/// Random.secure()).
+Future<String> encryptBackupDocument(
+        String documentV1Json, String password, Argon2idParams params) =>
+    encryptBackup(documentV1Json, password, params: params);
+
+/// Por que no se pudo crear un respaldo cifrado.
+enum BackupEncryptionFailure {
+  /// El cifrado mismo fallo (no se llego a escribir el archivo).
+  encryptionFailed,
+
+  /// El archivo escrito no descifra exactamente al documento original
+  /// (HU6b-10).
+  verificationFailed,
+
+  /// El archivo escrito supera el tope de tamano de un respaldo.
+  tooLarge,
+}
+
+/// Error al crear un respaldo cifrado. Nunca incluye la contrasena: ni
+/// en [detail] ni en [toString]. [message] es el texto para la usuaria.
+class BackupEncryptionException implements Exception {
+  BackupEncryptionException(this.cause, this.detail);
+
+  final BackupEncryptionFailure cause;
+
+  /// Solo para depuracion; nunca se muestra.
+  final String detail;
+
+  String get message => switch (cause) {
+        BackupEncryptionFailure.encryptionFailed =>
+          'No se pudo crear el respaldo protegido. No se guardó ningún '
+              'archivo.',
+        BackupEncryptionFailure.verificationFailed =>
+          'No se pudo crear el respaldo protegido: la comprobación del '
+              'archivo falló. No se guardó ningún archivo.',
+        BackupEncryptionFailure.tooLarge =>
+          'No se pudo crear el respaldo protegido: el archivo supera el '
+              'tamaño máximo. No se guardó ningún archivo.',
+      };
+
+  @override
+  String toString() => 'BackupEncryptionException($cause): $detail';
+}
+
+/// Resultado de intentar abrir un respaldo cifrado con una contrasena
+/// ([BackupService.unlockBackup]). Ninguno escribe nada.
+sealed class BackupUnlockResult {
+  const BackupUnlockResult();
+}
+
+/// Contrasena correcta y documento valido: [data] sigue el mismo camino
+/// que un respaldo sin cifrar (previewImport e importBackup).
+class BackupUnlocked extends BackupUnlockResult {
+  const BackupUnlocked(this.data);
+  final BackupData data;
+
+  @override
+  String toString() => 'BackupUnlocked(${data.days.length} dias)';
+}
+
+/// Contrasena incorrecta o archivo alterado (HU6b-8: no se distinguen).
+/// Se puede reintentar con el mismo [BackupNeedsPassword].
+class BackupUnlockWrongPasswordOrDamaged extends BackupUnlockResult {
+  const BackupUnlockWrongPasswordOrDamaged();
+
+  String get message => wrongPasswordOrDamagedMessage;
+
+  @override
+  String toString() => 'BackupUnlockWrongPasswordOrDamaged';
+}
+
+/// Se descifro, pero el documento no es un respaldo importable (por
+/// ejemplo, de un schema posterior). [error] es el mismo que daria un
+/// respaldo sin cifrar con ese contenido.
+class BackupUnlockInvalid extends BackupUnlockResult {
+  const BackupUnlockInvalid(this.error, this.detail);
+  final BackupError error;
+
+  /// Solo para depuracion; nunca se muestra.
+  final String detail;
+
+  @override
+  String toString() => 'BackupUnlockInvalid($error: $detail)';
+}
+
+// Trabajos que viajan al isolate. Son funciones de nivel superior que
+// arman el cierre: asi el cierre solo captura sus argumentos.
+
+Future<String> Function() _encryptJob(BackupEncryptFunction encrypt,
+        String documentV1Json, String password, Argon2idParams params) =>
+    () => encrypt(documentV1Json, password, params);
+
+/// null si no descifra (contrasena, sal, parametros o datos alterados).
+Future<Uint8List?> Function() _decryptJob(Uint8List fileBytes, String password) =>
+    () async {
+      try {
+        return await decryptBackup(fileBytes, password);
+      } on BackupCryptoException {
+        return null;
+      }
+    };
+
+Future<BackupUnlockResult> Function() _unlockJob(
+        BackupNeedsPassword pending, String password) =>
+    () async {
+      final BackupParseResult result;
+      try {
+        result = await decodeEncryptedBackup(pending, password);
+      } on BackupCryptoException {
+        return const BackupUnlockWrongPasswordOrDamaged();
+      }
+      return switch (result) {
+        BackupParseSuccess(:final data) => BackupUnlocked(data),
+        BackupParseFailure(:final error, :final detail) =>
+          BackupUnlockInvalid(error, detail),
+        // decodeEncryptedBackup ya rechaza un cifrado dentro de otro.
+        BackupNeedsPassword() =>
+          const BackupUnlockInvalid(BackupError.damaged, 'cifrado anidado'),
+      };
+    };
+
+bool _sameBytes(List<int> a, List<int> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
 /// Archivos del respaldo (HU-06): exportar, importar con copia previa,
 /// deshacer la importacion y limpiar temporales. Los datos pasan siempre
 /// por [CycleRepository]; esta clase solo agrega el manejo de archivos.
@@ -100,14 +253,32 @@ class BackupService {
     required Future<Directory> Function() supportDirectory,
     required Future<Directory> Function() temporaryDirectory,
     DateTime Function()? clock,
+    BackupTaskRunner runTask = runInIsolate,
+    Argon2idParams encryptionParams = Argon2idParams.production,
+    BackupEncryptFunction encrypt = encryptBackupDocument,
+    int maxFileBytes = maxBackupSizeBytes,
   })  : _supportDirectory = supportDirectory,
         _temporaryDirectory = temporaryDirectory,
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now,
+        _runTask = runTask,
+        _encryptionParams = encryptionParams,
+        _encrypt = encrypt,
+        _maxFileBytes = maxFileBytes;
 
   final CycleRepository _repository;
   final Future<Directory> Function() _supportDirectory;
   final Future<Directory> Function() _temporaryDirectory;
   final DateTime Function() _clock;
+
+  // Cifrado (HU-06b). La contrasena nunca se guarda en un campo: vive
+  // solo durante la llamada que la recibe.
+  final BackupTaskRunner _runTask;
+  final Argon2idParams _encryptionParams;
+  final BackupEncryptFunction _encrypt;
+
+  /// Tope de tamano de un archivo de respaldo, cifrado o no, al leerlo y
+  /// al verificar uno cifrado recien escrito. Inyectable solo para tests.
+  final int _maxFileBytes;
 
   /// Copia automatica de los datos anteriores a la ultima importacion,
   /// dentro del almacenamiento privado de la app. Hay una sola: cada
@@ -161,8 +332,15 @@ class BackupService {
   /// guardarlo. Antes borra los temporales de exportaciones anteriores;
   /// el archivo nuevo NO se borra al volver de la hoja de compartir,
   /// porque la app de destino puede seguir leyendolo.
-  Future<File> writeExportFile() async {
+  ///
+  /// Con [password] (HU-06b) el archivo va cifrado, se llama
+  /// `aura_respaldo_protegido_<fecha>.json` y antes de devolverlo se
+  /// verifica (HU6b-10, ver [_verifyEncryptedExport]); si la verificacion
+  /// falla se borra y se lanza [BackupEncryptionException]. Sin
+  /// [password], el archivo y su nombre son los de siempre.
+  Future<File> writeExportFile({String? password}) async {
     final json = await buildExportJson();
+    if (password != null) return _writeEncryptedExportFile(json, password);
     try {
       await cleanTemporaryFiles();
       final dir = Directory(
@@ -177,9 +355,77 @@ class BackupService {
     }
   }
 
-  /// Nombre sugerido para el archivo exportado.
-  String exportFileName() =>
-      'aura_respaldo_${DayKey.fromDate(_clock())}.json';
+  /// Nombre sugerido para el archivo exportado. [protected]: respaldo
+  /// cifrado (HU6b-7), solo como ayuda visual; el cifrado se detecta por
+  /// el contenido.
+  String exportFileName({bool protected = false}) => protected
+      ? 'aura_respaldo_protegido_${DayKey.fromDate(_clock())}.json'
+      : 'aura_respaldo_${DayKey.fromDate(_clock())}.json';
+
+  Future<File> _writeEncryptedExportFile(String json, String password) async {
+    final String encrypted;
+    try {
+      encrypted = await _runTask(
+          _encryptJob(_encrypt, json, password, _encryptionParams));
+    } catch (e) {
+      throw BackupEncryptionException(BackupEncryptionFailure.encryptionFailed,
+          'no se pudo cifrar: ${e.runtimeType}');
+    }
+    final File file;
+    try {
+      await cleanTemporaryFiles();
+      final dir = Directory(
+          p.join((await _temporaryDirectory()).path, exportDirName));
+      await dir.create(recursive: true);
+      file = File(p.join(dir.path, exportFileName(protected: true)));
+      await file.writeAsString(encrypted, flush: true);
+    } on FileSystemException catch (e) {
+      throw BackupWriteException(
+          BackupWriteCause.fileSystem, 'no se pudo escribir el respaldo: $e');
+    }
+    try {
+      await _verifyEncryptedExport(file, json, password);
+    } catch (e) {
+      try {
+        if (await file.exists()) await file.delete();
+      } on FileSystemException {
+        // Queda en la carpeta temporal: se borra al abrir la app o en la
+        // proxima exportacion (cleanTemporaryFiles).
+      }
+      if (e is BackupEncryptionException) rethrow;
+      throw BackupEncryptionException(
+          BackupEncryptionFailure.verificationFailed,
+          'error al verificar: ${e.runtimeType}');
+    }
+    return file;
+  }
+
+  /// HU6b-10: relee el archivo final desde el disco, comprueba el tope de
+  /// tamano y lo pasa por la misma funcion publica de descifrado que usa
+  /// la importacion ([decryptBackup]: lee el encabezado, vuelve a derivar
+  /// la clave y descifra). El resultado tiene que ser exactamente
+  /// [json]. Asi se detecta tambien un error al escribir la sal o los
+  /// parametros, a costa de una derivacion extra (~0,2 s, CP0).
+  Future<void> _verifyEncryptedExport(
+      File file, String json, String password) async {
+    final Uint8List bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } on FileSystemException catch (e) {
+      throw BackupEncryptionException(
+          BackupEncryptionFailure.verificationFailed, 'no se pudo releer: $e');
+    }
+    if (bytes.length > _maxFileBytes) {
+      throw BackupEncryptionException(
+          BackupEncryptionFailure.tooLarge, '${bytes.length} bytes');
+    }
+    final clear = await _runTask(_decryptJob(bytes, password));
+    if (clear == null || !_sameBytes(clear, utf8.encode(json))) {
+      throw BackupEncryptionException(
+          BackupEncryptionFailure.verificationFailed,
+          'el archivo no descifra al documento original');
+    }
+  }
 
   /// Borra las copias temporales del respaldo. Se llama al abrir la app,
   /// antes de cada exportacion y al borrar todos los datos.
@@ -193,12 +439,15 @@ class BackupService {
 
   /// Lee y valida el archivo elegido para importar. Revisa el tamano
   /// antes de cargarlo en memoria, y si es la copia que file_picker dejo
-  /// en la cache la borra apenas termina, sea valido o no. No lanza.
+  /// en la cache la borra apenas termina, sea valido o no. No lanza. Un
+  /// respaldo cifrado vuelve como [BackupNeedsPassword] (ya parseado: no
+  /// hace falta volver a elegir el archivo); se abre con [unlockBackup].
+  /// El tope de tamano es el mismo con o sin cifrado.
   Future<BackupParseResult> readBackupFile(String path) async {
     final file = File(path);
     try {
       final length = await file.length();
-      if (length > maxBackupSizeBytes) {
+      if (length > _maxFileBytes) {
         return BackupParseFailure(BackupError.tooLarge, '$length bytes');
       }
       return decodeBackup(await file.readAsBytes());
@@ -224,6 +473,27 @@ class BackupService {
       }
     } on FileSystemException {
       // Se reintenta al abrir la app (cleanTemporaryFiles).
+    }
+  }
+
+  /// Intenta abrir un respaldo cifrado con [password], fuera del hilo de
+  /// la interfaz. No escribe nada: ni la copia previa a importar ni la
+  /// base. Con [BackupUnlocked], los datos siguen el mismo camino que un
+  /// respaldo sin cifrar ([previewImport] e [importBackup]). Con
+  /// [BackupUnlockWrongPasswordOrDamaged] se puede reintentar con el mismo
+  /// [pending]. No lanza: un error inesperado (por ejemplo, del isolate)
+  /// vuelve como [BackupUnlockInvalid] con solo el tipo del error, nunca
+  /// su mensaje (podria contener datos).
+  Future<BackupUnlockResult> unlockBackup(
+      BackupNeedsPassword pending, String password) async {
+    try {
+      return await _runTask(_unlockJob(pending, password));
+    } on BackupCryptoException {
+      // Ya se trata dentro del trabajo; por si acaso.
+      return const BackupUnlockWrongPasswordOrDamaged();
+    } catch (e) {
+      return BackupUnlockInvalid(
+          BackupError.damaged, 'error inesperado: ${e.runtimeType}');
     }
   }
 
@@ -266,6 +536,9 @@ class BackupService {
         await _repository.replaceAllWithBackup(_upgrade(data));
       case BackupParseFailure():
         throw BackupUndoUnavailableException('copia previa invalida: $result');
+      case BackupNeedsPassword():
+        // La copia previa la escribe la app y nunca va cifrada.
+        throw BackupUndoUnavailableException('copia previa cifrada');
     }
   }
 

@@ -97,7 +97,7 @@ class FakeBackupService extends BackupService {
   }
 
   @override
-  Future<File> writeExportFile() async {
+  Future<File> writeExportFile({String? password}) async {
     await buildExportJson();
     return File('cache/aura_respaldo/${exportFileName()}');
   }

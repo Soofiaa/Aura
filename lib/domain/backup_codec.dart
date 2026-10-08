@@ -243,17 +243,11 @@ class BackupParseFailure extends BackupParseResult {
 }
 
 /// Respaldo cifrado (`formatVersion` 2) con un encabezado valido: hace
-/// falta la contrasena para seguir (ver [decodeEncryptedBackup]).
-///
-/// Puente hasta CP2-CP4 de HU-06b: es un [BackupParseFailure] con
-/// [BackupError.newerVersion] para que el codigo que hoy solo distingue
-/// exito y falla (BackupService.undoLastImport y la pantalla de
-/// importacion, con switch exhaustivos sobre la clase sellada) siga
-/// compilando y muestre "version mas nueva" mientras la interfaz no pida
-/// la contrasena. CP2-CP4 lo tratan antes que a las fallas.
-class BackupNeedsPassword extends BackupParseFailure {
-  const BackupNeedsPassword(this.envelope)
-      : super(BackupError.newerVersion, 'respaldo cifrado: falta la contrasena');
+/// falta la contrasena para seguir (ver [decodeEncryptedBackup] y
+/// BackupService.unlockBackup). Es un tercer resultado, hermano del exito
+/// y de la falla: todavia no se sabe si el contenido es valido.
+class BackupNeedsPassword extends BackupParseResult {
+  const BackupNeedsPassword(this.envelope);
 
   final EncryptedBackupEnvelope envelope;
 

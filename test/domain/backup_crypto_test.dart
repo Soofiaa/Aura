@@ -627,13 +627,13 @@ void main() {
       expect(root['formatVersion'] as int, greaterThan(backupFormatVersion));
       expect(root['encryption'], isNotNull);
       // Y en esta version, sin contrasena tampoco se importa nada: es un
-      // BackupParseFailure con newerVersion (lo que muestra la pantalla
-      // hasta CP4).
+      // BackupNeedsPassword (CP2: ya no es un BackupParseFailure).
       final result = decodeBackup(
         utf8.encode(_fixture('backup_v5_cifrado.json')),
       );
-      expect(result, isA<BackupParseFailure>());
-      expect((result as BackupParseFailure).error, BackupError.newerVersion);
+      expect(result, isA<BackupNeedsPassword>());
+      expect(result, isNot(isA<BackupParseSuccess>()));
+      expect(result, isNot(isA<BackupParseFailure>()));
     });
 
     test(

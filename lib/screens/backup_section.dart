@@ -146,6 +146,10 @@ class _BackupSectionState extends State<BackupSection> {
               await widget.service.previewImport(data),
             ),
             BackupParseFailure(:final error) => (error, null),
+            // TEMPORAL CP4: hasta que la pantalla pida la contrasena, un
+            // respaldo cifrado muestra el mismo mensaje que antes ("version
+            // mas nueva") y no se importa nada.
+            BackupNeedsPassword() => (BackupError.newerVersion, null),
           };
         });
         if (result.$1 != null) {
