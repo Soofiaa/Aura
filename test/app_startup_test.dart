@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/app_startup.dart';
@@ -169,5 +170,19 @@ void main() {
           findsOneWidget);
       expect(find.text('Reintentar'), findsOneWidget);
     });
+  });
+
+  testWidgets('la app llama "Cerrar" a la "x" de Material (por ejemplo, la '
+      'del aviso de la importacion)', (tester) async {
+    final (_, create) = await failingV3(() => false);
+    final startup = AppStartup(createDatabase: create, onReady: () {});
+    final initial = await startup.open();
+
+    await tester.pumpWidget(AuraRoot(startup: startup, initialResult: initial));
+    await tester.pumpAndSettle();
+
+    final pantalla = tester.element(find.text('Bienvenida a Aura 🌸'));
+    expect(MaterialLocalizations.of(pantalla).closeButtonTooltip, 'Cerrar');
+    await appDatabase.close();
   });
 }

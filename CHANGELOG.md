@@ -10,11 +10,11 @@
 - **"Confirmar días"** en el Calendario: cuando el último día estimado ya llegó, los estimados pasan a registrados y el período queda terminado.
 - **Terminar el período** desde Inicio ("Sigue", "Terminó hoy" y "Ya terminó antes") y desde el Calendario ("Terminó este día"). Se completan los días sin registro y se respetan los días que marcaste sin sangrado. Si el período quedaría de 1 día, Aura lo pregunta.
 - **Elegir varios días** en el Calendario: el panel guía cada paso, un tercer toque alarga, mueve o acorta el rango sin perderlo, y un rango que termina hace 2 días o más deja el período terminado solo si su último día es el último del período resultante; si quedan días marcados después, solo se marcan. Si termina hoy o ayer, Aura pregunta.
-- Todas estas acciones tienen **"Deshacer"** durante 8 segundos.
+- Todas estas acciones tienen **"Deshacer"** durante 7 segundos.
 - **Respaldo y restauración** de tus datos en un archivo JSON:
   - **Crear respaldo** guarda el archivo en el teléfono ("Guardar en el teléfono") o lo comparte con la hoja de compartir del sistema, después de avisar que contiene datos de salud.
   - **Restaurar un respaldo** revisa el archivo antes de tocar nada y pide confirmación con la fecha del respaldo y los días que se reemplazan. Si el respaldo trae menos días que los actuales, lo avisa.
-  - **Deshacer** en el mensaje de éxito vuelve a los datos que tenías antes de importar. El mensaje no se cierra solo.
+  - **Deshacer** en el mensaje de éxito vuelve a los datos que tenías antes de importar. El mensaje no se cierra solo: se cierra con una ×.
 - Nueva sección **"Tus datos"** en Ajustes, con las dos opciones de respaldo antes de "Borrar todos los datos".
 - La confirmación de importar cuenta los **días con registro (M de período)**: los días marcados como "no hubo sangrado" cuentan como registro, pero no como período.
 - **"Tus ciclos"** en Estadísticas: cuántos ciclos se consideran, la duración típica del ciclo, el más corto y el más largo, la regularidad ("Regular", "Algo variable" o "Muy variable") y la duración típica del período, indicando si sale de tus períodos o de tu ajuste. Avisa cuántos ciclos no se cuentan por durar menos de 15 o más de 60 días. La duración típica del ciclo es el mismo número que usa la predicción.
@@ -27,7 +27,7 @@
 - La pregunta de Inicio "¿Sigue tu período hoy?" cambia "Sí" y "No" por "Sigue", "Terminó hoy" y "Ya terminó antes", e indica el día del período y la duración estimada.
 - En el Calendario, el botón "Seleccionar varios días" pasa a llamarse "Elegir varios días" y está siempre visible junto a "Me llegó hoy". Hoy se distingue con un borde en vez de un relleno, para no confundirlo con un día registrado.
 - Marcar un día o un rango en el Calendario ahora tiene "Deshacer".
-- Los avisos con "Deshacer" (Inicio y "Marca quitada" del Calendario) ahora se cierran solos a los 8 segundos.
+- Los avisos se cierran solos: los simples a los 5 segundos (antes 4) y los que tienen "Deshacer" (Inicio, Calendario y "Me llegó hoy") a los 7. El de éxito de la importación sigue sin cerrarse solo y se cierra con una ×; el lector de pantalla la anuncia como "Cerrar".
 - Un mensaje nuevo reemplaza al anterior en vez de esperar en cola.
 - El Calendario y Ajustes se actualizan solos cuando los datos cambian en otra pestaña (por ejemplo, al importar o borrar todo).
 - La versión que muestra Ajustes sale de una constante única, comprobada con un test contra `pubspec.yaml`.

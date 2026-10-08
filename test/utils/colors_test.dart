@@ -3,13 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/utils/colors.dart';
 
-/// Razon de contraste WCAG 2.x entre dos colores opacos.
-double contrastRatio(Color a, Color b) {
-  final la = a.computeLuminance();
-  final lb = b.computeLuminance();
-  final (claro, oscuro) = la > lb ? (la, lb) : (lb, la);
-  return (claro + 0.05) / (oscuro + 0.05);
-}
+import '../support/contrast.dart';
 
 void main() {
   test('la formula da los valores conocidos (blanco/negro 21:1)', () {

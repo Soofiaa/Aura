@@ -102,12 +102,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     showAppSnackBar(
       context,
-      const SnackBar(
-        content: Text(
-          'El permiso de notificaciones fue revocado desde Ajustes del '
-          'sistema; se desactivaron los recordatorios.',
-        ),
-      ),
+      'El permiso de notificaciones fue revocado desde Ajustes del '
+      'sistema; se desactivaron los recordatorios.',
     );
   }
 
@@ -133,11 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         setState(() => _notificaciones = false);
         showAppSnackBar(
           context,
-          const SnackBar(
-            content: Text(
-              'No se activaron las notificaciones: permiso denegado.',
-            ),
-          ),
+          'No se activaron las notificaciones: permiso denegado.',
         );
         return;
       }
@@ -296,11 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _scheduler.scheduleTestNotification(delay: const Duration(seconds: 10));
     if (!mounted) return;
     showAppSnackBar(
-      context,
-      const SnackBar(
-        content: Text('Notificación de prueba programada en 10 segundos.'),
-      ),
-    );
+        context, 'Notificación de prueba programada en 10 segundos.');
   }
 
   Future<void> _confirmarYBorrarDatos() async {
@@ -337,18 +325,13 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!mounted) return;
       showAppSnackBar(
         context,
-        const SnackBar(
-          content: Text("No se pudieron borrar todos los datos. Inténtalo de nuevo."),
-        ),
+        "No se pudieron borrar todos los datos. Inténtalo de nuevo.",
       );
       return;
     }
 
     if (!mounted) return;
-    showAppSnackBar(
-      context,
-      const SnackBar(content: Text("Datos borrados correctamente 💧")),
-    );
+    showAppSnackBar(context, "Datos borrados correctamente 💧");
   }
 
   @override

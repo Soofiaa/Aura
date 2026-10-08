@@ -121,6 +121,11 @@ segundos (`undoSnackBarDuration` en `lib/utils/app_snackbar.dart`). El único pe
 importación. Tests de widget comprueban que siguen visibles a los 7 s y desaparecen a los 10 s; verificado también en el
 teléfono.
 
+**Ajuste posterior** (rama `fix/snackbar-autodismiss`): `showAppSnackBar` recibe el texto y la acción, y fija la duración con
+constantes de `lib/utils/app_snackbar.dart`: 5 segundos los avisos simples (`snackBarDuration`) y 7 los que tienen "Deshacer"
+(`undoSnackBarDuration`, antes 8 segundos), con `persist: false`. El éxito de la importación usa `persistent: true` (no se cierra solo) y lleva
+la "×" de cerrar, que el lector de pantalla anuncia como "Cerrar" (`lib/utils/aura_localizations.dart`).
+
 **Relacionado** (commit `9960dff`): `ScaffoldMessenger` encola los SnackBar, así que el éxito persistente de la importación
 bloqueaba todos los mensajes siguientes. Toda la app muestra los SnackBar con `showAppSnackBar`, que descarta los anteriores
 antes de mostrar uno nuevo. No se limpian al cambiar de pestaña, para no borrar el "Deshacer" de la importación cuando la
@@ -219,7 +224,7 @@ bloquea con un mensaje. Un período de 1 día pide confirmación. Todas las acci
 4. "Confirmar días" equivale a HU-03 usando como día de término el último día estimado: los estimados pasan a registrados y el período queda cerrado, tras una confirmación explícita.
 5. La selección de rango existente conserva su confirmación para rangos largos (`longRangeConfirmationThreshold`).
 6. Los controles táctiles miden al menos 48 dp.
-7. Marcar un día, quitar una marca, marcar un rango, "Confirmar días" y "Terminó este día" muestran "Deshacer" (8 segundos), que
+7. Marcar un día, quitar una marca, marcar un rango, "Confirmar días" y "Terminó este día" muestran "Deshacer" (7 segundos), que
    restaura exactamente el estado previo de todos los días afectados, incluido el fin del período, en una sola transacción.
 
 **Mejora U-1: selección de rango (decidida, opciones A + B).** Hace más visible el resumen que ya existe y evita que un rango ya
@@ -253,7 +258,7 @@ fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 18. Un rango puede cruzar de mes; si supera los 10 días, el resumen del panel lo advierte en ese momento.
 
 **Etapa A de HU-04:** ya no decide qué hacer, solo cómo: los textos exactos del panel; el SnackBar "Marca quitada · Deshacer", que
-no se cerraba solo (**resuelto**: ver hallazgo S-1, se cierra a los 8 segundos); y los casos límite (rango que cruza de mes,
+no se cerraba solo (**resuelto**: ver hallazgo S-1, se cierra a los 7 segundos); y los casos límite (rango que cruza de mes,
 tocar el mismo día dos veces, fechas futuras).
 
 ---
@@ -592,7 +597,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **C** | Si el respaldo trae **menos** días que los actuales, la confirmación lo avisa de forma destacada ("El respaldo tiene N días menos que los que tienes ahora; se perderán."). Se calcula con el total de días con registro. |
 | **D** | La versión sale de una **constante única** (`lib/utils/app_version.dart`), usada en Ajustes y en el respaldo, con un test que falla si no coincide con `pubspec.yaml`. |
 | **E** | La exportación es **determinista**: días ordenados por fecha, síntomas por nombre y claves siempre en el mismo orden; los mismos datos producen el mismo archivo, salvo `exportedAt`. |
-| **F** | "Deshacer" no se cierra solo y no reescribe la copia previa. El texto inicial ("…quedan guardados hasta la próxima importación") se cambió en la revisión del CP2 por **"Si te equivocaste, toca Deshacer."** |
+| **F** | "Deshacer" no se cierra solo (el mensaje se cierra con su "×") y no reescribe la copia previa. El texto inicial ("…quedan guardados hasta la próxima importación") se cambió en la revisión del CP2 por **"Si te equivocaste, toca Deshacer."** |
 | **G** | Rango de fechas válido al importar y exportar: de `1970-01-01` a la mayor entre `2030-12-31` y la fecha de exportación + 2 días. |
 | **H** | Durante la importación la interfaz queda **bloqueada** con un diálogo de progreso que no se puede cerrar (ni con "atrás"). |
 

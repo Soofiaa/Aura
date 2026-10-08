@@ -243,7 +243,7 @@ void main() {
       expect(find.text(card), findsOneWidget);
     });
 
-    testHome('el aviso con Deshacer se cierra solo a los 8 segundos',
+    testHome('el aviso con Deshacer se cierra solo a los 7 segundos',
         (tester) async {
       await seedHistory();
       await repo.markPeriodDay('2026-02-26');
@@ -252,9 +252,9 @@ void main() {
       await tapAndSettle(tester, 'Sigue');
       expect(find.text('Día marcado como sangrado.'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 7));
+      await tester.pump(const Duration(milliseconds: 6900));
       expect(find.text('Día marcado como sangrado.'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       expect(find.text('Día marcado como sangrado.'), findsNothing);
     });

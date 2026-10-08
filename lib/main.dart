@@ -7,6 +7,7 @@ import 'data/backup/backup_file_gateway.dart';
 import 'data/backup/backup_service.dart';
 import 'data/backup/plugin_backup_file_gateway.dart';
 import 'data/notifications/notification_reconciler.dart';
+import 'utils/aura_localizations.dart';
 import 'utils/colors.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/main_navigation_screen.dart';
@@ -49,7 +50,8 @@ Future<void> main() async {
   runApp(AuraRoot(startup: startup, initialResult: result));
 }
 
-ThemeData _auraTheme() => ThemeData(
+/// Tema de la app (publico para que los tests usen los mismos colores).
+ThemeData auraTheme() => ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       scaffoldBackgroundColor: AppColors.background,
       useMaterial3: true,
@@ -94,7 +96,8 @@ class _AuraRootState extends State<AuraRoot> {
       StartupFailed(:final outOfSpace) => MaterialApp(
           title: 'Aura',
           debugShowCheckedModeBanner: false,
-          theme: _auraTheme(),
+          theme: auraTheme(),
+          localizationsDelegates: auraLocalizationsDelegates,
           home: UpdateErrorScreen(
             outOfSpace: outOfSpace,
             retrying: _retrying,
@@ -114,7 +117,8 @@ class AuraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Aura',
       debugShowCheckedModeBanner: false,
-      theme: _auraTheme(),
+      theme: auraTheme(),
+      localizationsDelegates: auraLocalizationsDelegates,
       home: onboardingVisto
           ? const MainNavigationScreen()
           : const OnboardingScreen(),

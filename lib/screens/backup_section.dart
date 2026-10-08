@@ -221,14 +221,11 @@ class _BackupSectionState extends State<BackupSection> {
         : 'Listo: se importaron $dias días.';
     showAppSnackBar(
       context,
-      SnackBar(
-        content: Text('$texto\nSi te equivocaste, toca Deshacer.'),
-        // No se cierra sola: "Deshacer" debe seguir disponible hasta que
-        // la usuaria lo use o cierre el mensaje.
-        persist: true,
-        showCloseIcon: true,
-        action: SnackBarAction(label: 'Deshacer', onPressed: _deshacer),
-      ),
+      '$texto\nSi te equivocaste, toca Deshacer.',
+      // No se cierra sola: "Deshacer" debe seguir disponible hasta que
+      // la usuaria lo use o cierre el mensaje con la "x".
+      persistent: true,
+      action: SnackBarAction(label: 'Deshacer', onPressed: _deshacer),
     );
   }
 
@@ -281,7 +278,7 @@ class _BackupSectionState extends State<BackupSection> {
 
   void _aviso(String texto) {
     if (!mounted) return;
-    showAppSnackBar(context, SnackBar(content: Text(texto)));
+    showAppSnackBar(context, texto);
   }
 
   @override

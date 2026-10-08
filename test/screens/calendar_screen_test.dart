@@ -103,7 +103,7 @@ void main() {
   });
 
   testWidgets('el aviso "Marca quitada" con Deshacer se cierra solo a los '
-      '8 segundos', (tester) async {
+      '7 segundos', (tester) async {
     await repo.markPeriodDay(_clave(mesPasado, 10));
 
     await _pumpCalendar(tester);
@@ -115,10 +115,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Marca quitada'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 7));
+    await tester.pump(const Duration(milliseconds: 6900));
     expect(find.text('Marca quitada'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
     expect(find.text('Marca quitada'), findsNothing);
 

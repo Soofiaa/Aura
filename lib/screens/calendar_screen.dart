@@ -132,14 +132,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _showUndo(String message, DaysSnapshot snapshot) {
     showAppSnackBar(
       context,
-      SnackBar(
-        content: Text(message),
-        persist: false,
-        duration: undoSnackBarDuration,
-        action: SnackBarAction(
-          label: 'Deshacer',
-          onPressed: () => _repository.restoreDaysSnapshot(snapshot),
-        ),
+      message,
+      action: SnackBarAction(
+        label: 'Deshacer',
+        onPressed: () => _repository.restoreDaysSnapshot(snapshot),
       ),
     );
   }
@@ -154,10 +150,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (!mounted) return;
     if (!result.changedAnything) {
-      showAppSnackBar(
-        context,
-        const SnackBar(content: Text('Ese día ya estaba registrado')),
-      );
+      showAppSnackBar(context, 'Ese día ya estaba registrado');
       return;
     }
     _showUndo('Día registrado como menstruación.', result.snapshot);
@@ -240,11 +233,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } on PeriodEndException catch (e) {
       if (!mounted) return;
       showAppSnackBar(
-        context,
-        SnackBar(
-            content:
-                Text(periodEndProblemMessage(e.check, current.startDate))),
-      );
+          context, periodEndProblemMessage(e.check, current.startDate));
       return;
     }
     if (!mounted) return;
@@ -276,11 +265,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } on PeriodEndException catch (e) {
       if (!mounted) return;
       showAppSnackBar(
-        context,
-        SnackBar(
-            content:
-                Text(periodEndProblemMessage(e.check, periodo.startDate))),
-      );
+          context, periodEndProblemMessage(e.check, periodo.startDate));
       return;
     }
     if (!mounted) return;
@@ -381,11 +366,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (!result.changedAnything) {
       showAppSnackBar(
         context,
-        SnackBar(
-          content: Text(dias.length == 1
-              ? 'Ese día ya estaba registrado'
-              : 'Esos días ya estaban registrados'),
-        ),
+        dias.length == 1
+            ? 'Ese día ya estaba registrado'
+            : 'Esos días ya estaban registrados',
       );
       return;
     }

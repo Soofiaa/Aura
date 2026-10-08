@@ -6,6 +6,7 @@ import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/add_cycle_screen.dart';
+import 'package:aura/utils/app_snackbar.dart';
 import 'package:aura/utils/day_key.dart';
 
 /// AddCycleScreen hace Navigator.pop al guardar, asi que se abre desde
@@ -269,7 +270,7 @@ void main() {
 
     // Espera a que se vaya el SnackBar del primer guardado: si no, tapa
     // el boton "Guardar registro" de la segunda apertura.
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(snackBarDuration + const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
     await _abrirFormulario(tester);

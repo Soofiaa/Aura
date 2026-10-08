@@ -42,22 +42,15 @@ Future<void> showPeriodStartSheet(
   if (!result.changedAnything) {
     // La hoja ya no deja confirmar un dia marcado; esto cubre que se haya
     // marcado por otro lado mientras estaba abierta.
-    showAppSnackBar(
-      context,
-      const SnackBar(content: Text('Ese día ya está registrado.')),
-    );
+    showAppSnackBar(context, 'Ese día ya está registrado.');
     return;
   }
   showAppSnackBar(
     context,
-    SnackBar(
-      content: const Text('Inicio del período registrado.'),
-      persist: false,
-      duration: undoSnackBarDuration,
-      action: SnackBarAction(
-        label: 'Deshacer',
-        onPressed: () => repo.restoreDaysSnapshot(result.snapshot),
-      ),
+    'Inicio del período registrado.',
+    action: SnackBarAction(
+      label: 'Deshacer',
+      onPressed: () => repo.restoreDaysSnapshot(result.snapshot),
     ),
   );
 }

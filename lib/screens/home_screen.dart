@@ -105,14 +105,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _showUndo(String message, DaysSnapshot snapshot) {
     showAppSnackBar(
       context,
-      SnackBar(
-        content: Text(message),
-        persist: false,
-        duration: undoSnackBarDuration,
-        action: SnackBarAction(
-          label: 'Deshacer',
-          onPressed: () => _repository.restoreDaysSnapshot(snapshot),
-        ),
+      message,
+      action: SnackBarAction(
+        label: 'Deshacer',
+        onPressed: () => _repository.restoreDaysSnapshot(snapshot),
       ),
     );
   }
@@ -146,11 +142,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } on PeriodEndException catch (e) {
       if (!mounted) return;
       showAppSnackBar(
-        context,
-        SnackBar(
-            content:
-                Text(periodEndProblemMessage(e.check, current.startDate))),
-      );
+          context, periodEndProblemMessage(e.check, current.startDate));
       return;
     }
     if (!mounted) return;
