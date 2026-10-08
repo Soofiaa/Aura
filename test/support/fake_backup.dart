@@ -136,9 +136,33 @@ class FakeBackupService extends BackupService {
   Future<void> deleteExportFile(File file) async =>
       deletedExportPaths.add(file.path);
 
+  int readCount = 0;
+  int unlockCount = 0;
+
+  /// Si no es null, unlockBackup espera a que se complete (para ver el
+  /// dialogo de progreso mientras tanto).
+  Completer<void>? unlockGate;
+
+  /// Resultados de unlockBackup por contrasena. Se calculan antes, fuera
+  /// de testWidgets, con el BackupService y la criptografia reales:
+  /// Argon2id no avanza dentro del reloj falso. Una contrasena que no
+  /// esta aqui da BackupUnlockWrongPasswordOrDamaged.
+  final Map<String, BackupUnlockResult> unlockResults = {};
+
   @override
-  Future<BackupParseResult> readBackupFile(String path) async =>
-      decodeBackup(files[path]!);
+  Future<BackupParseResult> readBackupFile(String path) async {
+    readCount++;
+    return decodeBackup(files[path]!);
+  }
+
+  @override
+  Future<BackupUnlockResult> unlockBackup(
+      BackupNeedsPassword pending, String password) async {
+    unlockCount++;
+    if (unlockGate != null) await unlockGate!.future;
+    return unlockResults[password] ??
+        const BackupUnlockWrongPasswordOrDamaged();
+  }
 
   @override
   Future<void> importBackup(BackupData data) async {

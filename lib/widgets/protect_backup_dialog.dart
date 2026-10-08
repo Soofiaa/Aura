@@ -161,106 +161,105 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
     final showLengthError = _passwordTouched && !_longEnough;
     final showMatchError = _repeatTouched && !_matches;
     return AlertDialog(
+      // scrollable: titulo y contenido se desplazan juntos y las acciones
+      // quedan fijas; asi caben con el teclado abierto (360x640).
+      scrollable: true,
       title: const Text('Proteger tu respaldo'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Elige una contraseña para cifrar el archivo. Sin ella, nadie '
-              'podrá leerlo aunque lo obtenga.',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Elige una contraseña para cifrar el archivo. Sin ella, nadie '
+            'podrá leerlo aunque lo obtenga.',
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.warning_amber_rounded,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ExcludeSemantics(
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Aura no guarda tu contraseña y no puede recuperarla. '
+                    'Si la olvidas, no podrás abrir este respaldo.',
+                    style: TextStyle(
                       color: theme.colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Aura no guarda tu contraseña y no puede recuperarla. '
-                      'Si la olvidas, no podrás abrir este respaldo.',
-                      style: TextStyle(
-                        color: theme.colorScheme.onErrorContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const ValueKey('protect-password'),
+            controller: _password,
+            focusNode: _passwordFocus,
+            obscureText: !_visible,
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
+            autofillHints: null,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _repeatFocus.requestFocus(),
+            decoration:
+                _decoration(
+                  'Contraseña',
+                  helper:
+                      'Mínimo 10 caracteres. Una frase con varias '
+                      'palabras es fácil de recordar y difícil de adivinar.',
+                  error: showLengthError ? 'Usa al menos 10 caracteres.' : null,
+                ).copyWith(
+                  suffixIcon: IconButton(
+                    tooltip: _visible
+                        ? 'Ocultar contraseña'
+                        : 'Mostrar contraseña',
+                    icon: Icon(
+                      _visible ? Icons.visibility_off : Icons.visibility,
                     ),
+                    onPressed: () => setState(() => _visible = !_visible),
                   ),
-                ],
-              ),
+                ),
+          ),
+          const SizedBox(height: 8),
+          _StrengthIndicator(password: _password.text),
+          const SizedBox(height: 16),
+          TextField(
+            key: const ValueKey('protect-repeat'),
+            controller: _repeat,
+            focusNode: _repeatFocus,
+            obscureText: !_visible,
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
+            autofillHints: null,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _continue(),
+            decoration: _decoration(
+              'Repite la contraseña',
+              error: showMatchError ? 'Las contraseñas no coinciden.' : null,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('protect-password'),
-              controller: _password,
-              focusNode: _passwordFocus,
-              obscureText: !_visible,
-              autocorrect: false,
-              enableSuggestions: false,
-              enableIMEPersonalizedLearning: false,
-              autofillHints: null,
-              textInputAction: TextInputAction.next,
-              onSubmitted: (_) => _repeatFocus.requestFocus(),
-              decoration:
-                  _decoration(
-                    'Contraseña',
-                    helper:
-                        'Mínimo 10 caracteres. Una frase con varias '
-                        'palabras es fácil de recordar y difícil de adivinar.',
-                    error: showLengthError
-                        ? 'Usa al menos 10 caracteres.'
-                        : null,
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      tooltip: _visible
-                          ? 'Ocultar contraseña'
-                          : 'Mostrar contraseña',
-                      icon: Icon(
-                        _visible ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () => setState(() => _visible = !_visible),
-                    ),
-                  ),
-            ),
-            const SizedBox(height: 8),
-            _StrengthIndicator(password: _password.text),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('protect-repeat'),
-              controller: _repeat,
-              focusNode: _repeatFocus,
-              obscureText: !_visible,
-              autocorrect: false,
-              enableSuggestions: false,
-              enableIMEPersonalizedLearning: false,
-              autofillHints: null,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _continue(),
-              decoration: _decoration(
-                'Repite la contraseña',
-                error: showMatchError ? 'Las contraseñas no coinciden.' : null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _withoutPassword,
-              child: const Text('Continuar sin contraseña'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _withoutPassword,
+            child: const Text('Continuar sin contraseña'),
+          ),
+        ],
       ),
       actions: [
         TextButton(

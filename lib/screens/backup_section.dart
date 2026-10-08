@@ -11,6 +11,7 @@ import '../domain/backup_codec.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
 import '../widgets/protect_backup_dialog.dart';
+import '../widgets/unlock_backup_dialog.dart';
 
 enum _AccionRespaldo { guardar, compartir }
 
@@ -185,7 +186,8 @@ class _BackupSectionState extends State<BackupSection> {
       }
       if (path == null || !mounted) return;
 
-      final ImportPreview preview;
+      ImportPreview? preview;
+      BackupNeedsPassword? protegido;
       try {
         final result = await _conProgreso('Revisando el archivo…', () async {
           final parsed = await widget.service.readBackupFile(path!);
@@ -193,26 +195,33 @@ class _BackupSectionState extends State<BackupSection> {
             BackupParseSuccess(:final data) => (
               null,
               await widget.service.previewImport(data),
+              null,
             ),
-            BackupParseFailure(:final error) => (error, null),
-            // TEMPORAL CP4: hasta que la pantalla pida la contrasena, un
-            // respaldo cifrado muestra el mismo mensaje que antes ("version
-            // mas nueva") y no se importa nada.
-            BackupNeedsPassword() => (BackupError.newerVersion, null),
+            BackupParseFailure(:final error) => (error, null, null),
+            // Respaldo cifrado (HU-06b CP4): se pide la contrasena despues.
+            BackupNeedsPassword() => (null, null, parsed),
           };
         });
         if (result.$1 != null) {
           _aviso(_mensajeArchivoInvalido(result.$1!));
           return;
         }
-        preview = result.$2!;
+        preview = result.$2;
+        protegido = result.$3;
       } catch (_) {
         _aviso('No se pudo revisar el archivo. No se cambió nada.');
         return;
       }
       if (!mounted) return;
 
-      final confirmado = await _confirmarReemplazo(preview);
+      if (protegido != null) {
+        preview = await _abrirProtegido(protegido);
+        if (preview == null || !mounted) return;
+      }
+
+      // Desde aqui, el mismo camino con o sin cifrado.
+      final vista = preview!;
+      final confirmado = await _confirmarReemplazo(vista);
       if (!confirmado || !mounted) return;
 
       // Un "Deshacer" pendiente de Inicio o del Calendario restauraria una
@@ -221,7 +230,7 @@ class _BackupSectionState extends State<BackupSection> {
       try {
         await _conProgreso(
           'Importando tu respaldo…',
-          () => widget.service.importBackup(preview.data),
+          () => widget.service.importBackup(vista.data),
         );
       } on BackupWriteException catch (e) {
         _aviso(
@@ -236,10 +245,66 @@ class _BackupSectionState extends State<BackupSection> {
         _aviso('No se pudo importar. Tus datos no cambiaron.');
         return;
       }
-      _mostrarExito(preview.incomingDayCount);
+      _mostrarExito(vista.incomingDayCount);
     } finally {
       if (mounted) setState(() => _ocupada = false);
     }
+  }
+
+  /// Pide la contrasena y abre el respaldo cifrado (HU-06b CP4). Devuelve
+  /// la vista previa para el mismo camino que un respaldo sin cifrar, o
+  /// null si se cancela o el contenido no es importable (con su mensaje).
+  /// Con la contrasena incorrecta vuelve a pedirla, con el error y lo
+  /// escrito, sin volver a elegir el archivo. No escribe nada: ni la copia
+  /// previa ni la base. [pending] y la contrasena viven solo en esta
+  /// llamada.
+  Future<ImportPreview?> _abrirProtegido(BackupNeedsPassword pending) async {
+    String? escrita;
+    String? error;
+    while (mounted) {
+      final password = await showUnlockBackupDialog(
+        context,
+        initialPassword: escrita,
+        errorText: error,
+      );
+      if (password == null || !mounted) return null;
+
+      final (BackupUnlockResult, ImportPreview?) resultado;
+      try {
+        Future<(BackupUnlockResult, ImportPreview?)> tarea() async {
+          final r = await widget.service.unlockBackup(pending, password);
+          return switch (r) {
+            BackupUnlocked(:final data) => (
+              r,
+              await widget.service.previewImport(data),
+            ),
+            _ => (r, null),
+          };
+        }
+
+        resultado = await _conProgreso(
+          'Abriendo tu respaldo…',
+          tarea,
+          detalle: 'Esto puede tardar unos segundos.',
+        );
+      } catch (_) {
+        _aviso('No se pudo revisar el archivo. No se cambió nada.');
+        return null;
+      }
+      if (!mounted) return null;
+
+      switch (resultado.$1) {
+        case BackupUnlocked():
+          return resultado.$2;
+        case BackupUnlockWrongPasswordOrDamaged(:final message):
+          escrita = password;
+          error = message;
+        case BackupUnlockInvalid(:final error):
+          _aviso(_mensajeArchivoInvalido(error));
+          return null;
+      }
+    }
+    return null;
   }
 
   String _mensajeArchivoInvalido(BackupError error) {
@@ -323,7 +388,14 @@ class _BackupSectionState extends State<BackupSection> {
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [Text(texto), Text(detalle)],
+                        children: [
+                          Text(
+                            texto,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w500),
+                          ),
+                          Text(detalle),
+                        ],
                       ),
               ),
             ],
