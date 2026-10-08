@@ -422,8 +422,9 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 - **Respaldo v5 (con HU-05c):** el archivo pasa a `schemaVersion` 5, con `showFertileWindow` en los ajustes. `formatVersion`
   sigue en 1. Los respaldos v3 y v4 se importan con el interruptor activado. Una app v4 rechaza un respaldo v5 como de una
   versión más nueva, sin tocar nada.
-- **HU-06b (contraseña / cifrado del respaldo): pendiente.** Completa el criterio 7 (ver decisiones HU6-2 y HU6-3 en la sección
-  10). Bloquea la publicación de la v1.1.
+- **HU-06b (contraseña / cifrado del respaldo): decisiones tomadas el 2026-10-08 (Etapa A); implementación pendiente, en CP0 a
+  CP5.** Completa el criterio 7 (ver HU6-2, HU6-3 y HU6b-1 a HU6b-12 en la sección 10). Sigue bloqueando la publicación de la
+  v1.1.
 
 **Criterios de aceptación**
 1. **Exportar:** genera un archivo versionado (formato propio, con `schemaVersion`, fecha y app) con todos los datos: registros diarios, síntomas y ajustes.
@@ -436,6 +437,51 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 6. Un respaldo de una versión de schema anterior se puede importar; uno de una versión posterior se rechaza con un mensaje claro.
 7. Se advierte que el archivo contiene datos de salud y se ofrece protegerlo con contraseña (ver D-3).
 8. Tras importar, Inicio, Calendario y Estadísticas reflejan los datos sin reiniciar la app, y las notificaciones se reprograman.
+
+**Modelo de amenaza de HU-06b:**
+- **Protege** el archivo cuando sale del teléfono (Drive, WhatsApp, un correo o un pendrive): quien lo tenga no puede leerlo
+  sin la contraseña. También protege contra la manipulación: un archivo alterado o cortado no se importa.
+- **No protege** la base de datos, la copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar
+  (`antes_de_migrar_v4.sqlite`), que siguen sin cifrar en el almacenamiento privado de la app. Tampoco protege un teléfono
+  desbloqueado, una contraseña débil ni el malware.
+- **No hay recuperación** si se olvida la contraseña: ese respaldo no se puede abrir.
+
+**"Guardar en el teléfono" con un respaldo cifrado:** tras guardarlo se sigue borrando la copia previa a la migración, que solo
+existe para bases v1 a v3 (M-2). Si después se olvida la contraseña, esa copia ya no está.
+
+**Checkpoints de HU-06b** (decisiones HU6b-1 a HU6b-12 en la sección 10):
+
+| CP | Alcance |
+|---|---|
+| CP0 | **Hecho el 2026-10-08, sin merge** (ver HU6b-9): tiempo y memoria de PBKDF2 (Dart puro y puente nativo) y de Argon2id, AES-256-GCM, tamaño del APK, compilación con AGP 8.7.3 y permisos del release. Código descartable: **CP0 no se mergea**. |
+| CP1 | Dominio: cifrar y descifrar con funciones puras, envoltorio `formatVersion` 2, detección del respaldo cifrado al importar, límites de los parámetros, error de contraseña incorrecta o archivo alterado y decisión de HU6b-11. Tests con vectores conocidos (incluido el de HU6b-12 para los parámetros de producción), ida y vuelta, archivo manipulado o truncado y compatibilidad con `formatVersion` 1. |
+| CP2 | Servicio: exportar cifrado con la verificación de HU6b-10 (pasar el archivo final por la función de descifrado de la importación, con una segunda derivación) y la derivación fuera del hilo de la interfaz; descifrar al importar. |
+| CP3 | Interfaz de creación: contraseña, confirmación, mostrar u ocultar, indicador de fortaleza, advertencia de que no hay recuperación y "sin contraseña" como enlace secundario. |
+| CP4 | Interfaz de importación: pedir la contraseña, mensaje de HU6b-8 con reintento y progreso. |
+| CP5 | Documentación (spec, CHANGELOG, README y política de privacidad), prueba en el teléfono y verificación del release sin `INTERNET`. |
+
+**Formato del archivo cifrado (`formatVersion` 2), propuesta que se confirma en CP1:**
+
+```json
+{
+  "format": "aura-backup",
+  "formatVersion": 2,
+  "app": "Aura",
+  "encryption": {
+    "cipher": "AES-256-GCM",
+    "kdf": "Argon2id",
+    "kdfParams": { "memoryKiB": 19456, "iterations": 2, "parallelism": 1 },
+    "salt": "<16 bytes en base64>",
+    "nonce": "<12 bytes en base64>"
+  },
+  "ciphertext": "<texto cifrado + etiqueta de 16 bytes, en base64>"
+}
+```
+
+- El encabezado (todo lo que no es `ciphertext`) es dato adicional autenticado de GCM, con una serialización canónica y
+  determinista de los campos, que se define en CP1: cambiarlo hace fallar el descifrado.
+- Al importar se aceptan solo los algoritmos conocidos y parámetros dentro de límites (por ejemplo, un tope de memoria), para
+  que un archivo manipulado no pida recursos enormes.
 
 ---
 
@@ -550,8 +596,8 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 ## 10. Registro de decisiones
 
 Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03),
-tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7)
-y en HU-05 (H5-1 a H5-4).
+tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7),
+en HU-05 (H5-1 a H5-4) y tras la Etapa A de HU-06b (HU6b-1 a HU6b-12).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -578,10 +624,22 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **T-02 / T-03** | El ícono pequeño de notificación (T-02) y el ícono monocromo (T-03) son tareas separadas de T-01. T-02 debe estar antes de publicar la v1.1. | Son problemas distintos del fondo del ícono: cada uno necesita su propio asset y su propia prueba en el teléfono, y mezclarlos agrandaría T-01. T-02 va antes de la v1.1 porque las notificaciones ya están en uso y su ícono pequeño no muestra la flor: confirmado en el teléfono de Sofia (HyperOS), donde se ve como un disco oscuro liso. T-03 solo afecta a quien usa íconos temáticos: forma parte de la v1.1 pero no bloquea su publicación; si no queda lista, pasa a la v1.2. |
 | **HU6-1** | El respaldo es un **JSON propio** (`"format": "aura-backup"`, con `formatVersion`, `schemaVersion`, `appVersion` y `exportedAt`), no una copia del archivo `.sqlite`. | Se puede validar completo antes de tocar la base, no depende del formato interno de drift y un schema anterior se puede importar convirtiéndolo. |
 | **HU6-2** | El cifrado entra en la v1.1 como **HU-06b**, en una rama aparte. Bloquea la publicación de la v1.1, pero no la migración v4. | Son datos de salud en un archivo que puede terminar en la nube o en un chat, pero el respaldo sin cifrar ya permite proteger los datos reales antes de migrar (R-5). |
-| **HU6-3** | HU-06b usará un **envoltorio propio PBKDF2-SHA256 + AES-GCM**, no el ZIP AE-2 de PetPal. | El enfoque de PetPal usa 1000 iteraciones con SHA-1, un costo de derivación demasiado bajo para datos de salud. |
+| **HU6-3** | HU-06b usará un **envoltorio propio PBKDF2-SHA256 + AES-GCM**, no el ZIP AE-2 de PetPal. **Nota:** la derivación PBKDF2 se reemplaza por Argon2id (HU6b-2); el envoltorio propio y AES-GCM se mantienen. | El enfoque de PetPal usa 1000 iteraciones con SHA-1, un costo de derivación demasiado bajo para datos de salud. |
 | **HU6-4** | "Crear respaldo" ofrece la **hoja de compartir** del sistema y un botón **"Guardar en el teléfono"** (el "Guardar como" del sistema). | Guardar en el propio teléfono no debería obligar a pasar por otra app. Además, `share_plus` puede devolver `unavailable` en vez de `dismissed` según el dispositivo o la versión de Android, así que no se puede garantizar que siempre se detecte el cierre de la hoja de compartir. En el teléfono de prueba (Xiaomi, HyperOS) el cierre sí se detectó (verificado en el release real, 2026-10-04). "Guardar en el teléfono" informa si se guardó o se canceló. |
 | **HU6-5** | **"Deshacer"** está en el mensaje de éxito de la importación, sin un botón permanente en Ajustes. | Deshacer sirve justo después de importar; un botón permanente invitaría a restaurar una copia vieja por error. |
 | **HU6-6** | Se importan los **ajustes de recordatorios**, salvo el **interruptor general** de notificaciones. | Ese interruptor depende del permiso de notificaciones del teléfono donde se importa, así que conserva su valor actual. |
+| **HU6b-1** | Contraseña **opcional**. Al crear el respaldo se ofrece primero con contraseña, y "sin contraseña" queda como enlace secundario con advertencia. Los respaldos sin contraseña siguen en `formatVersion` 1 y los cifrados usan `formatVersion` 2; `schemaVersion` no cambia (sigue en 5). | Cumple el criterio 7 ("se ofrece protegerlo con contraseña") y la recomendación original de D-3, empuja hacia la opción segura y evita perder un respaldo de emergencia por una contraseña olvidada. Un respaldo sin contraseña en `formatVersion` 1 se puede seguir abriendo en una app que ya conozca el schema 5 (una app v4 rechaza cualquier respaldo con schema 5). |
+| **HU6b-2** | Derivación de clave **Argon2id** con m = 19 456 KiB, t = 2, p = 1, largo de salida 32 bytes y versión 0x13. Los parámetros van en el encabezado del archivo, así que se pueden subir en el futuro sin romper los respaldos anteriores. scrypt sigue descartado. | CP0 cumplió la condición fijada para cambiar a Argon2id: **214 ms** en profile (264 ms en debug), en Dart puro dentro de un isolate, con ~+23 MB de pico de memoria y sin bloquear la interfaz. PBKDF2 con 600 000 iteraciones midió 3,6 s en Dart y 2,2 s nativo, y el nativo congela la interfaz. Se midió en un POCO X6 Pro (gama media-alta); en un teléfono más lento se esperan tiempos mayores (no medido). Argon2id resiste mejor un ataque con GPU. scrypt con el mínimo de OWASP (N = 2^17, 128 MiB) es demasiada memoria para gama media. |
+| **HU6b-3** | Largo mínimo de la contraseña: **10 caracteres**. | Contra un ataque sin conexión al archivo, el largo es lo que más pesa, y 10 sigue siendo fácil de recordar como frase corta. |
+| **HU6b-4** | Indicador de fortaleza **simple y propio** (largo y variedad), sin dependencia nueva. | Alcanza para orientar sin agregar un paquete. |
+| **HU6b-5** | Paquete **`cryptography` 2.9.0**, **sin** `cryptography_flutter`. Cifrado **AES-256-GCM** en Dart. No se debe llamar a `FlutterCryptography.enable()`. Descartados `sodium` y `webcrypto` por la toolchain nativa que exigen en el build de Windows. **Riesgo anotado:** la última versión de `cryptography` es del 2025-11-21. | El PBKDF2 nativo de `cryptography_flutter` corre en el hilo principal de Android y congela la pantalla (CP0). Con Argon2id y AES-GCM en Dart (32 ms para 100 KB) el puente no hace falta, y se evita una dependencia con código Android y el riesgo HU6-R3. Cada respaldo usa una sal nueva, así que su clave es única y el nonce de 96 bits de GCM no se repite con la misma clave. |
+| **HU6b-6** | En claro va **solo lo necesario para descifrar**: `format`, `formatVersion`, `app` y los parámetros de `encryption`. Los datos adicionales autenticados de GCM cubren ese encabezado. `appVersion` y `exportedAt` van cifrados. | Menos metadatos a la vista de quien encuentre el archivo; cambiar un parámetro del encabezado hace fallar el descifrado en vez de producir otra cosa. |
+| **HU6b-7** | Nombre del archivo cifrado: `aura_respaldo_protegido_<fecha>.json`, solo como ayuda visual. El cifrado se detecta por el contenido, no por el nombre. | Que la usuaria sepa cuál respaldo necesita contraseña; el nombre se puede cambiar sin que la importación falle. |
+| **HU6b-8** | Mensaje único: **"La contraseña no es correcta o el archivo está dañado. No se cambió nada."**, con reintento sin volver a elegir el archivo. | AES-GCM no distingue una contraseña equivocada de un archivo alterado; separarlos obligaría a guardar un verificador de la contraseña en claro, que facilita los ataques. |
+| **HU6b-9** | **CP0 de medición** antes de fijar los parámetros y el paquete. **Hecho el 2026-10-08** (POCO X6 Pro, Android 16), en una rama descartable sin merge. Resultados en profile (mediana): PBKDF2 600 000 en Dart, 3594 ms; PBKDF2 600 000 nativo, 2207 ms (bloquea la interfaz); Argon2id m = 19 456 KiB, t = 2, p = 1, 214 ms; AES-256-GCM de 100 KB, 32 ms en Dart y 5 ms nativo. Memoria: ~+23 MB de pico con Argon2id. Tamaño: ~0,1 MB (~72 KB de código Dart de `cryptography` en arm64; los 17 KB de `cryptography_flutter` ya no aplican porque el puente se descartó). `cryptography_flutter` compiló con AGP 8.7.3 sin errores y el release no tiene `INTERNET`. | El tiempo de derivación en el teléfono y la compilación con AGP 8.7.3 decidían HU6b-2 y HU6b-5, y ninguno de los dos estaba verificado. |
+| **HU6b-10** | **Requisito:** antes de dar el éxito al crear un respaldo cifrado, se verifica pasando el archivo **final** por la misma función pública de descifrado que usa la importación (lee el encabezado, vuelve a derivar la clave, descifra y compara con el original), no con la clave ya derivada. Cuesta una derivación extra; con Argon2id suma ~0,2 s por derivación, ~0,4 s en total en el teléfono de medición (CP0). | Así se detecta también un error al escribir la sal o los parámetros, y nunca se entrega un respaldo que esta misma versión no pueda abrir. |
+| **HU6b-11** | **Abierta:** la normalización Unicode (NFC) de la contraseña. Dart no la trae en su biblioteca estándar. Se decide en CP1: agregar un paquete o no normalizar. | Sin normalizar, una misma contraseña con tildes escrita con otra composición de caracteres no abriría el archivo; el riesgo se considera bajo con los teclados de Android, pero queda anotado. |
+| **HU6b-12** | **Requisito de CP1:** los tests incluyen un vector de prueba independiente para los parámetros de producción, generado con una implementación de referencia distinta (libargon2 en C, vía argon2-cffi, calculado el 2026-10-08): contraseña "contraseña-de-prueba-CP0" (UTF-8), sal en hex `0b30557a9fc4e90e33587da2c7ec1136`, m = 19 456 KiB, t = 2, p = 1, largo 32, Argon2id v19 → `c60b1eee88c5827b9cdb6ce18e8668fcc112ebb52214c9c1bb239a440a66314a`. | CP0 solo verificó el vector del RFC 9106, que usa parámetros pequeños, no los de producción. |
 | **H5-1** | Con confianza baja, Inicio no muestra la ovulación, la ventana fértil ni la fase ovulatoria; sí el próximo período con su rango, y una línea gris que explica por qué. El aviso de la ventana fértil tampoco se envía. | La ovulación se calcula restando la fase lútea al próximo período, así que con un promedio poco confiable es todavía menos confiable: mostrarla sería falsa precisión. |
 | **H5-2** | "Tus ciclos" en Estadísticas usa la misma función que el predictor para la duración del ciclo (`estimateCycleLength`), y la regularidad usa el mismo umbral de 0,18 que baja la confianza. | Que Estadísticas y la predicción no se contradigan. |
 | **H5-3** | Un solo interruptor, "Mostrar ovulación y ventana fértil", para las dos, en "Tu ciclo" y activado por defecto. Columna `show_fertile_window` (schema v5), sin copia previa a la migración, incluido en el respaldo. "Ventana fértil" (Notificaciones) necesita los dos encendidos y conserva su valor. Con el interruptor apagado se oculta también la línea gris de confianza baja. | Decisión de producto. La migración solo agrega una columna con valor por defecto, sin tocar datos, por eso no hace falta copia previa. |
@@ -596,7 +654,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **B** | "Borrar todos los datos" borra también la carpeta `respaldos/` completa (`antes_de_importar.json` y, desde la v4, `antes_de_migrar_v4.sqlite`) y los temporales; intenta los tres pasos aunque uno falle. |
 | **C** | Si el respaldo trae **menos** días que los actuales, la confirmación lo avisa de forma destacada ("El respaldo tiene N días menos que los que tienes ahora; se perderán."). Se calcula con el total de días con registro. |
 | **D** | La versión sale de una **constante única** (`lib/utils/app_version.dart`), usada en Ajustes y en el respaldo, con un test que falla si no coincide con `pubspec.yaml`. |
-| **E** | La exportación es **determinista**: días ordenados por fecha, síntomas por nombre y claves siempre en el mismo orden; los mismos datos producen el mismo archivo, salvo `exportedAt`. |
+| **E** | La exportación es **determinista**: días ordenados por fecha, síntomas por nombre y claves siempre en el mismo orden; los mismos datos producen el mismo archivo, salvo `exportedAt`. Con HU-06b vale para el **contenido descifrado**: dos exportaciones cifradas de los mismos datos no son idénticas, por la sal y el nonce aleatorios. |
 | **F** | "Deshacer" no se cierra solo (el mensaje se cierra con su "×") y no reescribe la copia previa. El texto inicial ("…quedan guardados hasta la próxima importación") se cambió en la revisión del CP2 por **"Si te equivocaste, toca Deshacer."** |
 | **G** | Rango de fechas válido al importar y exportar: de `1970-01-01` a la mayor entre `2030-12-31` y la fecha de exportación + 2 días. |
 | **H** | Durante la importación la interfaz queda **bloqueada** con un diálogo de progreso que no se puede cerrar (ni con "atrás"). |
