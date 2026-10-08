@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../data/models/day_enums.dart';
 import '../utils/day_key.dart';
+import 'backup_crypto.dart';
 import 'legacy_period_ends.dart';
 
 /// Formato de respaldo de Aura (HU-06): JSON propio y versionado, sin
@@ -19,8 +20,17 @@ import 'legacy_period_ends.dart';
 ///   que `formatVersion` sigue en 1.
 /// - v5: `showFertileWindow` en los ajustes (HU-05, H5-3). `formatVersion`
 ///   sigue en 1.
+///
+/// Respaldo cifrado (HU-06b): `formatVersion` 2, con el documento de
+/// `formatVersion` 1 cifrado adentro (ver backup_crypto.dart).
+/// [decodeBackup] lo reconoce y devuelve [BackupNeedsPassword];
+/// [decodeEncryptedBackup] lo descifra con la contrasena y lo valida con
+/// [decodeBackup]. `schemaVersion` va dentro del documento cifrado.
 const String backupFormatId = 'aura-backup';
 const int backupFormatVersion = 1;
+
+/// `formatVersion` de un respaldo cifrado (HU6b-1).
+const int encryptedBackupFormatVersion = 2;
 
 /// Schema drift actual (AppDatabase.schemaVersion). Duplicado aca para
 /// que el dominio no importe drift; un test compara ambos valores.
@@ -232,6 +242,27 @@ class BackupParseFailure extends BackupParseResult {
   String toString() => 'BackupParseFailure($error: $detail)';
 }
 
+/// Respaldo cifrado (`formatVersion` 2) con un encabezado valido: hace
+/// falta la contrasena para seguir (ver [decodeEncryptedBackup]).
+///
+/// Puente hasta CP2-CP4 de HU-06b: es un [BackupParseFailure] con
+/// [BackupError.newerVersion] para que el codigo que hoy solo distingue
+/// exito y falla (BackupService.undoLastImport y la pantalla de
+/// importacion, con switch exhaustivos sobre la clase sellada) siga
+/// compilando y muestre "version mas nueva" mientras la interfaz no pida
+/// la contrasena. CP2-CP4 lo tratan antes que a las fallas.
+class BackupNeedsPassword extends BackupParseFailure {
+  const BackupNeedsPassword(this.envelope)
+      : super(BackupError.newerVersion, 'respaldo cifrado: falta la contrasena');
+
+  final EncryptedBackupEnvelope envelope;
+
+  EncryptedBackupHeader get header => envelope.header;
+
+  /// Texto cifrado seguido de la etiqueta GCM de 16 bytes.
+  List<int> get ciphertext => envelope.ciphertext;
+}
+
 /// Serializa [data] de forma determinista: dias ordenados por fecha y
 /// sintomas por nombre, claves siempre en el mismo orden. Dos
 /// exportaciones de los mismos datos producen el mismo texto (salvo
@@ -297,7 +328,8 @@ String formatExportedAt(DateTime local) {
 }
 
 /// Valida y decodifica un archivo de respaldo completo. No lanza: todo
-/// problema vuelve como [BackupParseFailure].
+/// problema vuelve como [BackupParseFailure]. Un respaldo cifrado con un
+/// encabezado valido vuelve como [BackupNeedsPassword], sin derivar nada.
 BackupParseResult decodeBackup(List<int> bytes) {
   if (bytes.length > maxBackupSizeBytes) {
     return BackupParseFailure(
@@ -319,12 +351,50 @@ BackupParseResult decodeBackup(List<int> bytes) {
     return const BackupParseFailure(
         BackupError.notABackup, 'falta format: aura-backup');
   }
+  if (root['formatVersion'] == encryptedBackupFormatVersion) {
+    return _parseEncrypted(root);
+  }
   try {
     return BackupParseSuccess(_parseRoot(root));
   } on _Invalid catch (e) {
     return BackupParseFailure(e.error, e.detail,
         outOfRangeDate: e.outOfRangeDate);
   }
+}
+
+BackupParseResult _parseEncrypted(Map<String, dynamic> root) {
+  try {
+    return BackupNeedsPassword(parseEncryptedBackup(root));
+  } on BackupCryptoException catch (e) {
+    // Algoritmos desconocidos o parametros por encima del maximo pueden
+    // venir de una version mas nueva; lo demas es un archivo danado.
+    final newer = e.error == BackupCryptoError.unsupportedAlgorithm ||
+        (e.error == BackupCryptoError.paramsOutOfRange &&
+            (e.params?.isAboveLimits ?? false));
+    return BackupParseFailure(
+        newer ? BackupError.newerVersion : BackupError.damaged,
+        'cifrado: $e');
+  }
+}
+
+/// Paso asincrono de un respaldo cifrado: deriva la clave, descifra y
+/// valida el documento de `formatVersion` 1 con [decodeBackup]. Lanza
+/// [BackupCryptoException] si la contrasena no es correcta o el archivo
+/// fue alterado ([BackupCryptoError.wrongPasswordOrDamaged], HU6b-8).
+Future<BackupParseResult> decodeEncryptedBackup(
+  BackupNeedsPassword pending,
+  String password, {
+  BackupKeyDeriver deriveKey = deriveBackupKey,
+}) async {
+  final inner = await decryptBackupEnvelope(pending.envelope, password,
+      deriveKey: deriveKey);
+  final result = decodeBackup(inner);
+  if (result is BackupNeedsPassword) {
+    // Adentro solo puede ir un documento de formatVersion 1.
+    return const BackupParseFailure(
+        BackupError.damaged, 'cifrado dentro de un cifrado');
+  }
+  return result;
 }
 
 class _Invalid implements Exception {

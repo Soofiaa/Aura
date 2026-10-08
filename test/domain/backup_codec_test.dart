@@ -376,12 +376,15 @@ void main() {
       _expectFailure(_decodeMap(map), BackupError.newerVersion);
     });
 
+    // HU-06b CP1: formatVersion 2 es el respaldo cifrado (ver
+    // backup_crypto_test.dart); "posterior" pasa a ser el 3.
     test('formatVersion posterior', () {
-      final map = _fixtureMap()..['formatVersion'] = backupFormatVersion + 1;
+      final map = _fixtureMap()
+        ..['formatVersion'] = encryptedBackupFormatVersion + 1;
       _expectFailure(_decodeMap(map), BackupError.newerVersion);
     });
 
-    test('respaldo cifrado (HU-06b todavia no existe)', () {
+    test('formatVersion 1 con encryption no nulo', () {
       final map = _fixtureMap()
         ..['encryption'] = {'kdf': 'pbkdf2-sha256'};
       _expectFailure(_decodeMap(map), BackupError.newerVersion);
