@@ -630,8 +630,8 @@ Fondo del círculo del ícono adaptativo en blanco `#FFFFFF`, con la misma flor 
 ---
 
 ### T-02 · Ícono pequeño de notificación (técnica)
-Hoy `notifications.dart` (línea 62) usa `@mipmap/ic_launcher` como ícono pequeño. Su fondo es opaco y Android dibuja ese ícono
-usando solo la transparencia, así que la notificación no muestra la flor.
+Antes, `notifications.dart` usaba `@mipmap/ic_launcher` como ícono pequeño. Su fondo es opaco y Android dibuja ese ícono
+usando solo la transparencia, así que la notificación no mostraba la flor.
 
 **Confirmado** en el teléfono de Sofia (HyperOS) con el botón "Enviar notificación de prueba" de Ajustes: el ícono pequeño se ve
 como un disco oscuro liso dentro del círculo del sistema, sin forma de flor. Es la misma causa: un ícono opaco usado como ícono
@@ -641,9 +641,12 @@ pequeño.
   R8 / `shrinkResources` no lo elimine en el release.
 - **Criterio de aceptación:** una notificación real en el teléfono muestra la silueta de la flor y no una forma lisa (un cuadrado o
   un disco).
-- **Mejora menor:** el texto de la notificación de prueba dice "Notificación de prueba (debug), programada hace 10s"
-  (`notifications.dart`, línea 173) y se ve en la versión de release, porque el botón de Ajustes no está limitado a debug
-  (`settings_screen.dart`, líneas 270-274). Conviene un texto pensado para quien usa la app, o esconder el botón en release.
+- **Estado: hecha** (commit `b2fdd6c`). `notifications.dart` usa `ic_stat_aura`
+  (`AndroidInitializationSettings('ic_stat_aura')`): una silueta blanca sobre fondo transparente en 24, 36, 48, 72 y 96 px
+  (`drawable-mdpi` a `drawable-xxxhdpi`), protegida con `res/raw/keep.xml`.
+- **Mejora menor (hecha):** el texto de la notificación de prueba ya no menciona debug. Antes decía "Notificación de prueba
+  (debug), programada hace 10s."; ahora dice "Si ves este aviso, Aura puede enviarte notificaciones en tu teléfono.". El botón
+  "Enviar notificación de prueba" de Ajustes no cambia y sigue visible también en la versión de release.
 - Debe estar antes de publicar la v1.1.
 
 ---

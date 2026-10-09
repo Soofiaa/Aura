@@ -173,7 +173,7 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     await _plugin.zonedSchedule(
       999,
       'Aura: prueba',
-      'Notificación de prueba (debug), programada hace ${delay.inSeconds}s.',
+      'Si ves este aviso, Aura puede enviarte notificaciones en tu teléfono.',
       when,
       _detailsFor(NotificationKind.periodReminder),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
