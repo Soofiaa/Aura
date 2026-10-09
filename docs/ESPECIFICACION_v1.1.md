@@ -769,6 +769,7 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **D-4** | ¿Qué pasa si la usuaria nunca toca "Terminó"? | El período queda abierto y fuera del promedio de duración, y el ciclo sigue contando para la regularidad (se deriva de los inicios). Evaluar un aviso suave tras la duración habitual. | Resuelta: ver sección 10 |
 | **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
+| **D-5** | ¿El Calendario debe marcar el próximo período estimado? Hoy solo marca los días que faltan del período en curso, y es intencional según E-1. | Consultar a las testers antes de decidir. Si se marca, no debe confundirse con un día registrado ni con los estimados del período en curso (principio 1). | Pendiente: consultar a las testers |
 
 ## 8. Definición de hecho (por historia)
 

@@ -32,6 +32,9 @@
 ### Cambiado
 
 - Se quita el botón "Enviar notificación de prueba" de Ajustes. Los recordatorios no cambian.
+- **"Síntomas más frecuentes"** en Estadísticas pasa a barras horizontales: el nombre a la izquierda, la barra y el número de días a la derecha, sin etiquetas que se pisen. Muestra solo los síntomas registrados, de mayor a menor (a igual cantidad, por orden alfabético), y el lector de pantalla lee el nombre y la cantidad de cada uno.
+- La leyenda del Calendario muestra "Estimado sin confirmar" solo cuando hay días estimados, igual que la ventana fértil y la ovulación.
+- La pantalla de registro se titula "Registrar día", como el botón de Inicio que la abre (antes decía "Registrar síntomas").
 - La pregunta de Inicio "¿Sigue tu período hoy?" cambia "Sí" y "No" por "Sigue", "Terminó hoy" y "Ya terminó antes", e indica el día del período y la duración estimada.
 - En el Calendario, el botón "Seleccionar varios días" pasa a llamarse "Elegir varios días" y está siempre visible junto a "Me llegó hoy". Hoy se distingue con un borde en vez de un relleno, para no confundirlo con un día registrado.
 - Marcar un día o un rango en el Calendario ahora tiene "Deshacer".
@@ -49,6 +52,10 @@
 - Los números de los días futuros del Calendario se ven en un gris más oscuro, más fácil de leer.
 - Los datos pasan a un formato nuevo (v5) que guarda el interruptor de la ovulación y la ventana fértil; no cambia ningún día ni síntoma. Los respaldos nuevos lo incluyen, y los anteriores se restauran con el interruptor activado. Una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos, y no puede abrir los datos ya actualizados: hay que seguir con esta versión o una más nueva.
 - Los respaldos nuevos usan un formato que incluye el fin de cada período. Los respaldos anteriores se siguen pudiendo restaurar; una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos.
+
+### Corregido
+
+- "Registrar día" no mostraba marcados los síntomas ya guardados al abrir un día registrado: ahora se ven marcados. Además, si en ese día tocabas otro síntoma, al guardar se borraban los que ya estaban guardados; eso ya no pasa.
 
 ## 1.0.1
 
