@@ -295,6 +295,17 @@ void main() {
     expect(row.flow, isNull);
   });
 
+  testWidgets('el titulo es "Registrar día", igual que el boton de Inicio',
+      (tester) async {
+    await _abrirFormulario(tester);
+    expect(
+      find.descendant(
+          of: find.byType(AppBar), matching: find.text('Registrar día')),
+      findsOneWidget,
+    );
+    expect(find.text('Registrar síntomas'), findsNothing);
+  });
+
   testWidgets(
       'un dia con sintomas guardados se abre con esos sintomas marcados',
       (tester) async {

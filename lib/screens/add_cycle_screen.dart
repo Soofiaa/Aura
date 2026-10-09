@@ -86,7 +86,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Registrar síntomas"),
+        title: const Text("Registrar día"),
         backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),

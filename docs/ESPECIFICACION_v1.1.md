@@ -51,7 +51,7 @@ Sí/No; con un registro de 2 toques deja de estarlo. **La v1.1 debe resolverlo (
 - **Resuelto en la v4** (P-1): el predictor solo promedia períodos cerrados y el caso especial de la línea 330 ya no existe. El test de
   regresión (5 y no 3,67) está en `test/domain/cycle_predictor_test.dart`.
 
-### Hallazgo B-1 — el formulario "Registrar síntomas" marca sangrado por defecto
+### Hallazgo B-1 — el formulario "Registrar día" (antes titulado "Registrar síntomas") marca sangrado por defecto
 
 En un día sin registro, el formulario abre con el interruptor "Día de sangrado" **encendido** (`add_cycle_screen.dart`, línea 22,
 y línea 50 al cambiar a una fecha sin registro) y con flujo "Ligero" (línea 23). Al guardar, `upsertDay` recibe
@@ -143,7 +143,7 @@ usuaria va al Calendario a revisar los días importados.
 
 | Versión | Contenido |
 |---|---|
-| **1.0.1** | Parche del formulario "Registrar síntomas": hallazgos B-1, B-2 y B-3 (sección 2) |
+| **1.0.1** | Parche del formulario "Registrar día" (entonces titulado "Registrar síntomas"): hallazgos B-1, B-2 y B-3 (sección 2) |
 | **1.1** | HU-01 a HU-06 (HU-04 incluye la mejora U-1) + tareas T-01, T-02 y T-03 (íconos) |
 | **1.2** | HU-07 (historial de anticonceptivos) |
 | Fuera de alcance | Recordatorio de toma de pastilla, cuenta o sincronización en la nube, publicidad, pagos, exportar a PDF clínico |
