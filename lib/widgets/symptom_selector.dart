@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
-class SymptomSelector extends StatefulWidget {
+/// Chips de sintomas. Es un widget controlado: muestra siempre
+/// [selectedSymptoms] tal como llega y cada toque entrega una lista
+/// nueva por [onSelectionChanged]; quien lo usa guarda esa lista y la
+/// vuelve a pasar. Antes copiaba la lista solo al crearse, asi que los
+/// sintomas de un dia guardado (que el formulario carga despues, de
+/// forma asincrona) no aparecian marcados.
+class SymptomSelector extends StatelessWidget {
   final List<String> selectedSymptoms;
   final Function(List<String>) onSelectionChanged;
 
@@ -10,12 +16,7 @@ class SymptomSelector extends StatefulWidget {
     required this.onSelectionChanged,
   });
 
-  @override
-  State<SymptomSelector> createState() => _SymptomSelectorState();
-}
-
-class _SymptomSelectorState extends State<SymptomSelector> {
-  final List<String> _allSymptoms = [
+  static const List<String> _allSymptoms = [
     'Dolor abdominal',
     'Dolor de cabeza',
     'Cansancio',
@@ -26,23 +27,11 @@ class _SymptomSelectorState extends State<SymptomSelector> {
     'Dolor de espalda',
   ];
 
-  late List<String> _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List.from(widget.selectedSymptoms);
-  }
-
+  // Lista nueva en cada cambio: nunca se modifica la que llego.
   void _toggleSymptom(String symptom) {
-    setState(() {
-      if (_selected.contains(symptom)) {
-        _selected.remove(symptom);
-      } else {
-        _selected.add(symptom);
-      }
-    });
-    widget.onSelectionChanged(_selected);
+    final updated = List<String>.from(selectedSymptoms);
+    if (!updated.remove(symptom)) updated.add(symptom);
+    onSelectionChanged(updated);
   }
 
   @override
@@ -51,7 +40,7 @@ class _SymptomSelectorState extends State<SymptomSelector> {
       spacing: 8,
       runSpacing: 8,
       children: _allSymptoms.map((symptom) {
-        final isSelected = _selected.contains(symptom);
+        final isSelected = selectedSymptoms.contains(symptom);
         return GestureDetector(
           onTap: () => _toggleSymptom(symptom),
           child: Container(

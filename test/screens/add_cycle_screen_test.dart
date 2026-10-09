@@ -40,6 +40,18 @@ Future<void> _guardar(WidgetTester tester) =>
 bool _interruptorEncendido(WidgetTester tester) =>
     tester.widget<Switch>(find.byType(Switch)).value;
 
+/// true si el chip del sintoma [label] se ve marcado (icono de check).
+bool _sintomaMarcado(WidgetTester tester, String label) {
+  final chip = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(GestureDetector),
+  );
+  final icono = tester.widget<Icon>(
+    find.descendant(of: chip.first, matching: find.byType(Icon)),
+  );
+  return icono.icon == Icons.check_circle;
+}
+
 List<String> _resumen(List<dynamic> ciclos) =>
     ciclos.map((c) => '${c.startDate}/${c.periodLengthDays}').toList();
 
@@ -281,6 +293,48 @@ void main() {
     final row = await repo.getDay(hoy);
     expect(row!.isPeriodDay, isTrue);
     expect(row.flow, isNull);
+  });
+
+  testWidgets(
+      'un dia con sintomas guardados se abre con esos sintomas marcados',
+      (tester) async {
+    await repo.upsertDay(
+      date: hoy,
+      isPeriodDaySwitch: false,
+      symptoms: {Symptom.cansancio, Symptom.dolorDeCabeza},
+    );
+
+    // El formulario carga el dia de forma asincrona, despues de
+    // construir el selector: los sintomas llegan tarde y deben verse.
+    await _abrirFormulario(tester);
+
+    expect(_sintomaMarcado(tester, 'Cansancio'), isTrue);
+    expect(_sintomaMarcado(tester, 'Dolor de cabeza'), isTrue);
+    expect(_sintomaMarcado(tester, 'Dolor abdominal'), isFalse);
+    expect(_sintomaMarcado(tester, 'Antojos'), isFalse);
+  });
+
+  testWidgets(
+      'en un dia guardado se puede desmarcar y marcar sintomas, y se guarda '
+      'exactamente lo que se ve', (tester) async {
+    await repo.upsertDay(
+      date: hoy,
+      isPeriodDaySwitch: false,
+      symptoms: {Symptom.cansancio, Symptom.dolorDeCabeza},
+    );
+
+    await _abrirFormulario(tester);
+    await _tocar(tester, find.text('Cansancio'));
+    await _tocar(tester, find.text('Antojos'));
+
+    expect(_sintomaMarcado(tester, 'Cansancio'), isFalse);
+    expect(_sintomaMarcado(tester, 'Antojos'), isTrue);
+    expect(_sintomaMarcado(tester, 'Dolor de cabeza'), isTrue);
+
+    await _guardar(tester);
+
+    expect(await repo.getSymptomsForDay(hoy),
+        {Symptom.dolorDeCabeza, Symptom.antojos});
   });
 
   testWidgets(
