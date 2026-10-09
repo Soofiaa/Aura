@@ -3,6 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_predictor.dart';
+import '../domain/symptom_ranking.dart';
+import '../utils/colors.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -38,7 +40,8 @@ class _StatsScreenState extends State<StatsScreen> {
           }
 
           final stats = snapshot.data!;
-          final sintomas = stats.symptomFrequency;
+          // Ya filtrados (conteo > 0) y ordenados de mayor a menor.
+          final sintomas = rankSymptoms(stats.symptomFrequency);
           final estadosAnimo = stats.moodFrequency;
           final promedioFlujo = stats.averageFlow;
 
@@ -88,7 +91,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // 🩹 Gráfico de síntomas
+                // 🩹 Grafico de sintomas: barras horizontales
                 if (sintomas.isNotEmpty) ...[
                   const Text(
                     "Síntomas más frecuentes",
@@ -96,63 +99,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 15),
-                  AspectRatio(
-                    aspectRatio: 1.3,
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        borderData: FlBorderData(show: false),
-                        gridData: const FlGridData(show: false),
-                        titlesData: FlTitlesData(
-                          leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                final keys = sintomas.keys.toList();
-                                if (index < keys.length) {
-                                  return Padding(
-                                    padding:
-                                    const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      keys[index].label,
-                                      style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.black),
-                                    ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                          ),
-                        ),
-                        barGroups: List.generate(
-                          sintomas.length,
-                              (i) => BarChartGroupData(
-                            x: i,
-                            barRods: [
-                              BarChartRodData(
-                                toY: sintomas.values.elementAt(i).toDouble(),
-                                color: const Color(0xFFFAD4D8),
-                                width: 18,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  _SymptomBars(ranking: sintomas),
                 ],
                 const SizedBox(height: 30),
 
@@ -196,6 +143,77 @@ class _StatsScreenState extends State<StatsScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// "Sintomas mas frecuentes" como barras horizontales: el nombre a la
+/// izquierda (puede ocupar dos lineas, nunca se pisa con el vecino), la
+/// barra proporcional al sintoma mas frecuente y el numero de dias a la
+/// derecha. [ranking] ya viene filtrado y ordenado ([rankSymptoms]).
+class _SymptomBars extends StatelessWidget {
+  final List<MapEntry<Symptom, int>> ranking;
+
+  const _SymptomBars({required this.ranking});
+
+  @override
+  Widget build(BuildContext context) {
+    final maximo = ranking.first.value;
+    return Column(
+      children: [
+        for (final entry in ranking)
+          Semantics(
+            key: ValueKey('sintoma-${entry.key.name}'),
+            container: true,
+            excludeSemantics: true,
+            label: '${entry.key.label}: ${entry.value} '
+                '${entry.value == 1 ? 'día' : 'días'}',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      entry.key.label,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: entry.value / maximo,
+                        child: Container(
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '${entry.value}',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

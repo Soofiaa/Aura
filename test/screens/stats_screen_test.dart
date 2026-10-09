@@ -47,7 +47,7 @@ void main() {
     expect(find.text('Aún no hay registros guardados 🩷'), findsOneWidget);
     expect(find.text('Promedio de flujo'), findsNothing);
     expect(find.text('Tus ciclos'), findsNothing);
-    expect(find.byType(BarChart), findsNothing);
+    expect(find.text('Síntomas más frecuentes'), findsNothing);
     expect(find.byType(PieChart), findsNothing);
   });
 
@@ -79,7 +79,6 @@ void main() {
     expect(find.text('Promedio de flujo'), findsOneWidget);
     expect(find.text('Abundante'), findsOneWidget);
     expect(find.text('Síntomas más frecuentes'), findsOneWidget);
-    expect(find.byType(BarChart), findsOneWidget);
     expect(find.text(Symptom.dolorAbdominal.label), findsOneWidget);
     expect(find.text('Estados de ánimo registrados'), findsOneWidget);
     expect(find.byType(PieChart), findsOneWidget);
@@ -104,11 +103,111 @@ void main() {
     await pumpStats(tester);
     expect(find.text('Promedio de flujo'), findsOneWidget);
     expect(find.text('Sin datos'), findsOneWidget);
-    expect(find.byType(BarChart), findsNothing);
+    expect(find.text('Síntomas más frecuentes'), findsNothing);
     expect(find.byType(PieChart), findsNothing);
     // CP4: un periodo registrado ya muestra "Tus ciclos".
     expect(find.text('Registra al menos dos períodos para ver tus ciclos.'),
         findsOneWidget);
+  });
+
+  // --- Sintomas mas frecuentes: barras horizontales ---
+
+  Future<void> sintomasEn(String fecha, List<Symptom> sintomas) async {
+    await db.into(db.dailyLogs).insert(
+        DailyLogsCompanion.insert(date: fecha),
+        mode: InsertMode.insertOrIgnore);
+    for (final s in sintomas) {
+      await db.into(db.dailyLogSymptoms).insert(
+          DailyLogSymptomsCompanion.insert(logDate: fecha, symptom: s));
+    }
+  }
+
+  // Posicion vertical de la fila de cada sintoma, en el orden en pantalla.
+  List<String> ordenEnPantalla(WidgetTester tester, List<Symptom> todos) {
+    final visibles = [
+      for (final s in todos)
+        if (find.byKey(ValueKey('sintoma-${s.name}')).evaluate().isNotEmpty) s
+    ];
+    visibles.sort((a, b) => tester
+        .getTopLeft(find.byKey(ValueKey('sintoma-${a.name}')))
+        .dy
+        .compareTo(tester
+            .getTopLeft(find.byKey(ValueKey('sintoma-${b.name}')))
+            .dy));
+    return [for (final s in visibles) s.label];
+  }
+
+  testStats(
+      'sintomas: de mayor a menor, empates por nombre y solo los registrados',
+      (tester) async {
+    // Antojos 3, Hinchazon 2, Dolor de cabeza 2, Dolor abdominal 2,
+    // Acne 1; el resto 0 (no aparece).
+    await sintomasEn('2026-03-01', [
+      Symptom.hinchazon, Symptom.antojos, Symptom.dolorDeCabeza, //
+    ]);
+    await sintomasEn('2026-03-02', [
+      Symptom.antojos, Symptom.dolorAbdominal, Symptom.hinchazon, //
+    ]);
+    await sintomasEn('2026-03-03', [
+      Symptom.antojos, Symptom.dolorDeCabeza, Symptom.dolorAbdominal, //
+      Symptom.acne,
+    ]);
+    await pumpStats(tester);
+
+    expect(find.text('Síntomas más frecuentes'), findsOneWidget);
+    expect(ordenEnPantalla(tester, Symptom.values), [
+      'Antojos',
+      'Dolor abdominal',
+      'Dolor de cabeza',
+      'Hinchazón',
+      'Acné',
+    ]);
+    for (final ausente in [
+      Symptom.cansancio,
+      Symptom.cambiosDeHumor,
+      Symptom.dolorDeEspalda,
+    ]) {
+      expect(find.text(ausente.label), findsNothing);
+    }
+  });
+
+  testStats('sintomas: cada fila tiene nombre, barra proporcional y numero',
+      (tester) async {
+    await sintomasEn('2026-03-01', [Symptom.cansancio, Symptom.acne]);
+    await sintomasEn('2026-03-02', [Symptom.cansancio]);
+    await sintomasEn('2026-03-03', [Symptom.cansancio]);
+    await sintomasEn('2026-03-04', [Symptom.cansancio]);
+    await pumpStats(tester);
+
+    final fila = find.byKey(const ValueKey('sintoma-cansancio'));
+    expect(find.descendant(of: fila, matching: find.text('Cansancio')),
+        findsOneWidget);
+    expect(find.descendant(of: fila, matching: find.text('4')),
+        findsOneWidget);
+
+    double anchoBarra(String nombre) => tester
+        .getSize(find.descendant(
+          of: find.byKey(ValueKey('sintoma-$nombre')),
+          matching: find.byType(FractionallySizedBox),
+        ))
+        .width;
+    final barra = tester.widget<FractionallySizedBox>(find.descendant(
+        of: find.byKey(const ValueKey('sintoma-acne')),
+        matching: find.byType(FractionallySizedBox)));
+    expect(barra.widthFactor, 0.25); // 1 de 4
+    expect(anchoBarra('acne'), lessThan(anchoBarra('cansancio')));
+  });
+
+  testStats('sintomas: etiqueta accesible con nombre y cantidad por fila',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await sintomasEn('2026-03-01', [Symptom.dolorDeCabeza, Symptom.acne]);
+    await sintomasEn('2026-03-02', [Symptom.dolorDeCabeza]);
+    await pumpStats(tester);
+
+    expect(find.bySemanticsLabel('Dolor de cabeza: 2 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Acné: 1 día'), findsOneWidget);
+    semantics.dispose();
   });
 
   // --- HU-05, CP4: "Tus ciclos" ---
