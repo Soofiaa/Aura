@@ -422,7 +422,7 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 - **Respaldo v5 (con HU-05c):** el archivo pasa a `schemaVersion` 5, con `showFertileWindow` en los ajustes. `formatVersion`
   sigue en 1. Los respaldos v3 y v4 se importan con el interruptor activado. Una app v4 rechaza un respaldo v5 como de una
   versión más nueva, sin tocar nada.
-- **HU-06b (contraseña / cifrado del respaldo): implementada** en la rama `feature/hu06b-cifrado` (CP1 a CP5, sin merge), con
+- **HU-06b (contraseña / cifrado del respaldo): implementada** en la rama `feature/hu06b-cifrado` (CP1 a CP5b), con
   las decisiones HU6b-1 a HU6b-12 de la sección 10 tomadas el 2026-10-08. Completa el criterio 7 (ver también HU6-2 y HU6-3).
   Probada en el teléfono con un build debug, automatizada por adb (ver "Prueba en el teléfono" más abajo). Build release
   construido y verificado sin `INTERNET`, sin instalar. La prueba manual de "Compartir" con contraseña quedó hecha (mensaje y nombre
@@ -474,7 +474,8 @@ existe para bases v1 a v3 (M-2). Si después se olvida la contraseña, esa copia
 | CP2 | `0228afd` | Servicio: exportar cifrado con la verificación de HU6b-10 (pasar el archivo final por la función de descifrado de la importación, con una segunda derivación) y la derivación fuera del hilo de la interfaz; descifrar al importar. |
 | CP3 | `aa93df1` | Interfaz de creación: contraseña, confirmación, mostrar u ocultar, indicador de fortaleza, advertencia de que no hay recuperación y "sin contraseña" como enlace secundario. |
 | CP4 | `53492f3` | Interfaz de importación: pedir la contraseña, mensaje de HU6b-8 con reintento y progreso. |
-| CP5 | (sin commit) | Documentación (spec, CHANGELOG, README y política de privacidad), prueba en el teléfono y verificación del release sin `INTERNET`. |
+| CP5 | `44980a6` | Documentación (spec, CHANGELOG, README y política de privacidad), prueba en el teléfono y verificación del release sin `INTERNET`. |
+| CP5b | `f6b85a6` | Tests de encabezado desconocido y parámetros fuera de rango, y registro de la prueba manual de Compartir. |
 
 **Formato del archivo cifrado (`formatVersion` 2), definitivo desde CP1:**
 
@@ -524,9 +525,9 @@ incorrecta, truncado, base64 y limites".
 | Claves de más o de menos, o de otro tipo, en el encabezado | Dañado, sin pedir contraseña | El mismo |
 | Encabezado alterado con valores válidos (`app`, un bit de la sal o del nonce, `memoryKiB` o `iterations` dentro de los límites) o `ciphertext` alterado o acortado | Pide la contraseña; el descifrado falla por el AAD o la etiqueta de GCM | El de HU6b-8, con reintento |
 
-Los tests fijan el resultado de cada fila. Las dos primeras las fijan, en el grupo "f)", "cipher desconocido: version mas
-nueva, sin pedir contrasena ni derivar la clave", "kdf desconocido: version mas nueva, sin pedir contrasena ni derivar la
-clave" y "un parametro por encima del maximo y otro por debajo del minimo a la vez: version mas nueva, sin derivar la clave".
+Los tests fijan el resultado de cada fila. La primera la fijan, en el grupo "f)", "cipher desconocido: version mas nueva, sin
+pedir contrasena ni derivar la clave" y "kdf desconocido: version mas nueva, sin pedir contrasena ni derivar la clave"; la
+segunda, "un parametro por encima del maximo y otro por debajo del minimo a la vez: version mas nueva, sin derivar la clave".
 
 **Rendimiento (medido en CP3, build profile):** en un POCO X6 Pro 5G (gama media-alta) con Android 16. El build **profile** se
 hizo desde una rama temporal descartada y se instaló con el sufijo `.debug`, en lugar de la app de prueba. Se midió crear un
@@ -576,7 +577,9 @@ librería. No acorta el tiempo: en esta medición, el caso con isolate tardó en
   así que la hoja se cerró con Atrás. Por eso no se vio "Respaldo protegido listo. Recuerda tu contraseña: Aura no puede
   recuperarla."; al cerrarla no apareció ningún mensaje, como corresponde a HU6-R5. No se leyó el contenido del archivo
   compartido, así que esta prueba no comprobó que vaya cifrado. Tras compartir quedaron dos copias en la caché de la app
-  (`cache/aura_respaldo/` y `cache/share_plus/`, de 2478 bytes cada una), y al volver a abrir la app se borraron (ajuste A).
+  (`cache/aura_respaldo/` y `cache/share_plus/`, de 2478 bytes cada una), y al volver a abrir la app se borraron
+  (`cleanTemporaryFiles` en `lib/data/backup/backup_service.dart`, llamada al abrir la app desde `main.dart` y antes de cada
+  exportación; esa llamada de `main.dart` no tiene test, se vio funcionar en el teléfono).
   Sin errores de Flutter, cierres ni "La app no responde" en el logcat filtrado por el proceso.
 - **Compartir con contraseña, prueba manual (2026-10-08, build debug, hecha a mano por Sofia):** se vio el mensaje
   "Respaldo protegido listo. Recuerda tu contraseña: Aura no puede recuperarla." y el archivo que llegó se llama
