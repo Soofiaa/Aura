@@ -8,20 +8,35 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Firma de release: lee android/key.properties si existe (nunca se
-// commitea, ver android/.gitignore). Si no existe -- por ejemplo, recien
-// clonado el repo -- el build NO debe fallar: cae a la firma de debug
-// para que se pueda compilar y probar igual, con un aviso explicito.
-val keystorePropertiesFile = rootProject.file("key.properties")
+// Firma de release: lee primero el archivo que indica la variable de
+// entorno AURA_KEY_PROPERTIES (si esta definida y el archivo existe; asi
+// key.properties puede vivir fuera del repo) y, si no, android/key.properties.
+// Ninguno se commitea (ver android/.gitignore). Si no existe ninguno -- por
+// ejemplo, recien clonado el repo -- el build NO debe fallar: cae a la firma
+// de debug para que se pueda compilar y probar igual, con un aviso explicito.
+val envKeystorePropertiesPath = System.getenv("AURA_KEY_PROPERTIES")
+val envKeystorePropertiesFile = envKeystorePropertiesPath
+    ?.takeIf { it.isNotBlank() }
+    ?.let { File(it) }
+if (envKeystorePropertiesFile != null && !envKeystorePropertiesFile.isFile) {
+    logger.warn(
+        "AVISO: AURA_KEY_PROPERTIES apunta a un archivo que no existe. " +
+            "Se usa android/key.properties si existe."
+    )
+}
+val keystorePropertiesFile = envKeystorePropertiesFile
+    ?.takeIf { it.isFile }
+    ?: rootProject.file("key.properties")
 val hasKeystoreProperties = keystorePropertiesFile.exists()
 val keystoreProperties = Properties()
 if (hasKeystoreProperties) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 } else {
     logger.warn(
-        "AVISO: android/key.properties no existe. El build de release " +
-            "se firmara con la key de DEBUG (no instalable en Play). " +
-            "Ver android/RELEASE.md para crear el keystore de verdad."
+        "AVISO: no hay key.properties (ni AURA_KEY_PROPERTIES ni " +
+            "android/key.properties). El build de release se firmara con " +
+            "la key de DEBUG (no instalable en Play). Ver android/RELEASE.md " +
+            "para crear el keystore de verdad."
     )
 }
 

@@ -55,6 +55,51 @@ verdad:
    `applicationId` (`com.soofiaa.aura`) — Play exige la misma firma en
    cada actualización.
 
+### `key.properties` fuera del repo: `AURA_KEY_PROPERTIES`
+
+El build busca primero el archivo que indica la variable de entorno
+`AURA_KEY_PROPERTIES` (ruta completa a un `key.properties`) y, si no está
+definida o el archivo no existe, usa `android/key.properties`. Así el
+`key.properties`, con las contraseñas, puede vivir fuera de la carpeta del
+proyecto (por ejemplo, fuera de una carpeta sincronizada con la nube). Si la
+variable apunta a un archivo que no existe, el build lo avisa en el log y
+sigue con `android/key.properties`. Con la variable, conviene que `storeFile`
+sea una ruta absoluta: una ruta relativa se resuelve igual que siempre,
+desde `android/app/`.
+
+En PowerShell, para la sesión actual:
+```
+$env:AURA_KEY_PROPERTIES = "<ruta completa a key.properties>"
+flutter build apk --release
+```
+
+### Restaurar la firma en otro equipo
+
+1. Restaurar el `.jks` desde la copia (el gestor de contraseñas o la copia
+   de respaldo) a una carpeta fuera del repo.
+2. Recrear `key.properties` con estas cuatro claves, con los valores
+   guardados en el gestor de contraseñas:
+   ```
+   storePassword=<...>
+   keyPassword=<...>
+   keyAlias=<...>
+   storeFile=<ruta al .jks>
+   ```
+   Ponerlo en `android/key.properties` o fuera del repo y apuntar a él con
+   `AURA_KEY_PROPERTIES`.
+3. Comprobar que es la clave correcta antes de construir:
+   ```
+   keytool -list -v -keystore <ruta al .jks> -alias <alias>
+   ```
+   El "SHA256" del certificado debe ser
+   `A9:32:D2:18:…:D0:A8:2C` (`a932d218…a82c`), el mismo con que se
+   firmaron las versiones anteriores de Aura.
+4. Después de `flutter build apk --release`, confirmar la firma del APK:
+   ```
+   apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
+   ```
+   El "certificate SHA-256 digest" debe ser el mismo valor.
+
 ## Qué probar a mano en un release de verdad (no alcanza con debug)
 
 `debug` compila con `isMinifyEnabled = false`; `release` corre R8 con
