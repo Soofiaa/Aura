@@ -125,7 +125,6 @@ void main() {
 
   void conLeyendaFertil() {
     expect(find.text('Período registrado'), findsOneWidget);
-    expect(find.text('Estimado sin confirmar'), findsOneWidget);
     expect(find.text(leyendaVentana), findsOneWidget);
     expect(find.text(leyendaOvulacion), findsOneWidget);
     expect(find.text(aviso), findsOneWidget);
@@ -209,7 +208,8 @@ void main() {
       sinLeyendaFertil();
       expect(find.byKey(const ValueKey('fertile-bar')), findsNothing);
       expect(find.text('Período registrado'), findsOneWidget);
-      expect(find.text('Estimado sin confirmar'), findsOneWidget);
+      // Periodo de 5 dias ya completo: no hay estimados que mostrar.
+      expect(find.text('Estimado sin confirmar'), findsNothing);
     });
 
     testCalendar('confianza baja (un solo periodo)', (tester) async {
@@ -290,10 +290,10 @@ void main() {
     expect(estilo.color, Colors.grey[700]);
   });
 
-  testCalendar('leyenda sin datos: solo registrado y estimado', (tester) async {
+  testCalendar('leyenda sin datos: solo registrado', (tester) async {
     await pumpCalendar(tester, '2026-07-07');
     expect(find.text('Período registrado'), findsOneWidget);
-    expect(find.text('Estimado sin confirmar'), findsOneWidget);
+    expect(find.text('Estimado sin confirmar'), findsNothing);
     sinLeyendaFertil();
   });
 

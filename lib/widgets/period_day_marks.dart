@@ -116,13 +116,20 @@ class FertileDayMark extends StatelessWidget {
 }
 
 /// Leyenda del calendario (HU-04 crit. 2 y 3, decision 9B): solo lo que
-/// el calendario muestra, registrado y estimado. Con [showFertile]
-/// (hay marcas de ventana fertil, CP5d-2) agrega la ventana, la
-/// ovulacion y el aviso de que no es un metodo anticonceptivo. Los
-/// textos son Flexible: con texto grande se parten en vez de desbordar.
+/// el calendario muestra. "Periodo registrado" va siempre; "Estimado sin
+/// confirmar" solo con [showEstimated] (hay dias estimados, E-1). Con
+/// [showFertile] (hay marcas de ventana fertil, CP5d-2) agrega la
+/// ventana, la ovulacion y el aviso de que no es un metodo
+/// anticonceptivo. Los textos son Flexible: con texto grande se parten
+/// en vez de desbordar.
 class CalendarLegend extends StatelessWidget {
-  const CalendarLegend({super.key, this.showFertile = false});
+  const CalendarLegend({
+    super.key,
+    this.showEstimated = false,
+    this.showFertile = false,
+  });
 
+  final bool showEstimated;
   final bool showFertile;
 
   @override
@@ -150,23 +157,25 @@ class CalendarLegend extends StatelessWidget {
             const Flexible(child: Text('Período registrado', style: style)),
           ],
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ExcludeSemantics(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CustomPaint(
-                  painter: DashedBorderPainter(radius: periodDayMarkRadius / 2),
+        if (showEstimated)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ExcludeSemantics(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CustomPaint(
+                    painter:
+                        DashedBorderPainter(radius: periodDayMarkRadius / 2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Flexible(
-                child: Text('Estimado sin confirmar', style: style)),
-          ],
-        ),
+              const SizedBox(width: 8),
+              const Flexible(
+                  child: Text('Estimado sin confirmar', style: style)),
+            ],
+          ),
         if (showFertile) ...[
           const Row(
             mainAxisSize: MainAxisSize.min,

@@ -128,13 +128,48 @@ void main() {
       expect(estimado(), findsNWidgets(2));
     });
 
-    testCalendar('leyenda: solo registrado y estimado, nada de fertilidad '
-        'ni ovulacion', (tester) async {
+    testCalendar('leyenda con dias estimados: registrado y estimado, nada '
+        'de fertilidad ni ovulacion', (tester) async {
+      await seedRange('2026-07-12', 3);
       await pumpCalendar(tester, '2026-07-15');
+      expect(estimado(), findsNWidgets(2));
       expect(find.text('Período registrado'), findsOneWidget);
       expect(find.text('Estimado sin confirmar'), findsOneWidget);
       expect(find.textContaining('értil'), findsNothing);
       expect(find.textContaining('vulaci'), findsNothing);
+    });
+
+    testCalendar('leyenda sin dias estimados (periodo cerrado): sin '
+        '"Estimado sin confirmar"', (tester) async {
+      await seedRange('2026-07-12', 3);
+      await repo.closePeriod('2026-07-12', '2026-07-14', today: '2026-07-15');
+      await pumpCalendar(tester, '2026-07-15');
+      expect(estimado(), findsNothing);
+      expect(find.text('Período registrado'), findsOneWidget);
+      expect(find.text('Estimado sin confirmar'), findsNothing);
+    });
+
+    testCalendar('leyenda sin datos: solo "Período registrado"',
+        (tester) async {
+      await pumpCalendar(tester, '2026-07-15');
+      expect(find.text('Período registrado'), findsOneWidget);
+      expect(find.text('Estimado sin confirmar'), findsNothing);
+      expect(find.textContaining('értil'), findsNothing);
+      expect(find.textContaining('vulaci'), findsNothing);
+    });
+
+    testCalendar('la leyenda sigue a los estimados: al confirmar los dias, '
+        'desaparece', (tester) async {
+      // Periodo abierto del 12 con duracion 5: estimados 15 y 16; hoy 16,
+      // asi que ya se pueden confirmar.
+      await seedRange('2026-07-12', 3);
+      await pumpCalendar(tester, '2026-07-16');
+      expect(find.text('Estimado sin confirmar'), findsOneWidget);
+
+      await repo.closePeriod('2026-07-12', '2026-07-16', today: '2026-07-16');
+      await tester.pumpAndSettle();
+      expect(estimado(), findsNothing);
+      expect(find.text('Estimado sin confirmar'), findsNothing);
     });
   });
 

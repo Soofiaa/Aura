@@ -628,7 +628,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            CalendarLegend(showFertile: fertiles.ventana.isNotEmpty),
+            CalendarLegend(
+              showEstimated: estimated.isNotEmpty,
+              showFertile: fertiles.ventana.isNotEmpty,
+            ),
             const SizedBox(height: 20),
             if (_rangeMode)
               ..._buildPanelRango()
