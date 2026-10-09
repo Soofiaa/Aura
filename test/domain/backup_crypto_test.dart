@@ -562,6 +562,66 @@ void main() {
       },
     );
 
+    // Algoritmo desconocido (valores inventados): puede venir de una
+    // version mas nueva. Se rechaza al elegir el archivo, sin pedir la
+    // contrasena ni derivar la clave.
+    for (final (campo, valor) in const [
+      ('cipher', 'Cifrado-Inventado-512'),
+      ('kdf', 'Derivacion-Inventada-9'),
+    ]) {
+      test('$campo desconocido: version mas nueva, sin pedir contrasena ni '
+          'derivar la clave', () async {
+        final m = _map(file);
+        _enc(m)[campo] = valor;
+        final bytes = utf8.encode(jsonEncode(m));
+        final result = decodeBackup(bytes);
+        expect(result, isNot(isA<BackupNeedsPassword>()));
+        expect((result as BackupParseFailure).error, BackupError.newerVersion);
+        await expectLater(
+          decryptBackup(bytes, _password, deriveKey: _mustNotDerive),
+          throwsA(
+            isA<BackupCryptoException>().having(
+              (e) => e.error,
+              'error',
+              BackupCryptoError.unsupportedAlgorithm,
+            ),
+          ),
+        );
+      });
+    }
+
+    test('un parametro por encima del maximo y otro por debajo del minimo a '
+        'la vez: version mas nueva, sin derivar la clave', () async {
+      final cases = <Map<String, int>>[
+        {'memoryKiB': 65537, 'iterations': 0},
+        {'iterations': 11, 'memoryKiB': 8191},
+        {'parallelism': 2, 'iterations': 0},
+      ];
+      for (final mutate in cases) {
+        final m = _map(file);
+        _params(m).addAll(mutate);
+        final bytes = utf8.encode(jsonEncode(m));
+        final result = decodeBackup(bytes);
+        expect(result, isNot(isA<BackupNeedsPassword>()), reason: '$mutate');
+        expect(
+          (result as BackupParseFailure).error,
+          BackupError.newerVersion,
+          reason: '$mutate',
+        );
+        await expectLater(
+          decryptBackup(bytes, _password, deriveKey: _mustNotDerive),
+          throwsA(
+            isA<BackupCryptoException>().having(
+              (e) => e.error,
+              'error',
+              BackupCryptoError.paramsOutOfRange,
+            ),
+          ),
+          reason: '$mutate',
+        );
+      }
+    });
+
     test('dentro de los limites si deriva, una sola vez', () async {
       final counter = _CountingDeriver();
       await decryptBackup(

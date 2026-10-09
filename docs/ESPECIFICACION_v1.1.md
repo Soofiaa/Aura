@@ -425,8 +425,9 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 - **HU-06b (contraseña / cifrado del respaldo): implementada** en la rama `feature/hu06b-cifrado` (CP1 a CP5, sin merge), con
   las decisiones HU6b-1 a HU6b-12 de la sección 10 tomadas el 2026-10-08. Completa el criterio 7 (ver también HU6-2 y HU6-3).
   Probada en el teléfono con un build debug, automatizada por adb (ver "Prueba en el teléfono" más abajo). Build release
-  construido y verificado sin `INTERNET`, sin instalar. **Pendiente antes de publicar la v1.1:** elegir un destino real de la hoja de Compartir a
-  mano y probar en un build de release firmado instalado (sección 8).
+  construido y verificado sin `INTERNET`, sin instalar. La prueba manual de "Compartir" con contraseña quedó hecha (mensaje y nombre
+  de archivo correctos). **Pendiente antes de publicar la v1.1:** restaurar en la app un respaldo protegido recibido por un
+  canal real (Drive, correo, WhatsApp) y probar en un build de release firmado instalado (sección 8).
 
 **Criterios de aceptación**
 1. **Exportar:** genera un archivo versionado (formato propio, con `schemaVersion`, fecha y app) con todos los datos: registros diarios, síntomas y ajustes.
@@ -523,9 +524,9 @@ incorrecta, truncado, base64 y limites".
 | Claves de más o de menos, o de otro tipo, en el encabezado | Dañado, sin pedir contraseña | El mismo |
 | Encabezado alterado con valores válidos (`app`, un bit de la sal o del nonce, `memoryKiB` o `iterations` dentro de los límites) o `ciphertext` alterado o acortado | Pide la contraseña; el descifrado falla por el AAD o la etiqueta de GCM | El de HU6b-8, con reintento |
 
-Los tests fijan el resultado exacto de cada fila con dos excepciones, que decide el código (`_parseEncrypted` y
-`Argon2idParams.isAboveLimits`) sin un test que las fije: para un algoritmo desconocido los tests solo comprueban que no se
-importa, y no prueban un parámetro por encima del máximo junto con otro por debajo del mínimo.
+Los tests fijan el resultado de cada fila. Las dos primeras las fijan, en el grupo "f)", "cipher desconocido: version mas
+nueva, sin pedir contrasena ni derivar la clave", "kdf desconocido: version mas nueva, sin pedir contrasena ni derivar la
+clave" y "un parametro por encima del maximo y otro por debajo del minimo a la vez: version mas nueva, sin derivar la clave".
 
 **Rendimiento (medido en CP3, build profile):** en un POCO X6 Pro 5G (gama media-alta) con Android 16. El build **profile** se
 hizo desde una rama temporal descartada y se instaló con el sufijo `.debug`, en lugar de la app de prueba. Se midió crear un
@@ -577,8 +578,12 @@ librería. No acorta el tiempo: en esta medición, el caso con isolate tardó en
   compartido, así que esta prueba no comprobó que vaya cifrado. Tras compartir quedaron dos copias en la caché de la app
   (`cache/aura_respaldo/` y `cache/share_plus/`, de 2478 bytes cada una), y al volver a abrir la app se borraron (ajuste A).
   Sin errores de Flutter, cierres ni "La app no responde" en el logcat filtrado por el proceso.
+- **Compartir con contraseña, prueba manual (2026-10-08, build debug, hecha a mano por Sofia):** se vio el mensaje
+  "Respaldo protegido listo. Recuerda tu contraseña: Aura no puede recuperarla." y el archivo que llegó se llama
+  `aura_respaldo_protegido_2026-10-08.json`. El destino elegido no quedó registrado. No se probó restaurar ese archivo en la
+  app de prueba con la contraseña.
 - **Quedó para revisión manual:** el selector de archivos del sistema ("Guardar como" y abrir) se manejó por adb pero no se
-  capturó en imagen, y falta elegir un destino real de la hoja de Compartir y ver el mensaje final.
+  capturó en imagen.
 
 **Release sin `INTERNET` (2026-10-08, build release):** build **release** con `flutter build apk --release` desde `53492f3`,
 firmado con la clave local de `android/key.properties` y sin instalarlo. `aapt dump permissions`
