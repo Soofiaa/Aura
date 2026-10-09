@@ -422,9 +422,11 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 - **Respaldo v5 (con HU-05c):** el archivo pasa a `schemaVersion` 5, con `showFertileWindow` en los ajustes. `formatVersion`
   sigue en 1. Los respaldos v3 y v4 se importan con el interruptor activado. Una app v4 rechaza un respaldo v5 como de una
   versión más nueva, sin tocar nada.
-- **HU-06b (contraseña / cifrado del respaldo): decisiones tomadas el 2026-10-08 (Etapa A); implementación pendiente, en CP0 a
-  CP5.** Completa el criterio 7 (ver HU6-2, HU6-3 y HU6b-1 a HU6b-12 en la sección 10). Sigue bloqueando la publicación de la
-  v1.1.
+- **HU-06b (contraseña / cifrado del respaldo): implementada** en la rama `feature/hu06b-cifrado` (CP1 a CP5, sin merge), con
+  las decisiones HU6b-1 a HU6b-12 de la sección 10 tomadas el 2026-10-08. Completa el criterio 7 (ver también HU6-2 y HU6-3).
+  Probada en el teléfono con un build debug, automatizada por adb (ver "Prueba en el teléfono" más abajo). Build release
+  construido y verificado sin `INTERNET`, sin instalar. **Pendiente antes de publicar la v1.1:** elegir un destino real de la hoja de Compartir a
+  mano y probar en un build de release firmado instalado (sección 8).
 
 **Criterios de aceptación**
 1. **Exportar:** genera un archivo versionado (formato propio, con `schemaVersion`, fecha y app) con todos los datos: registros diarios, síntomas y ajustes.
@@ -439,28 +441,41 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 8. Tras importar, Inicio, Calendario y Estadísticas reflejan los datos sin reiniciar la app, y las notificaciones se reprograman.
 
 **Modelo de amenaza de HU-06b:**
-- **Protege** el archivo cuando sale del teléfono (Drive, WhatsApp, un correo o un pendrive): quien lo tenga no puede leerlo
-  sin la contraseña. También protege contra la manipulación: un archivo alterado o cortado no se importa.
-- **No protege** la base de datos, la copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar
-  (`antes_de_migrar_v4.sqlite`), que siguen sin cifrar en el almacenamiento privado de la app. Tampoco protege un teléfono
-  desbloqueado, una contraseña débil ni el malware.
-- **No hay recuperación** si se olvida la contraseña: ese respaldo no se puede abrir.
+- **Protege** el archivo de un respaldo con contraseña cuando sale del teléfono (Drive, WhatsApp, un correo o un pendrive):
+  quien lo tenga no puede leerlo sin la contraseña. El cifrado ocurre en el teléfono, antes de guardar o compartir.
+- **Protege contra la manipulación del archivo:** AES-256-GCM verifica una etiqueta de 16 bytes, y el encabezado en claro
+  (`format`, `formatVersion`, `app` y `encryption`) entra como dato adicional autenticado (AAD). Un archivo alterado, cortado o
+  con el encabezado cambiado no se descifra y no se importa: se ve el mensaje de HU6b-8 y no se cambia nada. Los algoritmos y
+  los parámetros de Argon2id se validan contra límites **antes** de derivar la clave, para que un archivo manipulado no pida
+  recursos enormes.
+- **No protege:**
+  - la base de datos de la app, que sigue sin cifrar en su almacenamiento privado;
+  - la copia previa a importar (`respaldos/antes_de_importar.json`), que se guarda **sin cifrar** aunque el respaldo importado
+    tuviera contraseña;
+  - la copia previa a migrar (`respaldos/antes_de_migrar_v4.sqlite`), también sin cifrar;
+  - un respaldo creado "sin contraseña" (`formatVersion` 1), que es JSON legible;
+  - un teléfono desbloqueado en manos de otra persona, ni el malware en el teléfono;
+  - una contraseña débil: el archivo se puede atacar sin conexión probando contraseñas. El mínimo de 10 caracteres y Argon2id
+    lo encarecen, pero el indicador de fortaleza es solo orientativo.
+- **Queda a la vista** sin la contraseña: que es un respaldo de Aura, los parámetros de cifrado y el tamaño del archivo, que da
+  una idea aproximada de cuántos datos tiene.
+- **No hay recuperación** si se olvida la contraseña: Aura no la guarda ni tiene otra forma de abrir ese respaldo.
 
 **"Guardar en el teléfono" con un respaldo cifrado:** tras guardarlo se sigue borrando la copia previa a la migración, que solo
 existe para bases v1 a v3 (M-2). Si después se olvida la contraseña, esa copia ya no está.
 
 **Checkpoints de HU-06b** (decisiones HU6b-1 a HU6b-12 en la sección 10):
 
-| CP | Alcance |
-|---|---|
-| CP0 | **Hecho el 2026-10-08, sin merge** (ver HU6b-9): tiempo y memoria de PBKDF2 (Dart puro y puente nativo) y de Argon2id, AES-256-GCM, tamaño del APK, compilación con AGP 8.7.3 y permisos del release. Código descartable: **CP0 no se mergea**. |
-| CP1 | Dominio: cifrar y descifrar con funciones puras, envoltorio `formatVersion` 2, detección del respaldo cifrado al importar, límites de los parámetros, error de contraseña incorrecta o archivo alterado y decisión de HU6b-11. Tests con vectores conocidos (incluido el de HU6b-12 para los parámetros de producción), ida y vuelta, archivo manipulado o truncado y compatibilidad con `formatVersion` 1. |
-| CP2 | Servicio: exportar cifrado con la verificación de HU6b-10 (pasar el archivo final por la función de descifrado de la importación, con una segunda derivación) y la derivación fuera del hilo de la interfaz; descifrar al importar. |
-| CP3 | Interfaz de creación: contraseña, confirmación, mostrar u ocultar, indicador de fortaleza, advertencia de que no hay recuperación y "sin contraseña" como enlace secundario. |
-| CP4 | Interfaz de importación: pedir la contraseña, mensaje de HU6b-8 con reintento y progreso. |
-| CP5 | Documentación (spec, CHANGELOG, README y política de privacidad), prueba en el teléfono y verificación del release sin `INTERNET`. |
+| CP | Commit | Alcance |
+|---|---|---|
+| CP0 | — | **Hecho el 2026-10-08, sin merge** (ver HU6b-9): tiempo y memoria de PBKDF2 (Dart puro y puente nativo) y de Argon2id, AES-256-GCM, tamaño del APK, compilación con AGP 8.7.3 y permisos del release. Código descartable: **CP0 no se mergea**. |
+| CP1 | `64eb388` | Dominio: cifrar y descifrar con funciones puras, envoltorio `formatVersion` 2, detección del respaldo cifrado al importar, límites de los parámetros, error de contraseña incorrecta o archivo alterado y decisión de HU6b-11. Tests con vectores conocidos (incluido el de HU6b-12 para los parámetros de producción), ida y vuelta, archivo manipulado o truncado y compatibilidad con `formatVersion` 1. |
+| CP2 | `0228afd` | Servicio: exportar cifrado con la verificación de HU6b-10 (pasar el archivo final por la función de descifrado de la importación, con una segunda derivación) y la derivación fuera del hilo de la interfaz; descifrar al importar. |
+| CP3 | `aa93df1` | Interfaz de creación: contraseña, confirmación, mostrar u ocultar, indicador de fortaleza, advertencia de que no hay recuperación y "sin contraseña" como enlace secundario. |
+| CP4 | `53492f3` | Interfaz de importación: pedir la contraseña, mensaje de HU6b-8 con reintento y progreso. |
+| CP5 | (sin commit) | Documentación (spec, CHANGELOG, README y política de privacidad), prueba en el teléfono y verificación del release sin `INTERNET`. |
 
-**Formato del archivo cifrado (`formatVersion` 2), propuesta que se confirma en CP1:**
+**Formato del archivo cifrado (`formatVersion` 2), definitivo desde CP1:**
 
 ```json
 {
@@ -486,8 +501,91 @@ existe para bases v1 a v3 (M-2). Si después se olvida la contraseña, esa copia
   `format`; `formatVersion`. No lleva `ciphertext`. Los números van como enteros decimales y la sal y el nonce en base64
   estándar con relleno. Por ejemplo:
   `{"app":"Aura","encryption":{"cipher":"AES-256-GCM","kdf":"Argon2id","kdfParams":{"iterations":2,"memoryKiB":19456,"parallelism":1},"nonce":"…","salt":"…"},"format":"aura-backup","formatVersion":2}`.
-- Al importar se aceptan solo los algoritmos conocidos y parámetros dentro de límites (por ejemplo, un tope de memoria), para
-  que un archivo manipulado no pida recursos enormes.
+- Al importar se aceptan solo los algoritmos conocidos (`AES-256-GCM` y `Argon2id`) y parámetros dentro de límites, que se
+  comprueban antes de derivar la clave para que un archivo manipulado no pida recursos enormes: memoria de 8 192 a 65 536 KiB,
+  de 1 a 10 iteraciones y paralelismo 1 (`Argon2idParams` en `lib/domain/backup_crypto.dart`). La sal debe tener 16 bytes, el
+  nonce 12 y el `ciphertext` al menos 16 (la etiqueta).
+- El archivo descifrado es el mismo JSON de un respaldo sin contraseña (`formatVersion` 1, `schemaVersion` 5), y se importa por
+  el mismo camino: vista previa, confirmación, copia previa y "Deshacer".
+
+**Qué pasa al importar un archivo cifrado alterado o desconocido.** El encabezado se valida al elegir el archivo
+(`parseEncryptedBackup` en `lib/domain/backup_crypto.dart`, y `_parseEncrypted` en `lib/domain/backup_codec.dart` decide el
+error). Si falla, se avisa **sin pedir la contraseña ni derivar la clave** y no se cambia nada. Solo un encabezado válido llega
+al diálogo de la contraseña. Tests en `test/domain/backup_crypto_test.dart`, grupos "e) manipulacion" y "f) contrasena
+incorrecta, truncado, base64 y limites".
+
+| Caso | Resultado | Mensaje |
+|---|---|---|
+| `cipher` distinto de `AES-256-GCM` o `kdf` distinto de `Argon2id` | Versión más nueva, sin pedir contraseña | "Este respaldo es de una versión más nueva de Aura. Actualiza la app y vuelve a intentarlo. No se cambió nada." |
+| `memoryKiB` > 65 536, `iterations` > 10 o `parallelism` > 1 (basta uno, aunque otro esté por debajo del mínimo) | Versión más nueva, sin pedir contraseña | El mismo |
+| `memoryKiB` < 8 192, `iterations` < 1 o `parallelism` < 1, sin ninguno por encima del máximo | Dañado, sin pedir contraseña | "El respaldo está dañado o incompleto. No se cambió nada." |
+| Sal de largo distinto de 16 bytes, nonce distinto de 12, `ciphertext` de menos de 16 bytes, o base64 inválido o no canónico | Dañado, sin pedir contraseña | El mismo |
+| Claves de más o de menos, o de otro tipo, en el encabezado | Dañado, sin pedir contraseña | El mismo |
+| Encabezado alterado con valores válidos (`app`, un bit de la sal o del nonce, `memoryKiB` o `iterations` dentro de los límites) o `ciphertext` alterado o acortado | Pide la contraseña; el descifrado falla por el AAD o la etiqueta de GCM | El de HU6b-8, con reintento |
+
+Los tests fijan el resultado exacto de cada fila con dos excepciones, que decide el código (`_parseEncrypted` y
+`Argon2idParams.isAboveLimits`) sin un test que las fije: para un algoritmo desconocido los tests solo comprueban que no se
+importa, y no prueban un parámetro por encima del máximo junto con otro por debajo del mínimo.
+
+**Rendimiento (medido en CP3, build profile):** en un POCO X6 Pro 5G (gama media-alta) con Android 16. El build **profile** se
+hizo desde una rama temporal descartada y se instaló con el sufijo `.debug`, en lugar de la app de prueba. Se midió crear un
+respaldo protegido (cifrar y verificar, con dos derivaciones de Argon2id), 3 veces por caso:
+
+| Caso | Duración | Pausa máxima entre fotogramas |
+|---|---|---|
+| Como en la app: derivación en un isolate (`runInIsolate`) | 503, 418 y 425 ms (**0,42 a 0,50 s**) | 24,7, 8,5 y 8,4 ms |
+| Control: en el hilo principal (`runInSameIsolate`) | 378, 396 y 365 ms | 8,3, 16,7 y 8,4 ms |
+| Control bloqueante: hilo principal más 400 ms de espera bloqueante por derivación (dos en total) | 1160, 1173 y 1196 ms | 407,4, 406,9 y 406,8 ms |
+
+En el caso real la interfaz siguió dibujando, a unos 113 a 120 fotogramas por segundo. El control bloqueante muestra que la
+medición detecta un bloqueo cuando existe. **No se midieron teléfonos más lentos:** en uno de gama baja se estima un tiempo de 3 a
+5 veces mayor, sin medir.
+
+**Isolate:** la derivación, el cifrado y el descifrado corren en un `Isolate` (`runInIsolate`, con `Isolate.run`, en
+`lib/data/backup/backup_service.dart`). Es una garantía independiente de la librería: la implementación de Argon2id en Dart puro
+de `cryptography` 2.9.0 cede el control de forma cooperativa cada 500 bloques, y por eso en la medición no congeló la interfaz
+ni siquiera corriendo en el hilo principal (control `runInSameIsolate`). El isolate evita depender de ese detalle de la
+librería. No acorta el tiempo: en esta medición, el caso con isolate tardó entre 0,42 y 0,50 s y el del hilo principal entre
+0,37 y 0,40 s.
+
+**Prueba en el teléfono (2026-10-08, build debug):** con la app de prueba `com.soofiaa.aura.debug`, un build **debug** de
+`53492f3`, en el POCO X6 Pro (Android 16), automatizada por adb y con datos inventados. La app real no se tocó: su `versionCode`, `versionName` y `lastUpdateTime` fueron iguales antes y después.
+- Crear con contraseña: botón deshabilitado con menos de 10 caracteres, aviso de contraseñas distintas, indicador de fortaleza,
+  progreso "Protegiendo tu respaldo…" y "Respaldo protegido guardado. Recuerda tu contraseña: Aura no puede recuperarla.".
+- El archivo guardado tiene solo `format`, `formatVersion` 2, `app`, `encryption` y `ciphertext`, con los parámetros de
+  producción, y ningún dato en claro (ni notas, ni fechas, ni síntomas). El código del repositorio lo descifra con la contraseña
+  correcta y falla con otra.
+- Contraseña equivocada (dos veces): progreso "Abriendo tu respaldo…" y el mensaje de HU6b-8; el diálogo vuelve con lo escrito
+  y no pide elegir el archivo otra vez.
+- Contraseña correcta: vista previa con los recuentos y el aviso de "1 día menos"; "Cancelar" no cambia nada ni crea la copia
+  previa; "Reemplazar" importa, crea `antes_de_importar.json` y "Deshacer" devuelve los datos anteriores.
+- "Continuar sin contraseña" pide confirmación, guarda un archivo sin cifrar y al restaurarlo no se pide contraseña.
+- Sin errores de Flutter, cierres ni "La app no responde" en el logcat (filtrado por el proceso de la app).
+- Aparece la línea `E ActivityThread: fail in deliverResultsIfNeeded java.lang.NullPointerException` (al invocar
+  `Bundle.getString` sobre un `Bundle` nulo) una vez por cada vuelta desde el selector de archivos del sistema: 7 líneas en 7
+  vueltas. El log no trae stack trace. El texto del mensaje y el método `deliverResultsIfNeededForFreeform` están en la clase
+  `android.app.ActivityThreadImpl` de `/system_ext/framework/miui-framework.jar` (HyperOS OS3.0.9.0). `file_picker` 11.0.3 no
+  llama a `Bundle.getString`, y la app siguió funcionando. Conclusión: ruido atribuido al sistema, sin evidencia de que venga de
+  Aura.
+- **Compartir con contraseña (2026-10-08, build debug, automatizada por adb, contraseña inventada):** se vio el progreso
+  "Protegiendo tu respaldo…" y se abrió la hoja de compartir del sistema (`com.android.intentresolver`) con el archivo
+  `aura_respaldo_protegido_2026-10-08.json`, de 2478 bytes. El tipo `application/json` sale del código
+  (`plugin_backup_file_gateway.dart`); no se comprobó en el intent. **No se eligió destino:** todos los destinos del teléfono
+  sacan el archivo de él (Bluetooth, Drive, Gmail, Quick Share, Xiaomi Share, apps de mensajería…) y no había uno solo local,
+  así que la hoja se cerró con Atrás. Por eso no se vio "Respaldo protegido listo. Recuerda tu contraseña: Aura no puede
+  recuperarla."; al cerrarla no apareció ningún mensaje, como corresponde a HU6-R5. No se leyó el contenido del archivo
+  compartido, así que esta prueba no comprobó que vaya cifrado. Tras compartir quedaron dos copias en la caché de la app
+  (`cache/aura_respaldo/` y `cache/share_plus/`, de 2478 bytes cada una), y al volver a abrir la app se borraron (ajuste A).
+  Sin errores de Flutter, cierres ni "La app no responde" en el logcat filtrado por el proceso.
+- **Quedó para revisión manual:** el selector de archivos del sistema ("Guardar como" y abrir) se manejó por adb pero no se
+  capturó en imagen, y falta elegir un destino real de la hoja de Compartir y ver el mensaje final.
+
+**Release sin `INTERNET` (2026-10-08, build release):** build **release** con `flutter build apk --release` desde `53492f3`,
+firmado con la clave local de `android/key.properties` y sin instalarlo. `aapt dump permissions`
+(build-tools 37.0.0) lista solo `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` y
+`com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (permiso propio que agrega AndroidX); no hay `INTERNET`. El
+manifiesto fusionado del release dice lo mismo. `INTERNET` solo está en los manifiestos de debug y profile, que Flutter necesita
+para desarrollar.
 
 ---
 
@@ -641,11 +739,11 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **HU6b-5** | Paquete **`cryptography` 2.9.0**, **sin** `cryptography_flutter`. Cifrado **AES-256-GCM** en Dart. No se debe llamar a `FlutterCryptography.enable()`. Descartados `sodium` y `webcrypto` por la toolchain nativa que exigen en el build de Windows. **Riesgo anotado:** la última versión de `cryptography` es del 2025-11-21. | El PBKDF2 nativo de `cryptography_flutter` corre en el hilo principal de Android y congela la pantalla (CP0). Con Argon2id y AES-GCM en Dart (32 ms para 100 KB) el puente no hace falta, y se evita una dependencia con código Android y el riesgo HU6-R3. Cada respaldo usa una sal nueva, así que su clave es única y el nonce de 96 bits de GCM no se repite con la misma clave. |
 | **HU6b-6** | En claro va **solo lo necesario para descifrar**: `format`, `formatVersion`, `app` y los parámetros de `encryption`. Los datos adicionales autenticados de GCM cubren ese encabezado. `appVersion` y `exportedAt` van cifrados. | Menos metadatos a la vista de quien encuentre el archivo; cambiar un parámetro del encabezado hace fallar el descifrado en vez de producir otra cosa. |
 | **HU6b-7** | Nombre del archivo cifrado: `aura_respaldo_protegido_<fecha>.json`, solo como ayuda visual. El cifrado se detecta por el contenido, no por el nombre. | Que la usuaria sepa cuál respaldo necesita contraseña; el nombre se puede cambiar sin que la importación falle. |
-| **HU6b-8** | Mensaje único: **"La contraseña no es correcta o el archivo está dañado. No se cambió nada."**, con reintento sin volver a elegir el archivo. | AES-GCM no distingue una contraseña equivocada de un archivo alterado; separarlos obligaría a guardar un verificador de la contraseña en claro, que facilita los ataques. |
+| **HU6b-8** | Mensaje único: **"La contraseña no es correcta o el archivo está dañado. No se cambió nada."**, con reintento sin volver a elegir el archivo. **Implementado en CP4:** el diálogo vuelve con lo escrito, seleccionado, y no hay límite de intentos. | AES-GCM no distingue una contraseña equivocada de un archivo alterado; separarlos obligaría a guardar un verificador de la contraseña en claro, que facilita los ataques. |
 | **HU6b-9** | **CP0 de medición** antes de fijar los parámetros y el paquete. **Hecho el 2026-10-08** (POCO X6 Pro, Android 16), en una rama descartable sin merge. Resultados en profile (mediana): PBKDF2 600 000 en Dart, 3594 ms; PBKDF2 600 000 nativo, 2207 ms (bloquea la interfaz); Argon2id m = 19 456 KiB, t = 2, p = 1, 214 ms; AES-256-GCM de 100 KB, 32 ms en Dart y 5 ms nativo. Memoria: ~+23 MB de pico con Argon2id. Tamaño: ~0,1 MB (~72 KB de código Dart de `cryptography` en arm64; los 17 KB de `cryptography_flutter` ya no aplican porque el puente se descartó). `cryptography_flutter` compiló con AGP 8.7.3 sin errores y el release no tiene `INTERNET`. | El tiempo de derivación en el teléfono y la compilación con AGP 8.7.3 decidían HU6b-2 y HU6b-5, y ninguno de los dos estaba verificado. |
-| **HU6b-10** | **Requisito:** antes de dar el éxito al crear un respaldo cifrado, se verifica pasando el archivo **final** por la misma función pública de descifrado que usa la importación (lee el encabezado, vuelve a derivar la clave, descifra y compara con el original), no con la clave ya derivada. Cuesta una derivación extra; con Argon2id suma ~0,2 s por derivación, ~0,4 s en total en el teléfono de medición (CP0). | Así se detecta también un error al escribir la sal o los parámetros, y nunca se entrega un respaldo que esta misma versión no pueda abrir. |
+| **HU6b-10** | **Requisito:** antes de dar el éxito al crear un respaldo cifrado, se verifica pasando el archivo **final** por la misma función pública de descifrado que usa la importación (lee el encabezado, vuelve a derivar la clave, descifra y compara con el original), no con la clave ya derivada. Cuesta una derivación extra; con Argon2id suma ~0,2 s por derivación, ~0,4 s en total en el teléfono de medición (CP0). **Implementado en CP2;** crear y verificar midió de 0,42 a 0,50 s en CP3 (build profile, con isolate). | Así se detecta también un error al escribir la sal o los parámetros, y nunca se entrega un respaldo que esta misma versión no pueda abrir. |
 | **HU6b-11** | **Decidida (CP1): no se normaliza.** La contraseña se codifica en UTF-8 tal como llega, sin normalización Unicode (NFC). | Dart no trae la normalización en su biblioteca estándar y agregarla exigiría un paquete más. Sin normalizar, una misma contraseña con tildes escrita con otra composición de caracteres (por ejemplo, "n" + tilde combinable en vez de "ñ") no abriría el archivo; el riesgo se considera bajo con los teclados de Android. Un test lo deja fijado. |
-| **HU6b-12** | **Requisito de CP1:** los tests incluyen un vector de prueba independiente para los parámetros de producción, generado con una implementación de referencia distinta (libargon2 en C, vía argon2-cffi, calculado el 2026-10-08): contraseña "contraseña-de-prueba-CP0" (UTF-8), sal en hex `0b30557a9fc4e90e33587da2c7ec1136`, m = 19 456 KiB, t = 2, p = 1, largo 32, Argon2id v19 → `c60b1eee88c5827b9cdb6ce18e8668fcc112ebb52214c9c1bb239a440a66314a`. | CP0 solo verificó el vector del RFC 9106, que usa parámetros pequeños, no los de producción. |
+| **HU6b-12** | **Requisito de CP1:** los tests incluyen un vector de prueba independiente para los parámetros de producción, generado con una implementación de referencia distinta (libargon2 en C, vía argon2-cffi, calculado el 2026-10-08): contraseña "contraseña-de-prueba-CP0" (UTF-8), sal en hex `0b30557a9fc4e90e33587da2c7ec1136`, m = 19 456 KiB, t = 2, p = 1, largo 32, Argon2id v19 → `c60b1eee88c5827b9cdb6ce18e8668fcc112ebb52214c9c1bb239a440a66314a`. **Cumplido en CP1** (`test/domain/backup_crypto_test.dart`). | CP0 solo verificó el vector del RFC 9106, que usa parámetros pequeños, no los de producción. |
 | **H5-1** | Con confianza baja, Inicio no muestra la ovulación, la ventana fértil ni la fase ovulatoria; sí el próximo período con su rango, y una línea gris que explica por qué. El aviso de la ventana fértil tampoco se envía. | La ovulación se calcula restando la fase lútea al próximo período, así que con un promedio poco confiable es todavía menos confiable: mostrarla sería falsa precisión. |
 | **H5-2** | "Tus ciclos" en Estadísticas usa la misma función que el predictor para la duración del ciclo (`estimateCycleLength`), y la regularidad usa el mismo umbral de 0,18 que baja la confianza. | Que Estadísticas y la predicción no se contradigan. |
 | **H5-3** | Un solo interruptor, "Mostrar ovulación y ventana fértil", para las dos, en "Tu ciclo" y activado por defecto. Columna `show_fertile_window` (schema v5), sin copia previa a la migración, incluido en el respaldo. "Ventana fértil" (Notificaciones) necesita los dos encendidos y conserva su valor. Con el interruptor apagado se oculta también la línea gris de confianza baja. | Decisión de producto. La migración solo agrega una columna con valor por defecto, sin tocar datos, por eso no hace falta copia previa. |

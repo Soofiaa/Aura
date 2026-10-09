@@ -16,15 +16,16 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Statistics with "Your cycles": typical cycle length, shortest and longest cycle, regularity and typical period length.
 - Optional local reminders, with discreet text by default.
 - Lets you mark the end of a period and remove marks.
-- Backup and restore to a JSON file from Settings → "Your data", with "Undo" after importing.
+- Backup and restore to a JSON file from Settings → "Your data", with an optional password to encrypt the file and "Undo" after importing.
 - Full data wipe from Settings.
 
 ## Privacy by design
 
 - Data lives in a SQLite database inside the app's private storage.
 - `allowBackup="false"`: Android does not copy it to the cloud.
-- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with. The file contains health data and, for now, has no password: anyone who opens it can read it. Aura does not receive or keep a copy, and the app still has no `INTERNET` permission.
+- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with. The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). Aura does not store the password and cannot recover it. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy, and the app still has no `INTERNET` permission.
 - Before migrating the database to schema v4, the app saves a safety copy in its private storage; "Delete all data" also removes it.
+- When an import is confirmed, the app first saves an unencrypted copy of the current data in its private storage, only for "Undo"; the next import replaces it and "Delete all data" removes it.
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
 - Privacy policy: [`docs/privacy.html`](docs/privacy.html).
 
@@ -47,12 +48,14 @@ flowchart LR
 lib/
 ├── domain/        # pure logic, no Flutter or database
 │   ├── backup_codec.dart
+│   ├── backup_crypto.dart
 │   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
 │   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
+│   ├── password_strength.dart
 │   └── range_selection.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
@@ -98,7 +101,7 @@ Signed release build: see [`android/RELEASE.md`](android/RELEASE.md). The signin
 
 ## Not yet implemented
 
-- Password-protected backups (coming with HU-06b)
+- Encryption of the data inside the phone (the password protects only the backup file)
 - Dark mode
 - iOS
 - English UI locale

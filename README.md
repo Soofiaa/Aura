@@ -16,15 +16,16 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 - Estadísticas con "Tus ciclos": duración típica del ciclo, el más corto y el más largo, regularidad y duración típica del período.
 - Recordatorios locales (opcionales) con texto discreto por defecto.
 - Permite marcar el fin del período y quitar marcas.
-- Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con "Deshacer" tras importar.
+- Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con contraseña opcional para cifrar el archivo y "Deshacer" tras importar.
 - Borrado total de datos desde Ajustes.
 
 ## Privacidad por diseño
 
 - Los datos viven en una base SQLite dentro del almacenamiento privado de la app.
 - `allowBackup="false"`: Android no los copia a la nube.
-- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo. El archivo contiene datos de salud y, por ahora, va sin contraseña: cualquiera que lo abra puede leerlo. Aura no recibe ni guarda una copia, y la app sigue sin el permiso `INTERNET`.
+- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo. El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). Aura no guarda la contraseña ni puede recuperarla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia, y la app sigue sin el permiso `INTERNET`.
 - Antes de migrar la base al esquema v4, la app guarda una copia de seguridad en su almacenamiento privado; "Borrar todos los datos" también la elimina.
+- Al confirmar una importación, la app guarda antes una copia sin cifrar de los datos actuales en su almacenamiento privado, solo para "Deshacer"; la siguiente importación la reemplaza y "Borrar todos los datos" la elimina.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
 
@@ -47,12 +48,14 @@ flowchart LR
 lib/
 ├── domain/        # lógica pura, sin Flutter ni base de datos
 │   ├── backup_codec.dart
+│   ├── backup_crypto.dart
 │   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
 │   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
+│   ├── password_strength.dart
 │   └── range_selection.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
@@ -98,7 +101,7 @@ Build de release firmado: ver [`android/RELEASE.md`](android/RELEASE.md). La cla
 
 ## Qué no tiene (todavía)
 
-- Contraseña para el respaldo (llega con HU-06b)
+- Cifrado de los datos dentro del teléfono (la contraseña protege solo el archivo del respaldo)
 - Modo oscuro
 - iOS
 - Idioma inglés en la interfaz

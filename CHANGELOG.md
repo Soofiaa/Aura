@@ -15,6 +15,12 @@
   - **Crear respaldo** guarda el archivo en el teléfono ("Guardar en el teléfono") o lo comparte con la hoja de compartir del sistema, después de avisar que contiene datos de salud.
   - **Restaurar un respaldo** revisa el archivo antes de tocar nada y pide confirmación con la fecha del respaldo y los días que se reemplazan. Si el respaldo trae menos días que los actuales, lo avisa.
   - **Deshacer** en el mensaje de éxito vuelve a los datos que tenías antes de importar. El mensaje no se cierra solo: se cierra con una ×.
+- **Respaldo protegido con contraseña (opcional):**
+  - Al crear un respaldo, Aura ofrece protegerlo con una contraseña de al menos 10 caracteres, con un indicador de fortaleza orientativo ("Débil", "Aceptable" o "Fuerte"). El archivo se cifra en el teléfono antes de guardarlo o compartirlo, con un formato nuevo (versión 2 del formato del archivo), y se llama `aura_respaldo_protegido_<fecha>.json`. Antes de avisar que está listo, Aura comprueba que se puede abrir con esa contraseña.
+  - **Aura no guarda la contraseña y no puede recuperarla: si la olvidas, ese respaldo no se puede abrir.**
+  - Se puede seguir sin contraseña, después de una advertencia: ese archivo queda sin cifrar, como antes, y cualquiera que lo abra puede leerlo.
+  - Al restaurar un respaldo protegido, Aura pide la contraseña. Si no es correcta o el archivo está dañado, lo dice sin cambiar nada y permite volver a intentarlo sin elegir el archivo otra vez.
+  - La contraseña protege solo el archivo del respaldo: los datos dentro de la app y la copia que Aura guarda antes de importar no se cifran.
 - Nueva sección **"Tus datos"** en Ajustes, con las dos opciones de respaldo antes de "Borrar todos los datos".
 - La confirmación de importar cuenta los **días con registro (M de período)**: los días marcados como "no hubo sangrado" cuentan como registro, pero no como período.
 - **"Tus ciclos"** en Estadísticas: cuántos ciclos se consideran, la duración típica del ciclo, el más corto y el más largo, la regularidad ("Regular", "Algo variable" o "Muy variable") y la duración típica del período, indicando si sale de tus períodos o de tu ajuste. Avisa cuántos ciclos no se cuentan por durar menos de 15 o más de 60 días. La duración típica del ciclo es el mismo número que usa la predicción.
