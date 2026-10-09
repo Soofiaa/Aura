@@ -1,6 +1,8 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
@@ -10,19 +12,26 @@ import 'package:aura/utils/app_version.dart';
 
 import '../support/fake_backup.dart';
 import '../support/fake_notification_scheduler.dart';
+import '../support/fake_url_launcher.dart';
 
 void main() {
   late AppDatabase db;
   late CycleRepository repo;
   late FakeNotificationScheduler scheduler;
   late FakeBackupService backup;
+  late FakeUrlLauncher launcher;
+  final realLauncher = UrlLauncherPlatform.instance;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
     repo = CycleRepository(db);
     scheduler = FakeNotificationScheduler();
     backup = FakeBackupService(repo);
+    launcher = FakeUrlLauncher();
+    UrlLauncherPlatform.instance = launcher;
   });
+
+  tearDown(() => UrlLauncherPlatform.instance = realLauncher);
 
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -127,24 +136,75 @@ void main() {
     await db.close();
   });
 
-  testWidgets(
-      'el boton de notificacion de prueba esta siempre visible y programa una',
-      (tester) async {
+  testWidgets('ya no hay boton de notificacion de prueba', (tester) async {
     await pumpScreen(tester);
-
-    final testButton = find.text('Enviar notificación de prueba');
-    await tester.scrollUntilVisible(testButton, 200);
-    expect(testButton, findsOneWidget); // visible siempre, no solo en debug
-
-    await tester.tap(testButton);
-    await tester.pumpAndSettle();
-
-    // No hay contador dedicado en el falso, pero no debe explotar y el
-    // mensaje de confirmacion debe aparecer.
-    expect(find.text('Notificación de prueba programada en 10 segundos.'),
-        findsOneWidget);
-
+    await tester.scrollUntilVisible(
+        find.text('Versión $appVersionName • Aura 🌸'), 200);
+    expect(find.textContaining('notificación de prueba'), findsNothing);
     await db.close();
+  });
+
+  group('Política de privacidad', () {
+    const fallo = 'No se pudo abrir el enlace. Puedes abrirlo desde un '
+        'navegador: $privacyPolicyUrl';
+
+    Future<void> tocarEnlace(WidgetTester tester) async {
+      final enlace = find.text('Política de privacidad');
+      await tester.scrollUntilVisible(enlace, 200);
+      await tester.tap(enlace);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('esta junto a la version, al pie de Ajustes', (tester) async {
+      await pumpScreen(tester);
+      final enlace = find.text('Política de privacidad');
+      final version = find.text('Versión $appVersionName • Aura 🌸');
+      await tester.scrollUntilVisible(version, 200);
+      expect(enlace, findsOneWidget);
+      // Debajo de "Borrar todos los datos" y justo encima de la version.
+      final borrar = find.text('Borrar todos los datos');
+      expect(tester.getTopLeft(enlace).dy,
+          greaterThan(tester.getTopLeft(borrar).dy));
+      expect(tester.getTopLeft(enlace).dy,
+          lessThan(tester.getTopLeft(version).dy));
+      expect(launcher.launchedUrls, isEmpty); // no abre nada solo
+      await db.close();
+    });
+
+    testWidgets('abre la direccion en una app externa (el navegador)',
+        (tester) async {
+      await pumpScreen(tester);
+      await tocarEnlace(tester);
+
+      expect(privacyPolicyUrl, 'https://soofiaa.github.io/Aura/privacy.html');
+      expect(launcher.launchedUrls, [privacyPolicyUrl]);
+      expect(launcher.launchedModes,
+          [PreferredLaunchMode.externalApplication]);
+      expect(find.text(fallo), findsNothing);
+      await db.close();
+    });
+
+    testWidgets('si ninguna app puede abrirla, muestra la direccion',
+        (tester) async {
+      launcher.result = false;
+      await pumpScreen(tester);
+      await tocarEnlace(tester);
+
+      expect(launcher.launchedUrls, [privacyPolicyUrl]);
+      expect(find.text(fallo), findsOneWidget);
+      await db.close();
+    });
+
+    testWidgets('si la plataforma falla, muestra la direccion sin romperse',
+        (tester) async {
+      launcher.error = PlatformException(code: 'ACTIVITY_NOT_FOUND');
+      await pumpScreen(tester);
+      await tocarEnlace(tester);
+
+      expect(find.text(fallo), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await db.close();
+    });
   });
 
   testWidgets('muestra la version de la constante unica', (tester) async {

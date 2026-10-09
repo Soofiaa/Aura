@@ -49,6 +49,13 @@ dependencies:
   # Cifrado del respaldo (HU-06b, HU6b-5): Argon2id y AES-256-GCM en Dart
   # puro. Version exacta; sin cryptography_flutter.
   cryptography: 2.9.0
+  # Enlace a la politica de privacidad en Ajustes: abre el navegador del
+  # telefono con una intencion del sistema; la app no hace red. Versiones
+  # exactas: url_launcher_android 6.3.29 o mas nueva trae
+  # androidx.browser 1.9.0, que exige AGP >= 8.9.1 (el proyecto usa 8.7.3).
+  # Revisar al actualizar AGP/Gradle/Kotlin.
+  url_launcher: 6.3.2
+  url_launcher_android: 6.3.23
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -57,6 +64,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Doble de url_launcher en los tests de Ajustes (sin red).
+  url_launcher_platform_interface: ^2.3.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

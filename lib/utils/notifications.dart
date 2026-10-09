@@ -25,11 +25,6 @@ abstract class NotificationScheduler {
 
   Future<void> cancelAll();
 
-  /// Para el boton de debug: programa un aviso generico sin pasar por
-  /// planNotifications, solo para validar permiso/zona horaria en el
-  /// telefono sin esperar dias.
-  Future<void> scheduleTestNotification({Duration delay});
-
   /// Vuelve a consultar la zona horaria del dispositivo y reconfigura
   /// tz.local si cambio. Devuelve true si cambio (quien llama debe
   /// reconciliar de nuevo con las fechas ya reinterpretadas en la zona
@@ -164,21 +159,4 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
 
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
-
-  @override
-  Future<void> scheduleTestNotification({
-    Duration delay = const Duration(seconds: 10),
-  }) async {
-    final when = tz.TZDateTime.now(tz.local).add(delay);
-    await _plugin.zonedSchedule(
-      999,
-      'Aura: prueba',
-      'Si ves este aviso, Aura puede enviarte notificaciones en tu teléfono.',
-      when,
-      _detailsFor(NotificationKind.periodReminder),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
-  }
 }

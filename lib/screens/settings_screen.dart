@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
 import '../data/backup/backup_service.dart';
 import '../data/models/day_enums.dart';
@@ -12,6 +13,10 @@ import '../utils/colors.dart';
 import '../utils/notifications.dart';
 import 'backup_section.dart';
 import '../utils/app_snackbar.dart';
+
+/// Politica de privacidad publicada (GitHub Pages). Se abre en el
+/// navegador del telefono con una intencion del sistema.
+const String privacyPolicyUrl = 'https://soofiaa.github.io/Aura/privacy.html';
 
 class SettingsScreen extends StatefulWidget {
   /// Inyectables para tests (base en memoria / scheduler falso /
@@ -284,11 +289,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
   }
 
-  Future<void> _probarNotificacion() async {
-    await _scheduler.scheduleTestNotification(delay: const Duration(seconds: 10));
-    if (!mounted) return;
+  /// Abre la politica de privacidad en una app externa (el navegador).
+  /// Si no hay app que la abra (o la plataforma falla), deja la
+  /// direccion visible para copiarla a mano.
+  Future<void> _abrirPoliticaDePrivacidad() async {
+    bool abierto;
+    try {
+      abierto = await launchUrl(
+        Uri.parse(privacyPolicyUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      abierto = false;
+    }
+    if (abierto || !mounted) return;
     showAppSnackBar(
-        context, 'Notificación de prueba programada en 10 segundos.');
+      context,
+      'No se pudo abrir el enlace. Puedes abrirlo desde un navegador: '
+      '$privacyPolicyUrl',
+    );
   }
 
   Future<void> _confirmarYBorrarDatos() async {
@@ -438,13 +457,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: _notificaciones ? _elegirHora : null,
           ),
 
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _probarNotificacion,
-            icon: const Icon(Icons.notifications_active_outlined),
-            label: const Text("Enviar notificación de prueba"),
-          ),
-
           const SizedBox(height: 40),
           const Divider(),
           const SizedBox(height: 20),
@@ -470,6 +482,13 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
 
           const SizedBox(height: 20),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text("Política de privacidad"),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _abrirPoliticaDePrivacidad,
+          ),
+          const SizedBox(height: 10),
           const Text(
             "Versión $appVersionName • Aura 🌸",
             textAlign: TextAlign.center,

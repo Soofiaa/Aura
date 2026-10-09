@@ -635,17 +635,30 @@ opcional ("Continuar sin contraseña"). No se cifran la base de datos (SQLite es
 copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar (`antes_de_migrar_v4.sqlite`).
 
 **Red y comunicaciones** (✅):
-- **Código propio:** sin `HttpClient`, `package:http`, `Socket`, `WebSocket`, `SecurityContext`, `launchUrl`, `Uri.parse` ni
-  WebView.
+- **Código propio:** sin `HttpClient`, `package:http`, `Socket`, `WebSocket`, `SecurityContext` ni WebView propio.
+- **Enlace a la política de privacidad** (agregado después de 1.1.0+3, rama `feat/limpieza-release`): el único `launchUrl`
+  (con el único `Uri.parse`) está en `lib/screens/settings_screen.dart`, en el elemento "Política de privacidad" de Ajustes.
+  Abre `https://soofiaa.github.io/Aura/privacy.html` con `LaunchMode.externalApplication`: Android recibe una intención del
+  sistema (`ACTION_VIEW` con esa dirección) y la abre en el navegador del teléfono, que es otra app con sus propios permisos.
+  La app no ejecuta red por sí misma: no descarga la página ni recibe su contenido. Si ninguna app puede abrirla, Aura muestra
+  la dirección para abrirla a mano.
 - **Manifiesto:** sin enlaces profundos. Los únicos `intent-filter` son el lanzador (MAIN/LAUNCHER) y el receptor de arranque
-  (BOOT_COMPLETED); las consultas (`<queries>`) son `PROCESS_TEXT` y `GET_CONTENT` (selector de archivos).
+  (BOOT_COMPLETED); las consultas (`<queries>`) son `PROCESS_TEXT` y `GET_CONTENT` (selector de archivos). El enlace no
+  necesita una consulta para `VIEW` con `https`: `launchUrl` no pregunta antes si hay una app que lo abra (no usa
+  `canLaunchUrl`); lanza la intención y, si Android no encuentra ninguna, el error se muestra como el aviso con la dirección.
+  `url_launcher_android` agrega la actividad `io.flutter.plugins.urllauncher.WebViewActivity` (no exportada), que solo se usa
+  en el modo `inAppWebView`; Aura no la abre y, sin `INTERNET`, no podría cargar páginas.
 - **Dependencias de la app:** ninguna ejecuta red. `file_picker` usa `URLConnection.guessContentTypeFromStream` solo para
   adivinar el tipo de un archivo a partir de sus bytes; `timezone/standalone.dart` (que tiene `HttpClient`) y
-  `drift/remote.dart` no se importan; el paquete `web` es solo para la plataforma web.
+  `drift/remote.dart` no se importan; el paquete `web` es solo para la plataforma web. `url_launcher` 6.3.2 y
+  `url_launcher_android` 6.3.23 solo lanzan la intención del sistema. `url_launcher_android` va con versión exacta: desde la
+  6.3.29 trae `androidx.browser` 1.9.0, que exige AGP 8.9.1 o más nuevo (el proyecto usa 8.7.3).
 - **Solo de desarrollo:** los paquetes de red de `pubspec.lock` (`http_multi_server`, `shelf_web_socket`, `web_socket` y
   `web_socket_channel`) no entran en la app.
 - **Permisos del release** (`aapt`): `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` y
-  `com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Sin `INTERNET`.**
+  `com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Sin `INTERNET`.** Verificado otra vez el 2026-10-09 con
+  `url_launcher`, en un release firmado de la rama `feat/limpieza-release` (sin instalar): los mismos cuatro permisos, las
+  mismas consultas y el mismo certificado (SHA-256 `a932d218…a82c`).
 
 **Bibliotecas nativas del release** (✅, `app-release.apk` de la 1.1.0+3, SHA-256 `4d666f2c…737e2b`; tamaños en bytes):
 
@@ -704,9 +717,9 @@ Fondo del círculo del ícono adaptativo en blanco `#FFFFFF`, con la misma flor 
 Antes, `notifications.dart` usaba `@mipmap/ic_launcher` como ícono pequeño. Su fondo es opaco y Android dibuja ese ícono
 usando solo la transparencia, así que la notificación no mostraba la flor.
 
-**Confirmado** en el teléfono de Sofia (HyperOS) con el botón "Enviar notificación de prueba" de Ajustes: el ícono pequeño se ve
-como un disco oscuro liso dentro del círculo del sistema, sin forma de flor. Es la misma causa: un ícono opaco usado como ícono
-pequeño.
+**Confirmado** en el teléfono de Sofia (HyperOS) con el botón "Enviar notificación de prueba" que entonces tenía Ajustes: el
+ícono pequeño se ve como un disco oscuro liso dentro del círculo del sistema, sin forma de flor. Es la misma causa: un ícono
+opaco usado como ícono pequeño.
 
 - **Solución:** un ícono `ic_stat_*` blanco sobre transparente, referenciado por nombre, con su `res/raw/keep.xml` para que
   R8 / `shrinkResources` no lo elimine en el release.
@@ -716,8 +729,10 @@ pequeño.
   (`AndroidInitializationSettings('ic_stat_aura')`): una silueta blanca sobre fondo transparente en 24, 36, 48, 72 y 96 px
   (`drawable-mdpi` a `drawable-xxxhdpi`), protegida con `res/raw/keep.xml`.
 - **Mejora menor (hecha):** el texto de la notificación de prueba ya no menciona debug. Antes decía "Notificación de prueba
-  (debug), programada hace 10s."; ahora dice "Si ves este aviso, Aura puede enviarte notificaciones en tu teléfono.". El botón
-  "Enviar notificación de prueba" de Ajustes no cambia y sigue visible también en la versión de release.
+  (debug), programada hace 10s."; ahora dice "Si ves este aviso, Aura puede enviarte notificaciones en tu teléfono.".
+- **Botón de prueba quitado** (rama `feat/limpieza-release`): T-02 ya está confirmada, así que "Enviar notificación de prueba"
+  sale de Ajustes junto con lo que existía solo para él (`scheduleTestNotification`, el aviso con id 999 y su test). El ícono
+  `ic_stat_aura`, su `keep.xml`, los canales y los recordatorios reales no cambian.
 - Debe estar antes de publicar la v1.1.
 
 ---

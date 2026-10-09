@@ -51,11 +51,6 @@ class FakeNotificationScheduler implements NotificationScheduler {
   }
 
   @override
-  Future<void> scheduleTestNotification({
-    Duration delay = const Duration(seconds: 10),
-  }) async {}
-
-  @override
   Future<bool> resyncTimeZone() async {
     final changed = simulateTimeZoneChange;
     simulateTimeZoneChange = false;

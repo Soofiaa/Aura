@@ -21,6 +21,7 @@
   - Se puede seguir sin contraseña, después de una advertencia: ese archivo queda sin cifrar, como antes, y cualquiera que lo abra puede leerlo.
   - Al restaurar un respaldo protegido, Aura pide la contraseña. Si no es correcta o el archivo está dañado, lo dice sin cambiar nada y permite volver a intentarlo sin elegir el archivo otra vez.
   - La contraseña protege solo el archivo del respaldo: los datos dentro de la app y la copia que Aura guarda antes de importar no se cifran.
+- **"Política de privacidad"** al pie de Ajustes, junto a la versión: abre la política en el navegador del teléfono. Aura no se conecta a Internet: la página la abre el navegador. Si no se puede abrir, Aura muestra la dirección para abrirla desde un navegador.
 - Nueva sección **"Tus datos"** en Ajustes, con las dos opciones de respaldo antes de "Borrar todos los datos".
 - La confirmación de importar cuenta los **días con registro (M de período)**: los días marcados como "no hubo sangrado" cuentan como registro, pero no como período.
 - **"Tus ciclos"** en Estadísticas: cuántos ciclos se consideran, la duración típica del ciclo, el más corto y el más largo, la regularidad ("Regular", "Algo variable" o "Muy variable") y la duración típica del período, indicando si sale de tus períodos o de tu ajuste. Avisa cuántos ciclos no se cuentan por durar menos de 15 o más de 60 días. La duración típica del ciclo es el mismo número que usa la predicción.
@@ -30,6 +31,7 @@
 
 ### Cambiado
 
+- Se quita el botón "Enviar notificación de prueba" de Ajustes. Los recordatorios no cambian.
 - La pregunta de Inicio "¿Sigue tu período hoy?" cambia "Sí" y "No" por "Sigue", "Terminó hoy" y "Ya terminó antes", e indica el día del período y la duración estimada.
 - En el Calendario, el botón "Seleccionar varios días" pasa a llamarse "Elegir varios días" y está siempre visible junto a "Me llegó hoy". Hoy se distingue con un borde en vez de un relleno, para no confundirlo con un día registrado.
 - Marcar un día o un rango en el Calendario ahora tiene "Deshacer".
