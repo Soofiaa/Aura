@@ -595,6 +595,77 @@ firmado con la clave local de `android/key.properties` y sin instalarlo. `aapt d
 manifiesto fusionado del release dice lo mismo. `INTERNET` solo está en los manifiestos de debug y profile, que Flutter necesita
 para desarrollar.
 
+#### Inventario criptográfico y exportación (EE. UU.)
+
+Inventario del **2026-10-09**, versión **1.1.0+3**, commit de referencia `1afc2e6`, para responder la declaración de leyes
+de exportación de EE. UU. de Google Play. Marcas: ✅ visto en el código o en el APK; 🔎 inferencia.
+
+**Resumen:** Aura usa criptografía estándar (AES-256-GCM y Argon2id) solo para cifrar, de forma opcional, los respaldos que
+crea la usuaria; no tiene código de red y el release no declara el permiso `INTERNET`.
+
+**Dependencias relevantes** (de los 60 paquetes que entran en la app; los de desarrollo no entran):
+
+| Paquete | Versión | Tipo | Notas |
+|---|---|---|---|
+| `cryptography` | 2.9.0 | Directa | ✅ Dart puro. Usa `ffi` solo para reservar memoria (calloc/malloc) en `argon2_impl_default.dart`; no carga ninguna biblioteca criptográfica nativa. |
+| `crypto` | 3.0.6 | Transitiva (de `cryptography`) | ✅ Dart puro. La app no la importa. |
+| `uuid` | 4.6.0 | Transitiva (de `share_plus`) | ✅ Dart puro. 🔎 La usa `share_plus`, probablemente para nombres o identificadores. |
+| `sqlite3` y `sqlite3_flutter_libs` | 2.9.4 y 0.5.42 | Directas | ✅ Nativo: `libsqlite3.so` es SQLite estándar 3.52.0, **sin SQLCipher** (no tiene `sqlite3_key`, `sqlite3_rekey` ni `SQLITE_HAS_CODEC`, solo `sqlite3_keyword_*`). |
+
+✅ **No están:** `cryptography_flutter`, `pointycastle`, `encrypt` ni `sqlcipher`.
+
+**Uso en el código propio** (✅, todo en `lib/domain/backup_crypto.dart`):
+- **Derivación de la clave:** Argon2id (`DartArgon2id`, RFC 9106) en `deriveBackupKey` (líneas 118-136), con memoria de
+  19 456 KiB, 2 iteraciones, paralelismo 1 y salida de 32 bytes.
+- **Cifrado:** AES-256-GCM (`DartAesGcm.with256bits()`, líneas 269 y 398), con clave de 256 bits, nonce de 12 bytes y
+  etiqueta de 16 bytes. El encabezado del archivo va como dato adicional autenticado (AAD), con una serialización canónica.
+- **Sal y nonce:** sal de 16 bytes y nonce de 12 bytes, nuevos en cada respaldo, generados con `Random.secure()` (línea 258).
+- **Límites aceptados al importar:** memoria de 8 192 a 65 536 KiB, de 1 a 10 iteraciones y paralelismo 1.
+- **Clave y contraseña en memoria:** la clave derivada y la contraseña en bytes se borran después de usarlas (`_zero`, líneas
+  136, 281, 414 y 485). La contraseña no se guarda en la base de datos, los ajustes ni archivos, y no hay `print`, `debugPrint`
+  ni `log` en `lib/`.
+- **Solo algoritmos estándar:** los de la biblioteca `cryptography`, sin ningún algoritmo propio. Lo propio es el formato del
+  archivo (un envoltorio JSON, `formatVersion` 2), no un algoritmo.
+- **Otros usos:** no hay firmas digitales, autenticación, HMAC ni hashes propios. La verificación del archivo exportado
+  (HU6b-10) compara los bytes descifrados con el original (`_sameBytes`), sin calcular un hash. 🔎 La firma APK v2 la pone el
+  build y la verifica Android al instalar; no es una función de la app.
+
+**Finalidad y qué no se cifra** (✅): el cifrado se usa solo para el archivo de respaldo que la usuaria decide crear, y es
+opcional ("Continuar sin contraseña"). No se cifran la base de datos (SQLite estándar), los ajustes, las notificaciones, la
+copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar (`antes_de_migrar_v4.sqlite`).
+
+**Red y comunicaciones** (✅):
+- **Código propio:** sin `HttpClient`, `package:http`, `Socket`, `WebSocket`, `SecurityContext`, `launchUrl`, `Uri.parse` ni
+  WebView.
+- **Manifiesto:** sin enlaces profundos. Los únicos `intent-filter` son el lanzador (MAIN/LAUNCHER) y el receptor de arranque
+  (BOOT_COMPLETED); las consultas (`<queries>`) son `PROCESS_TEXT` y `GET_CONTENT` (selector de archivos).
+- **Dependencias de la app:** ninguna ejecuta red. `file_picker` usa `URLConnection.guessContentTypeFromStream` solo para
+  adivinar el tipo de un archivo a partir de sus bytes; `timezone/standalone.dart` (que tiene `HttpClient`) y
+  `drift/remote.dart` no se importan; el paquete `web` es solo para la plataforma web.
+- **Solo de desarrollo:** los paquetes de red de `pubspec.lock` (`http_multi_server`, `shelf_web_socket`, `web_socket` y
+  `web_socket_channel`) no entran en la app.
+- **Permisos del release** (`aapt`): `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` y
+  `com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Sin `INTERNET`.**
+
+**Bibliotecas nativas del release** (✅, `app-release.apk` de la 1.1.0+3, SHA-256 `4d666f2c…737e2b`; tamaños en bytes):
+
+| Archivo | arm64-v8a | armeabi-v7a | x86_64 |
+|---|---|---|---|
+| `libflutter.so` | 11 581 856 | 8 453 804 | 12 859 464 |
+| `libapp.so` | 7 668 624 | 8 454 732 | 7 865 232 |
+| `libsqlite3.so` | 1 526 536 | 1 524 844 | 1 550 040 |
+
+- `libflutter.so` (motor de Flutter): ✅ contiene **BoringSSL** (la cadena `third_party/boringssl` y las suites TLS 1.3
+  `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384` y `TLS_CHACHA20_POLY1305_SHA256`). 🔎 Es la pila TLS de `dart:io`, que
+  viene en toda app Flutter; Aura no la usa, porque no hace conexiones.
+- `libapp.so` (el código Dart compilado): contiene la cadena `X509`. 🔎 Viene de las clases de certificados de `dart:io`
+  incluidas en el binario, no de código de Aura.
+- `libsqlite3.so`: ✅ SQLite 3.52.0 sin cifrado.
+
+**Estado de la declaración de exportación:** la clasificación de Aura bajo la EAR (Export Administration Regulations) **no
+está determinada todavía**. Está pendiente una consulta a la BIS (Bureau of Industry and Security) o a asesoría legal, y este
+inventario existe para respaldar esa consulta. Aquí no se afirma ninguna clasificación ni exención.
+
 ---
 
 ### HU-07 · Llevar el historial de anticonceptivos (v1.2)
