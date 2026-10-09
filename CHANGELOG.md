@@ -1,6 +1,6 @@
 # Cambios
 
-## Sin publicar
+## 1.1.0 (sin publicar)
 
 ### Nuevo
 
