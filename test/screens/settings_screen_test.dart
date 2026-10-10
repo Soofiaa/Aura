@@ -153,6 +153,8 @@ void main() {
     Future<void> tocarEnlace(WidgetTester tester) async {
       final enlace = find.text('Política de privacidad');
       await tester.scrollUntilVisible(enlace, 200);
+      await tester.ensureVisible(enlace);
+      await tester.pumpAndSettle();
       await tester.tap(enlace);
       await tester.pumpAndSettle();
     }
@@ -639,6 +641,8 @@ void main() {
       await pumpConTema(tester);
       final finder = find.byKey(const Key('borrar_todos_los_datos'));
       await tester.scrollUntilVisible(finder, 200);
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
       final boton = tester.widget<OutlinedButton>(finder);
       final contexto = tester.element(finder);
       final error = Theme.of(contexto).colorScheme.error;

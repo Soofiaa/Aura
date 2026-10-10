@@ -9,6 +9,8 @@ import '../data/backup/backup_file_gateway.dart';
 import '../data/backup/backup_reminder_store.dart';
 import '../data/backup/backup_service.dart';
 import '../domain/backup_codec.dart';
+import '../domain/backup_reminder.dart';
+import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
 import '../widgets/protect_backup_dialog.dart';
@@ -22,13 +24,21 @@ enum _AccionRespaldo { guardar, compartir }
 /// con datos estructurados (BackupError, BackupWriteException.cause),
 /// nunca con el texto de una excepcion.
 class BackupSection extends StatefulWidget {
-  const BackupSection({super.key, required this.service, this.gateway});
+  const BackupSection({
+    super.key,
+    required this.service,
+    this.gateway,
+    this.reminderStore,
+  });
 
   final BackupService service;
 
   /// Inyectable para tests; en la app real se usa [backupFileGateway]
   /// (asignado en main.dart), resuelto recien al usarlo.
   final BackupFileGateway? gateway;
+
+  /// Inyectable para tests; en la app real, [backupReminderStore].
+  final BackupReminderStore? reminderStore;
 
   @override
   State<BackupSection> createState() => _BackupSectionState();
@@ -40,6 +50,12 @@ class _BackupSectionState extends State<BackupSection> {
   bool _ocupada = false;
 
   BackupFileGateway get _gateway => widget.gateway ?? backupFileGateway;
+
+  BackupReminderStore get _store => widget.reminderStore ?? backupReminderStore;
+
+  /// Fecha del ultimo respaldo y el interruptor, en vivo: crear un
+  /// respaldo (aqui o desde Inicio) o borrar los datos los cambia.
+  late final Stream<BackupReminderState> _recordatorio = _store.watch();
 
   // --- Crear respaldo ---
 
@@ -168,8 +184,18 @@ class _BackupSectionState extends State<BackupSection> {
   /// caso, el recordatorio aparece antes de tiempo.
   Future<void> _anotarRespaldo() async {
     try {
-      await backupReminderStore.recordBackup();
+      await _store.recordBackup();
     } catch (_) {}
+  }
+
+  /// Interruptor "Recordarme crear un respaldo". La pantalla cambia
+  /// cuando el almacen confirma (watch).
+  Future<void> _cambiarRecordatorio(bool value) async {
+    try {
+      await _store.setEnabled(value);
+    } catch (_) {
+      _aviso('No se pudo guardar el cambio. Inténtalo de nuevo.');
+    }
   }
 
   String _mensajeNoSeCreo(BackupWriteException e) {
@@ -431,23 +457,63 @@ class _BackupSectionState extends State<BackupSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.upload_file),
-          title: const Text('Crear respaldo'),
-          subtitle: const Text('Guarda tus registros en un archivo'),
-          enabled: !_ocupada,
-          onTap: _crearRespaldo,
-        ),
-        ListTile(
-          leading: const Icon(Icons.restore),
-          title: const Text('Restaurar un respaldo'),
-          subtitle: const Text('Reemplaza tus datos por los de un archivo'),
-          enabled: !_ocupada,
-          onTap: _restaurar,
-        ),
-      ],
+    return StreamBuilder<BackupReminderState>(
+      stream: _recordatorio,
+      builder: (context, snapshot) {
+        // Sin leer (o sin poder leer) el estado: solo la primera linea y
+        // el interruptor en su valor por defecto, sin poder cambiarlo.
+        final estado = snapshot.hasError ? null : snapshot.data;
+        return Column(
+          children: [
+            _crearRespaldoTile(estado),
+            SwitchListTile(
+              title: const Text('Recordarme crear un respaldo'),
+              subtitle: const Text(
+                'Un aviso en Inicio si pasan $diasUmbralRecordatorioRespaldo '
+                'días sin respaldo',
+              ),
+              value: estado?.activado ?? true,
+              onChanged: estado == null ? null : _cambiarRecordatorio,
+            ),
+            _restaurarTile(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _crearRespaldoTile(BackupReminderState? estado) {
+    final ultimo = estado?.ultimoRespaldo;
+    final segundaLinea = estado == null
+        ? null
+        : ultimo == null
+            ? 'Todavía no has creado un respaldo en este teléfono'
+            : 'Último respaldo: '
+                '${dayMonthLabelWithYear(ultimo, today: _store.today())}';
+    return ListTile(
+      leading: const Icon(Icons.upload_file),
+      title: const Text('Crear respaldo'),
+      subtitle: segundaLinea == null
+          ? const Text('Guarda tus registros en un archivo')
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Guarda tus registros en un archivo'),
+                Text(segundaLinea),
+              ],
+            ),
+      enabled: !_ocupada,
+      onTap: _crearRespaldo,
+    );
+  }
+
+  Widget _restaurarTile() {
+    return ListTile(
+      leading: const Icon(Icons.restore),
+      title: const Text('Restaurar un respaldo'),
+      subtitle: const Text('Reemplaza tus datos por los de un archivo'),
+      enabled: !_ocupada,
+      onTap: _restaurar,
     );
   }
 }

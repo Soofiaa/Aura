@@ -128,7 +128,8 @@ class BackupReminderStore {
       StreamController<BackupReminderState>.broadcast();
   Future<void> _fila = Future.value();
 
-  String _today() => DayKey.fromDate(_clock());
+  /// Hoy segun el reloj del almacen (el mismo que anota las fechas).
+  String today() => DayKey.fromDate(_clock());
 
   Future<File> _file() async =>
       File(p.join((await _supportDirectory()).path, fileName));
@@ -156,12 +157,12 @@ class BackupReminderStore {
   /// Un respaldo se guardo o se compartio con exito hoy. Tambien quita un
   /// "Ahora no" pendiente. Lanza si no se puede escribir.
   Future<BackupReminderState> recordBackup() => _actualizar((s) =>
-      s.copyWith(ultimoRespaldo: _today(), clearPospuestoHasta: true));
+      s.copyWith(ultimoRespaldo: today(), clearPospuestoHasta: true));
 
   /// "Ahora no": pospone [diasPosponerRecordatorioRespaldo] dias.
   Future<BackupReminderState> postpone() => _actualizar((s) => s.copyWith(
       pospuestoHasta:
-          DayKey.addDays(_today(), diasPosponerRecordatorioRespaldo)));
+          DayKey.addDays(today(), diasPosponerRecordatorioRespaldo)));
 
   /// Interruptor "Recordarme crear un respaldo".
   Future<BackupReminderState> setEnabled(bool value) =>
@@ -175,7 +176,7 @@ class BackupReminderStore {
         for (final f in [file, File('${file.path}.tmp')]) {
           if (await f.exists()) await f.delete();
         }
-        _changes.add(BackupReminderState(primerUso: _today()));
+        _changes.add(BackupReminderState(primerUso: today()));
       });
 
   Future<T> _enFila<T>(Future<T> Function() op) {
@@ -210,11 +211,11 @@ class BackupReminderStore {
     } on FileSystemException {
       // Existe pero no se pudo leer (permisos, E/S): no se reescribe.
       if (paraEscribir) rethrow;
-      return BackupReminderState(primerUso: _today());
+      return BackupReminderState(primerUso: today());
     } on FormatException {
       // Archivo danado: se usan los valores por defecto.
     }
-    final inicial = BackupReminderState(primerUso: _today());
+    final inicial = BackupReminderState(primerUso: today());
     try {
       await _escribir(inicial);
     } on FileSystemException {

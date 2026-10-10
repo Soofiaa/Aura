@@ -8,6 +8,7 @@ import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/domain/backup_reminder.dart';
 import 'package:aura/utils/day_key.dart';
 
 /// Gateway falso: no toca canales de plataforma, solo registra que se le
@@ -57,15 +58,25 @@ class FakeBackupFileGateway implements BackupFileGateway {
 }
 
 /// Recordatorio de respaldo en memoria para tests de widget: la E/S real
-/// de archivos no avanza dentro del reloj falso de testWidgets. El
-/// almacen real se prueba en test/data/backup/backup_reminder_store_test.dart.
+/// de archivos no avanza dentro del reloj falso de testWidgets. Se
+/// comporta como el real (ver fake_reminder_store_parity_test.dart):
+/// primerUso se fija en la primera lectura, recordBackup quita el "Ahora
+/// no", delete vuelve a los valores por defecto y watch emite el estado
+/// actual y despues cada cambio. El almacen real se prueba en
+/// test/data/backup/backup_reminder_store_test.dart.
 class FakeBackupReminderStore extends BackupReminderStore {
-  FakeBackupReminderStore({DateTime Function()? clock})
-      : _now = clock ?? (() => DateTime(2026, 10, 4, 10, 15)),
-        super(supportDirectory: () => throw UnimplementedError());
+  FakeBackupReminderStore({DateTime Function()? clock, this.initial})
+      : super(
+          supportDirectory: () => throw UnimplementedError(),
+          clock: clock ?? (() => DateTime(2026, 10, 4, 10, 15)),
+        );
 
-  final DateTime Function() _now;
-  BackupReminderState? _state;
+  /// Estado ya guardado antes de abrir la pantalla (null = primera vez).
+  final BackupReminderState? initial;
+
+  late BackupReminderState? _state = initial;
+  final StreamController<BackupReminderState> _cambios =
+      StreamController<BackupReminderState>.broadcast();
 
   /// Veces que se anoto un respaldo con exito.
   int recordCount = 0;
@@ -73,18 +84,67 @@ class FakeBackupReminderStore extends BackupReminderStore {
   /// Si no es null, recordBackup lo lanza (no se puede escribir).
   Object? recordError;
 
+  /// Si no es null, toda escritura (recordBackup, postpone, setEnabled)
+  /// lo lanza sin cambiar nada.
+  Object? writeError;
+
+  /// Si no es null, read (y por lo tanto watch) lo lanza.
+  Object? readError;
+
   BackupReminderState get _actual =>
-      _state ??= BackupReminderState(primerUso: DayKey.fromDate(_now()));
+      _state ??= BackupReminderState(primerUso: today());
+
+  /// Estado actual sin pasar por read (para las comprobaciones).
+  BackupReminderState? get current => _state;
 
   @override
-  Future<BackupReminderState> read() async => _actual;
+  Stream<BackupReminderState> watch() {
+    late StreamSubscription<BackupReminderState> sub;
+    final controller = StreamController<BackupReminderState>();
+    controller.onListen = () {
+      sub = _cambios.stream.listen(controller.add);
+      read().then(controller.add, onError: controller.addError);
+    };
+    controller.onCancel = () => sub.cancel();
+    return controller.stream;
+  }
+
+  @override
+  Future<BackupReminderState> read() async {
+    if (readError != null) throw readError!;
+    return _actual;
+  }
 
   @override
   Future<BackupReminderState> recordBackup() async {
     if (recordError != null) throw recordError!;
+    final nuevo = _cambiar((s) =>
+        s.copyWith(ultimoRespaldo: today(), clearPospuestoHasta: true));
     recordCount++;
-    return _state = _actual.copyWith(
-        ultimoRespaldo: DayKey.fromDate(_now()), clearPospuestoHasta: true);
+    return nuevo;
+  }
+
+  @override
+  Future<BackupReminderState> postpone() async => _cambiar((s) => s.copyWith(
+      pospuestoHasta:
+          DayKey.addDays(today(), diasPosponerRecordatorioRespaldo)));
+
+  @override
+  Future<BackupReminderState> setEnabled(bool value) async =>
+      _cambiar((s) => s.copyWith(activado: value));
+
+  @override
+  Future<void> delete() async {
+    _state = null;
+    _cambios.add(BackupReminderState(primerUso: today()));
+  }
+
+  BackupReminderState _cambiar(
+      BackupReminderState Function(BackupReminderState) cambio) {
+    if (writeError != null) throw writeError!;
+    final nuevo = _state = cambio(_actual);
+    _cambios.add(nuevo);
+    return nuevo;
   }
 }
 

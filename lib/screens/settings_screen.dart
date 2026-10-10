@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
+import '../data/backup/backup_reminder_store.dart' show BackupReminderStore;
 import '../data/backup/backup_service.dart';
 import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
@@ -26,6 +27,7 @@ class SettingsScreen extends StatefulWidget {
   final NotificationScheduler? scheduler;
   final BackupService? backupService;
   final BackupFileGateway? fileGateway;
+  final BackupReminderStore? reminderStore;
 
   const SettingsScreen({
     super.key,
@@ -33,6 +35,7 @@ class SettingsScreen extends StatefulWidget {
     this.scheduler,
     this.backupService,
     this.fileGateway,
+    this.reminderStore,
   });
 
   @override
@@ -461,7 +464,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          BackupSection(service: _backupService, gateway: widget.fileGateway),
+          BackupSection(
+            service: _backupService,
+            gateway: widget.fileGateway,
+            reminderStore: widget.reminderStore,
+          ),
           const SizedBox(height: 20),
           // Accion destructiva: boton con borde en el color de error del
           // tema, compacto y menos prominente que "Crear respaldo". El
