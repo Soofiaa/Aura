@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -458,24 +459,107 @@ void main() {
   });
 
   group('estado en texto y encabezado (accesibilidad)', () {
-    testCalendar('los dias registrados dicen "período registrado" y hoy dice '
-        '"hoy"', (tester) async {
+    // Cada celda del calendario es UN solo nodo: la fecha que arma
+    // table_calendar y, si tiene, su estado ("período registrado", "hoy"),
+    // que Flutter une con un salto de linea al fusionarlos.
+    List<SemanticsNode> nodos(WidgetTester tester) {
+      final lista = <SemanticsNode>[];
+      void recorrer(SemanticsNode n) {
+        lista.add(n);
+        n.visitChildren((c) {
+          recorrer(c);
+          return true;
+        });
+      }
+
+      recorrer(tester.binding.renderViews.first.owner!.semanticsOwner!
+          .rootSemanticsNode!);
+      return lista;
+    }
+
+    SemanticsNode celda(WidgetTester tester, String fecha) {
+      final candidatas =
+          nodos(tester).where((n) => n.label.startsWith(fecha)).toList();
+      expect(candidatas, hasLength(1), reason: fecha);
+      return candidatas.single;
+    }
+
+    void unSoloNodo(WidgetTester tester, String fecha, String etiqueta) {
+      final nodo = celda(tester, fecha);
+      expect(nodo.label, etiqueta);
+      expect(nodo.getSemanticsData().hasAction(SemanticsAction.tap), isTrue,
+          reason: 'la celda sigue siendo tocable');
+      // Ningun hijo con el estado.
+      final hijos = <String>[];
+      nodo.visitChildren((c) {
+        hijos.add(c.label);
+        return true;
+      });
+      expect(hijos.where((l) => l.contains('registrado') || l == 'hoy'),
+          isEmpty);
+    }
+
+    void sinNodoDeEstadoSuelto(WidgetTester tester) {
+      final etiquetas = nodos(tester).map((n) => n.label).toSet();
+      expect(etiquetas.contains('período registrado'), isFalse);
+      expect(etiquetas.contains('hoy'), isFalse);
+      expect(etiquetas.contains('período registrado, hoy'), isFalse);
+    }
+
+    testCalendar('celda sin estado: la misma etiqueta de siempre (solo fecha)',
+        (tester) async {
       await seedRange('2026-07-10', 3);
       await repo.closePeriod('2026-07-10', '2026-07-12', today: '2026-07-15');
       await pumpCalendar(tester, '2026-07-15');
-
-      expect(find.bySemanticsLabel('período registrado'), findsNWidgets(3));
-      expect(find.bySemanticsLabel('hoy'), findsOneWidget);
-      // El nodo de hoy esta sobre el dia 15.
-      final hoy = tester.getRect(find.bySemanticsLabel('hoy'));
-      expect(hoy.contains(tester.getCenter(find.text('15'))), isTrue);
+      unSoloNodo(tester, 'lunes, 13 de julio de 2026',
+          'lunes, 13 de julio de 2026');
     });
 
-    testCalendar('hoy registrado dice las dos cosas', (tester) async {
+    testCalendar('solo periodo registrado: fecha y estado en un solo nodo',
+        (tester) async {
+      await seedRange('2026-07-10', 3);
+      await repo.closePeriod('2026-07-10', '2026-07-12', today: '2026-07-15');
+      await pumpCalendar(tester, '2026-07-15');
+      for (final fecha in [
+        'viernes, 10 de julio de 2026',
+        'sábado, 11 de julio de 2026',
+        'domingo, 12 de julio de 2026',
+      ]) {
+        unSoloNodo(tester, fecha, '$fecha\nperíodo registrado');
+      }
+      sinNodoDeEstadoSuelto(tester);
+    });
+
+    testCalendar('solo hoy: fecha y "hoy" en un solo nodo', (tester) async {
+      await seedRange('2026-07-10', 3);
+      await repo.closePeriod('2026-07-10', '2026-07-12', today: '2026-07-15');
+      await pumpCalendar(tester, '2026-07-15');
+      unSoloNodo(tester, 'miércoles, 15 de julio de 2026',
+          'miércoles, 15 de julio de 2026\nhoy');
+      sinNodoDeEstadoSuelto(tester);
+    });
+
+    testCalendar('registrado y hoy: primero "período registrado", luego "hoy"',
+        (tester) async {
       await seedRange('2026-07-14', 2);
       await pumpCalendar(tester, '2026-07-15');
-      expect(find.bySemanticsLabel('período registrado, hoy'), findsOneWidget);
-      expect(find.bySemanticsLabel('período registrado'), findsOneWidget);
+      unSoloNodo(tester, 'miércoles, 15 de julio de 2026',
+          'miércoles, 15 de julio de 2026\nperíodo registrado, hoy');
+      unSoloNodo(tester, 'martes, 14 de julio de 2026',
+          'martes, 14 de julio de 2026\nperíodo registrado');
+      sinNodoDeEstadoSuelto(tester);
+    });
+
+    testCalendar('el toque desde el lector sigue seleccionando el dia',
+        (tester) async {
+      await seedRange('2026-07-10', 3);
+      await repo.closePeriod('2026-07-10', '2026-07-12', today: '2026-07-15');
+      await pumpCalendar(tester, '2026-07-15');
+      celda(tester, 'viernes, 10 de julio de 2026');
+      tester.semantics
+          .tap(find.semantics.byLabel(RegExp(r'^viernes, 10 de julio de 2026')));
+      await tester.pumpAndSettle();
+      expect(find.text('Día seleccionado: 10 julio 2026'), findsOneWidget);
     });
 
     testCalendar('las marcas de siempre conservan su etiqueta junto al estado',
@@ -484,7 +568,16 @@ void main() {
       await seedRange('2026-07-12', 3);
       await pumpCalendar(tester, '2026-07-15');
       expect(estimado(), findsNWidgets(2));
-      expect(find.bySemanticsLabel('hoy'), findsOneWidget);
+      // Hoy: un nodo con fecha y estado; la marca "estimado" sigue como
+      // su hijo, igual que en cualquier otro dia estimado.
+      final hoy = celda(tester, 'miércoles, 15 de julio de 2026');
+      expect(hoy.label, 'miércoles, 15 de julio de 2026\nhoy');
+      final hijos = <String>[];
+      hoy.visitChildren((c) {
+        hijos.add(c.label);
+        return true;
+      });
+      expect(hijos, ['estimado']);
     });
 
     testCalendar('las flechas de mes tienen etiqueta y cambian de mes',

@@ -395,29 +395,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// todos los dias, incluidos los futuros (deshabilitados) y hoy. Como
   /// table_calendar no recibe rangeStartDay/rangeEndDay, nunca dibuja su
   /// propio resaltado.
-  ///
-  /// Tambien dice en texto el estado que solo se ve por color: "periodo
-  /// registrado" (relleno) y "hoy" (borde). Va en un nodo propio y la
-  /// marca visible queda como nodo hijo con su etiqueta de siempre.
   Widget? _dayMark(
     DateTime day,
     Set<String> estimated,
     Set<String> registrados,
     ({Set<String> ventana, Set<String> ovulacion}) fertiles,
   ) {
+    final marca = _dayMarkContent(
+        day, DayKey.fromDate(day), estimated, registrados, fertiles);
+    return marca == null ? null : Positioned.fill(child: marca);
+  }
+
+  /// Estado que solo se ve por color: "periodo registrado" (relleno) y
+  /// "hoy" (borde), en ese orden. Va en markerBuilder porque table_calendar
+  /// lo pinta DESPUES de su Semantics con la fecha (CellContent) y, sin
+  /// container, se fusiona en el mismo nodo de la celda (el del toque):
+  /// la celda queda como un solo nodo con la fecha y el estado. Las
+  /// celdas sin estado no cambian. markerBuilder solo se llama para dias
+  /// habilitados, y los dos estados lo son (hoy y dias pasados).
+  Widget? _stateSemantics(DateTime day, Set<String> registrados) {
     final clave = DayKey.fromDate(day);
     final estado = [
       if (registrados.contains(clave)) 'período registrado',
       if (clave == _today) 'hoy',
     ];
-    final marca = _dayMarkContent(day, clave, estimated, registrados, fertiles);
-    if (estado.isEmpty && marca == null) return null;
-    if (estado.isEmpty) return Positioned.fill(child: marca!);
+    if (estado.isEmpty) return null;
     return Positioned.fill(
       child: Semantics(
-        container: true,
         label: estado.join(', '),
-        child: marca ?? const SizedBox.expand(),
+        child: const SizedBox.expand(),
       ),
     );
   }
@@ -577,7 +583,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            TableCalendar(
+            // <dynamic> explicito: con markerBuilder se inferiria otro tipo
+            // y cambiaria el tipo del widget (antes era dynamic).
+            TableCalendar<dynamic>(
               locale: 'es_ES',
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
@@ -679,6 +687,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _registeredCell(day),
                 todayBuilder: (context, day, focusedDay) =>
                     _registeredCell(day),
+                markerBuilder: (context, day, events) =>
+                    _stateSemantics(day, registrados),
               ),
             ),
             const SizedBox(height: 12),
