@@ -6,6 +6,7 @@ import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/add_cycle_screen.dart';
+import 'package:aura/screens/stats_screen.dart';
 import 'package:aura/utils/app_snackbar.dart';
 import 'package:aura/utils/day_key.dart';
 
@@ -411,5 +412,179 @@ void main() {
         });
       }
     }
+  });
+
+  // #11: un dia sin registro que se guarda vacio no crea una fila.
+  group('registro vacio', () {
+    const nada = 'No había nada para guardar.';
+    const guardado = 'Registro guardado correctamente ✅';
+
+    // Como _abrirFormulario, pero la ruta base tiene Scaffold para ver el
+    // aviso que se muestra al volver.
+    Future<void> abrir(WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddCycleScreen()),
+              ),
+              child: const Text('abrir'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('abrir'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> elegir(WidgetTester tester, String menu, String opcion) async {
+      await _tocar(tester, find.text(menu));
+      await tester.tap(find.text(opcion).last);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> notas(WidgetTester tester, String texto) async {
+      final campo = find.byType(TextFormField);
+      await tester.ensureVisible(campo);
+      await tester.enterText(campo, texto);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('dia nuevo sin nada: no crea fila y avisa', (tester) async {
+      await abrir(tester);
+      await _guardar(tester);
+
+      expect(await repo.getDay(hoy), isNull);
+      expect(await repo.hasAnyLog(), isFalse);
+      expect(find.text(nada), findsOneWidget);
+      expect(find.text(guardado), findsNothing);
+      expect(find.byType(AddCycleScreen), findsNothing); // se cerro
+    });
+
+    testWidgets('dia nuevo, solo notas: se guarda', (tester) async {
+      await abrir(tester);
+      await notas(tester, 'Algo de cansancio');
+      await _guardar(tester);
+      expect((await repo.getDay(hoy))!.notes, 'Algo de cansancio');
+      expect(find.text(guardado), findsOneWidget);
+    });
+
+    testWidgets('dia nuevo, solo un sintoma: se guarda', (tester) async {
+      await abrir(tester);
+      await _tocar(tester, find.text('Antojos'));
+      await _guardar(tester);
+      expect(await repo.getDay(hoy), isNotNull);
+      expect(await repo.getSymptomsForDay(hoy), {Symptom.antojos});
+    });
+
+    testWidgets('dia nuevo, solo animo: se guarda', (tester) async {
+      await abrir(tester);
+      await elegir(tester, 'Sin registrar', 'Feliz');
+      await _guardar(tester);
+      expect((await repo.getDay(hoy))!.mood, Mood.feliz);
+    });
+
+    testWidgets('dia nuevo, solo sangrado (sin flujo): se guarda',
+        (tester) async {
+      await abrir(tester);
+      await _tocar(tester, find.byType(Switch));
+      await _guardar(tester);
+      final row = await repo.getDay(hoy);
+      expect(row!.isPeriodDay, isTrue);
+      expect(row.flow, isNull);
+    });
+
+    testWidgets(
+        'dia con "no hubo sangrado" explicito, guardado sin tocar: se '
+        'conserva', (tester) async {
+      await repo.markPeriodDays([hoy]);
+      await repo.setPeriodDayExplicitly(hoy, isPeriodDay: false);
+      expect((await repo.getDay(hoy))!.periodDayExplicit, isTrue);
+
+      await abrir(tester);
+      await _guardar(tester);
+      final row = await repo.getDay(hoy);
+      expect(row, isNotNull);
+      expect(row!.isPeriodDay, isFalse);
+      expect(row.periodDayExplicit, isTrue);
+      expect(find.text(guardado), findsOneWidget);
+    });
+
+    testWidgets('dia de sangrado: apagar el interruptor deja el "no"',
+        (tester) async {
+      await repo.upsertDay(date: hoy, isPeriodDaySwitch: true);
+      await abrir(tester);
+      expect(_interruptorEncendido(tester), isTrue);
+      await _tocar(tester, find.byType(Switch));
+      await _guardar(tester);
+      final row = await repo.getDay(hoy);
+      expect(row!.isPeriodDay, isFalse);
+      expect(row.periodDayExplicit, isTrue);
+    });
+
+    testWidgets(
+        'dia existente: borrar sus notas y sintomas se guarda (fila vacia a '
+        'proposito)', (tester) async {
+      await repo.upsertDay(
+        date: hoy,
+        isPeriodDaySwitch: false,
+        notes: 'Antes',
+        symptoms: {Symptom.acne},
+      );
+      await abrir(tester);
+      await notas(tester, '');
+      await _tocar(tester, find.text('Acné'));
+      await _guardar(tester);
+      final row = await repo.getDay(hoy);
+      expect(row, isNotNull);
+      expect(row!.notes, '');
+      expect(await repo.getSymptomsForDay(hoy), isEmpty);
+      expect(find.text(guardado), findsOneWidget);
+    });
+
+    testWidgets('dia nuevo: escribir una nota y borrarla no crea fila',
+        (tester) async {
+      await abrir(tester);
+      await notas(tester, 'borrador');
+      await notas(tester, '');
+      await _guardar(tester);
+      expect(await repo.getDay(hoy), isNull);
+      expect(find.text(nada), findsOneWidget);
+    });
+
+    testWidgets('dia nuevo: notas solo con espacios cuentan como vacias',
+        (tester) async {
+      await abrir(tester);
+      await notas(tester, '   ');
+      await _guardar(tester);
+      expect(await repo.getDay(hoy), isNull);
+      expect(find.text(nada), findsOneWidget);
+    });
+
+    testWidgets(
+        'dia nuevo: un flujo elegido con el sangrado luego apagado no '
+        'cuenta ni se guarda', (tester) async {
+      await abrir(tester);
+      await _tocar(tester, find.byType(Switch));
+      await elegir(tester, 'Sin especificar', 'Abundante');
+      await _tocar(tester, find.byType(Switch));
+      await _guardar(tester);
+      expect(await repo.getDay(hoy), isNull);
+      expect(find.text(nada), findsOneWidget);
+    });
+
+    testWidgets('Estadisticas sigue en estado vacio tras guardar vacio',
+        (tester) async {
+      await abrir(tester);
+      await _guardar(tester);
+      await tester.pumpWidget(const MaterialApp(home: StatsScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Aún no hay registros guardados 🩷'), findsOneWidget);
+      // Estadisticas observa la base: se cierra dentro del test (en
+      // tearDown quedan timers de drift pendientes).
+      await db.close();
+    });
   });
 }

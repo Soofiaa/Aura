@@ -29,6 +29,10 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   final TextEditingController _notasController = TextEditingController();
   List<String> _selectedSymptoms = [];
 
+  /// Si la fecha elegida ya tenia una fila en daily_logs al cargarla. Un
+  /// dia que no la tenia y se guarda vacio no se escribe (hallazgo #11).
+  bool _teniaRegistro = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +48,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
     if (!mounted) return;
     setState(() {
+      _teniaRegistro = existing != null;
       if (existing != null) {
         _esDiaDeSangrado = existing.isPeriodDay;
         _flujo = existing.flow;
@@ -60,7 +65,27 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
     });
   }
 
+  /// Registro vacio: sangrado apagado, animo sin registrar, notas vacias
+  /// (tras trim) y ningun sintoma, en un dia que no tenia fila. El flujo
+  /// no cuenta: con el sangrado apagado no se guarda aunque se haya
+  /// elegido antes de apagarlo. Un dia que ya tenia fila se guarda
+  /// siempre (por ejemplo, un "no hubo sangrado" explicito o datos que la
+  /// usuaria borro a proposito).
+  bool get _registroVacio =>
+      !_teniaRegistro &&
+      !_esDiaDeSangrado &&
+      _estadoAnimo == null &&
+      _notasController.text.trim().isEmpty &&
+      _selectedSymptoms.isEmpty;
+
   Future<void> _guardarRegistro() async {
+    if (_registroVacio) {
+      // No se crea una fila vacia: Estadisticas seguiria mostrando datos
+      // y el respaldo contaria un "dia con registro" que no lo es.
+      showAppSnackBar(context, "No había nada para guardar.");
+      Navigator.pop(context);
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       final symptoms = _selectedSymptoms
           .map((label) => Symptom.values.firstWhere((s) => s.label == label))
