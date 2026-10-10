@@ -181,8 +181,15 @@ void main() {
       await seedRange('2026-02-26', 6);
       await pumpHome(tester, '2026-03-04');
       expect(find.text(card), findsOneWidget);
-      expect(find.text('Día 7 de tu período · duración estimada: 5 días'),
+      // El dia 7 ya supera la duracion estimada (5): no se presenta como si
+      // el periodo durara menos que el dia actual.
+      expect(
+          find.text('Día 7 de tu período · ya superó tu duración estimada '
+              '(5 días)'),
           findsOneWidget);
+      expect(find.textContaining('duración estimada: 5'), findsNothing);
+      // Y la fase que se muestra es la menstrual (periodo en curso).
+      expect(find.text('Fase menstrual'), findsOneWidget);
     });
 
     testHome('oculta fuera de la fase menstrual si el ultimo dia marcado '

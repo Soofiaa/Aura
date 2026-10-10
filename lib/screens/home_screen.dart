@@ -200,7 +200,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 20),
                 _buildPredictionCard(prediction,
-                    mostrarFertilidad: inputs?.showFertileWindow ?? true),
+                    mostrarFertilidad: inputs?.showFertileWindow ?? true,
+                    enCurso: _periodoEnCurso(prediction, current)),
                 StreamBuilder<DailyLogRow?>(
                   stream: _todayStream,
                   builder: (context, todaySnapshot) {
@@ -287,8 +288,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Periodo en curso, tal como lo presenta Inicio: el periodo actual
+  /// (findCurrentPeriod) sigue abierto y, ademas, la fase calculada es la
+  /// menstrual o el ultimo dia con sangrado es hoy o ayer. Es la misma
+  /// condicion con la que aparece "Sigue tu periodo hoy?" (HU-03). Solo
+  /// cambia lo que se muestra en Inicio (fase y fertilidad); la
+  /// prediccion, el Calendario, Estadisticas y los avisos no cambian.
+  /// Sin esto, un sangrado que reabre o alarga el periodo (regla de 7
+  /// dias, R-4) dejaba "Fase folicular" junto a "Dia 9 de tu periodo".
+  bool _periodoEnCurso(CyclePrediction? prediction, CurrentPeriod? current) {
+    if (prediction is! ActivePrediction) return false;
+    if (current == null || current.isClosed) return false;
+    return prediction.currentPhase == CyclePhase.menstrual ||
+        current.lastMarkedDate == _today ||
+        current.lastMarkedDate == DayKey.addDays(_today, -1);
+  }
+
   Widget _buildPredictionCard(CyclePrediction? prediction,
-      {required bool mostrarFertilidad}) {
+      {required bool mostrarFertilidad, required bool enCurso}) {
     if (prediction == null) {
       return _buildCardShell(children: [
         const Icon(Icons.favorite_border, color: Colors.grey, size: 50),
@@ -309,8 +326,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return switch (prediction) {
       StaleDataPrediction() => _buildStaleCard(prediction),
-      ActivePrediction() =>
-        _buildActiveCard(prediction, mostrarFertilidad: mostrarFertilidad),
+      ActivePrediction() => _buildActiveCard(prediction,
+          mostrarFertilidad: mostrarFertilidad, enCurso: enCurso),
     };
   }
 
@@ -355,7 +372,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 4),
       Text(
-        'Día ${current.dayNumber} de tu período · duración estimada: $dias',
+        // Si el dia ya supera la duracion estimada, no se presenta como si
+        // el periodo durara menos que el dia actual.
+        current.dayNumber > estimatedPeriodLength
+            ? 'Día ${current.dayNumber} de tu período · ya superó tu '
+                'duración estimada ($dias)'
+            : 'Día ${current.dayNumber} de tu período · duración estimada: '
+                '$dias',
         style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         textAlign: TextAlign.center,
       ),
@@ -426,22 +449,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// (solo si el interruptor esta encendido). Con un periodo atrasado no
   /// se muestra ninguna fase: el ciclo real ya supero lo estimado. El
   /// predictor no cambia: esto es solo lo que se muestra.
+  /// [enCurso]: ver [_periodoEnCurso]. Con el periodo en curso, la fase
+  /// que se muestra es la menstrual. Inicio no habla de fertilidad
+  /// mientras la fase mostrada sea la menstrual: no se muestran la
+  /// ovulacion ni la ventana fertil (tambien el dia en que el periodo se
+  /// cierra con "Termino hoy", que sigue siendo fase menstrual). La linea
+  /// gris de confianza baja no da fechas y se mantiene.
   Widget _buildActiveCard(ActivePrediction p,
-      {required bool mostrarFertilidad}) {
+      {required bool mostrarFertilidad, required bool enCurso}) {
     final confianzaBaja = p.confidence == PredictionConfidence.low;
-    final mostrarFertil =
-        visibleFertileMarks(p, showFertileWindow: mostrarFertilidad) != null;
     final valorPorDefecto = p.completeCyclesConsidered <
         const PredictionConfig().minCompleteCyclesForMedium;
+    final fase = enCurso ? CyclePhase.menstrual : p.currentPhase;
+    final mostrarFertil = fase != CyclePhase.menstrual &&
+        visibleFertileMarks(p, showFertileWindow: mostrarFertilidad) != null;
     final mostrarFase = !p.isPeriodLate &&
-        !(!mostrarFertil && p.currentPhase == CyclePhase.ovulatoria);
+        !(!mostrarFertil && fase == CyclePhase.ovulatoria);
     return _buildCardShell(children: [
       if (p.isPeriodLate) _buildLateBanner(p),
       const Icon(Icons.favorite, color: Colors.pinkAccent, size: 50),
       if (mostrarFase) ...[
         const SizedBox(height: 10),
         Text(
-          p.currentPhase.label,
+          fase.label,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],

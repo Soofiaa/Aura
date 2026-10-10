@@ -198,7 +198,9 @@ void main() {
     testHome('d) media: ovulacion, ventana y el aviso justo despues de la '
         'ventana, sin advertencias de confianza baja', (tester) async {
       await seedPeriods(tresCiclos);
-      await pumpHome(tester, '2026-03-28');
+      // Fuera del periodo (26-30/03): durante el periodo en curso Inicio
+      // no muestra la ovulacion ni la ventana (ver home_screen_coherencia_test).
+      await pumpHome(tester, '2026-04-02');
 
       expect(find.text('Confianza: Media'), findsOneWidget);
       expect(find.textContaining('Ovulación estimada:'), findsOneWidget);
@@ -220,7 +222,9 @@ void main() {
 
     testHome('e) alta (4 ciclos de 28): lo mismo', (tester) async {
       await seedPeriods(['2025-12-04', ...tresCiclos]);
-      await pumpHome(tester, '2026-03-28');
+      // Fuera del periodo (26-30/03): durante el periodo en curso Inicio
+      // no muestra la ovulacion ni la ventana (ver home_screen_coherencia_test).
+      await pumpHome(tester, '2026-04-02');
       expect(find.text('Confianza: Alta'), findsOneWidget);
       expect(find.textContaining('Ovulación estimada:'), findsOneWidget);
       avisoJustoDespuesDeLaVentana(tester);
@@ -393,7 +397,9 @@ void main() {
         'tarjeta como hoy', (tester) async {
       await seedPeriods(tresCiclos);
       await repo.setShowFertileWindow(true);
-      await pumpHome(tester, '2026-03-28');
+      // Fuera del periodo (26-30/03): durante el periodo en curso Inicio
+      // no muestra la ovulacion ni la ventana (ver home_screen_coherencia_test).
+      await pumpHome(tester, '2026-04-02');
       expect(find.text('Confianza: Media'), findsOneWidget);
       expect(find.textContaining('Ovulación estimada:'), findsOneWidget);
       avisoJustoDespuesDeLaVentana(tester);
@@ -408,7 +414,9 @@ void main() {
 
     testHome('se actualiza sola al cambiar el interruptor', (tester) async {
       await seedPeriods(cuatroCiclos);
-      await pumpHome(tester, '2026-03-28');
+      // Fuera del periodo (26-30/03): durante el periodo en curso Inicio
+      // no muestra la ovulacion ni la ventana (ver home_screen_coherencia_test).
+      await pumpHome(tester, '2026-04-02');
       expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
 
       await repo.setShowFertileWindow(false);
