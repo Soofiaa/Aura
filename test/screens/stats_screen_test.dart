@@ -110,6 +110,52 @@ void main() {
         findsOneWidget);
   });
 
+  // --- Estados de animo: lo que lee el lector de pantalla ---
+
+  testStats('animo: el lector de pantalla lee cada estado y su porcentaje',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    // Cansada 4, Irritable 3, Feliz 3, Normal 3 (13 dias): 31 % y 23 %.
+    const animos = {
+      Mood.cansada: 4,
+      Mood.irritable: 3,
+      Mood.feliz: 3,
+      Mood.normal: 3,
+    };
+    var dia = 1;
+    for (final e in animos.entries) {
+      for (var i = 0; i < e.value; i++) {
+        await db.into(db.dailyLogs).insert(DailyLogsCompanion.insert(
+              date: '2026-03-${(dia++).toString().padLeft(2, '0')}',
+              mood: Value(e.key),
+            ));
+      }
+    }
+    await pumpStats(tester);
+    await tester.scrollUntilVisible(find.byType(PieChart), 200);
+
+    final nodo = find.bySemanticsLabel(RegExp(r'^Estados de ánimo: '));
+    expect(nodo, findsOneWidget);
+    final etiqueta = tester.getSemantics(nodo).label;
+    for (final parte in [
+      'Cansada: 31 %',
+      'Irritable: 23 %',
+      'Feliz: 23 %',
+      'Normal: 23 %',
+    ]) {
+      expect(etiqueta, contains(parte));
+    }
+    // Los mismos numeros que se dibujan en el grafico.
+    final secciones = tester
+        .widget<PieChart>(find.byType(PieChart))
+        .data
+        .sections
+        .map((s) => s.title.replaceAll('\n', ': '))
+        .toList();
+    expect(secciones, contains('Cansada: 31%'));
+    semantics.dispose();
+  });
+
   // --- Sintomas mas frecuentes: barras horizontales ---
 
   Future<void> sintomasEn(String fecha, List<Symptom> sintomas) async {

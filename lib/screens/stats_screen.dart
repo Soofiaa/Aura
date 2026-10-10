@@ -111,7 +111,13 @@ class _StatsScreenState extends State<StatsScreen> {
                     TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 15),
-                  AspectRatio(
+                  // El grafico es solo dibujo: el lector de pantalla lee
+                  // cada estado con el mismo porcentaje que se ve.
+                  Semantics(
+                    container: true,
+                    label: _moodSummary(estadosAnimo),
+                    excludeSemantics: true,
+                    child: AspectRatio(
                     aspectRatio: 1.2,
                     child: PieChart(
                       PieChartData(
@@ -126,7 +132,7 @@ class _StatsScreenState extends State<StatsScreen> {
                             estadosAnimo.keys.toList().indexOf(entry.key) %
                                 Colors.primaries.length],
                             title:
-                            "${entry.key.label}\n${(porcentaje * 100).toStringAsFixed(0)}%",
+                            "${entry.key.label}\n${_percent(porcentaje)}%",
                             radius: 70,
                             titleStyle: const TextStyle(
                                 color: Colors.white,
@@ -136,6 +142,7 @@ class _StatsScreenState extends State<StatsScreen> {
                         }).toList(),
                       ),
                     ),
+                  ),
                   ),
                 ],
               ],
@@ -216,6 +223,20 @@ class _SymptomBars extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Porcentaje redondeado que muestra el grafico de animo.
+String _percent(double fraction) => (fraction * 100).toStringAsFixed(0);
+
+/// Lo que lee el lector de pantalla del grafico de animo, en el mismo
+/// orden que las porciones: "Estados de animo: Cansada: 31 %. ...".
+String _moodSummary(Map<Mood, int> moods) {
+  final total = moods.values.fold<int>(0, (a, b) => a + b);
+  final partes = [
+    for (final e in moods.entries)
+      '${e.key.label}: ${_percent(e.value / total)} %',
+  ];
+  return 'Estados de ánimo: ${partes.join('. ')}.';
 }
 
 /// "Tus ciclos": duracion tipica del ciclo (el mismo numero que usa la
