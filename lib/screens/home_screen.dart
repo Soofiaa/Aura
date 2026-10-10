@@ -383,8 +383,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 12),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      // Wrap: con pantalla angosta o letra grande, "Termino hoy" baja a
+      // la linea siguiente en vez de desbordar (con 1,0 en 360 dp ya no
+      // entraban los dos).
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
         children: [
           ElevatedButton(
             onPressed: _sigue,

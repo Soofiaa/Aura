@@ -220,4 +220,30 @@ void main() {
       expect(find.text(tarjeta), findsNothing);
     });
   });
+
+  // #9: la tarjeta "Sigue tu periodo hoy?" no desborda a 360 x 640 con
+  // ninguna escala de texto (los botones pasan a otra linea si no entran).
+  group('tarjeta a 360 x 640', () {
+    for (final escala in [1.0, 1.3, 1.5, 2.0]) {
+      testWidgets('texto $escala: sin desbordes y con sus tres acciones',
+          (tester) async {
+        await historial();
+        await periodo('2026-10-01');
+        await repo.markPeriodDay('2026-10-08');
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = escala;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpHome(tester, '2026-10-09');
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(tarjeta), findsOneWidget);
+        for (final accion in ['Sigue', 'Terminó hoy', 'Ya terminó antes']) {
+          expect(find.text(accion), findsOneWidget, reason: accion);
+        }
+        await db.close();
+      });
+    }
+  });
 }
