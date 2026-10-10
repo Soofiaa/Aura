@@ -587,4 +587,202 @@ void main() {
       await db.close();
     });
   });
+
+  // #3: salir o cambiar de fecha con cambios sin guardar pregunta antes.
+  group('cambios sin guardar', () {
+    const titulo = '¿Descartar los cambios?';
+    final quinceDelMesPasado = () {
+      final ahora = DateTime.now();
+      return DayKey.fromDate(DateTime(ahora.year, ahora.month - 1, 15));
+    }();
+
+    bool formularioAbierto() => find.byType(AddCycleScreen).evaluate().isNotEmpty;
+
+    String notasVisibles(WidgetTester tester) =>
+        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text;
+
+    Future<void> escribirNota(WidgetTester tester, String texto) async {
+      final campo = find.byType(TextFormField);
+      await tester.ensureVisible(campo);
+      await tester.enterText(campo, texto);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> flechaAtras(WidgetTester tester) async {
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> atrasDelSistema(WidgetTester tester) async {
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+    }
+
+    // Elige el 15 del mes anterior: siempre es pasado y existe.
+    Future<void> elegirOtraFecha(WidgetTester tester) async {
+      await _tocar(tester, find.byIcon(Icons.calendar_today));
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+    }
+
+    String fechaVisible(String key) {
+      final d = DayKey.toUtcAnchor(key);
+      return '${d.day}/${d.month}/${d.year}';
+    }
+
+    testWidgets('abrir y salir sin tocar nada no pregunta', (tester) async {
+      await _abrirFormulario(tester);
+      await flechaAtras(tester);
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+    });
+
+    testWidgets('un dia guardado abierto sin cambios sale sin preguntar',
+        (tester) async {
+      await repo.upsertDay(
+        date: hoy,
+        isPeriodDaySwitch: true,
+        flow: FlowIntensity.moderado,
+        mood: Mood.feliz,
+        notes: 'Nota guardada',
+        symptoms: {Symptom.cansancio},
+      );
+      await _abrirFormulario(tester);
+      await atrasDelSistema(tester);
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+    });
+
+    testWidgets(
+        'cambiar algo y volver a dejarlo como estaba no cuenta como cambio',
+        (tester) async {
+      await _abrirFormulario(tester);
+      await _tocar(tester, find.byType(Switch));
+      await _tocar(tester, find.byType(Switch));
+      await escribirNota(tester, 'algo');
+      await escribirNota(tester, '  ');
+      await flechaAtras(tester);
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+    });
+
+    testWidgets(
+        'flecha con cambios pregunta; "Seguir editando" conserva el texto',
+        (tester) async {
+      await _abrirFormulario(tester);
+      await escribirNota(tester, 'Nota sin guardar');
+      await flechaAtras(tester);
+
+      expect(find.text(titulo), findsOneWidget);
+      expect(
+          find.text('No guardaste los cambios de este día. Si sales ahora, '
+              'se pierden.'),
+          findsOneWidget);
+      await tester.tap(find.text('Seguir editando'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isTrue);
+      expect(notasVisibles(tester), 'Nota sin guardar');
+    });
+
+    testWidgets(
+        'atras del sistema con cambios pregunta; "Descartar" sale sin '
+        'cambiar la base', (tester) async {
+      await repo.upsertDay(
+        date: hoy,
+        isPeriodDaySwitch: false,
+        notes: 'Nota original',
+      );
+      await _abrirFormulario(tester);
+      await escribirNota(tester, 'Nota cambiada');
+      await _tocar(tester, find.text('Antojos'));
+      await atrasDelSistema(tester);
+
+      expect(find.text(titulo), findsOneWidget);
+      await tester.tap(find.text('Descartar'));
+      await tester.pumpAndSettle();
+
+      // El pop programatico tras "Descartar" no queda bloqueado.
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+      expect((await repo.getDay(hoy))!.notes, 'Nota original');
+      expect(await repo.getSymptomsForDay(hoy), isEmpty);
+    });
+
+    testWidgets('"Descartar" en un dia nuevo no crea fila', (tester) async {
+      await _abrirFormulario(tester);
+      await _tocar(tester, find.text('Dolor de cabeza'));
+      await flechaAtras(tester);
+      await tester.tap(find.text('Descartar'));
+      await tester.pumpAndSettle();
+
+      expect(formularioAbierto(), isFalse);
+      expect(await repo.getDay(hoy), isNull);
+    });
+
+    testWidgets(
+        'guardar con cambios sale sin preguntar (el pop programatico no '
+        'queda bloqueado)', (tester) async {
+      await _abrirFormulario(tester);
+      await escribirNota(tester, 'Nota nueva');
+      await _guardar(tester);
+
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+      expect((await repo.getDay(hoy))!.notes, 'Nota nueva');
+    });
+
+    testWidgets('cambiar de fecha sin cambios no pregunta y carga el dia',
+        (tester) async {
+      await repo.upsertDay(
+        date: quinceDelMesPasado,
+        isPeriodDaySwitch: false,
+        notes: 'Nota del 15',
+      );
+      await _abrirFormulario(tester);
+      await elegirOtraFecha(tester);
+
+      expect(find.text(titulo), findsNothing);
+      expect(find.text(fechaVisible(quinceDelMesPasado)), findsOneWidget);
+      expect(notasVisibles(tester), 'Nota del 15');
+    });
+
+    testWidgets(
+        'cambiar de fecha con cambios pregunta: "Seguir editando" se queda '
+        'en la fecha y "Descartar" carga la otra', (tester) async {
+      await repo.upsertDay(
+        date: quinceDelMesPasado,
+        isPeriodDaySwitch: false,
+        notes: 'Nota del 15',
+      );
+      await _abrirFormulario(tester);
+      await escribirNota(tester, 'Nota de hoy sin guardar');
+
+      await elegirOtraFecha(tester);
+      expect(find.text(titulo), findsOneWidget);
+      await tester.tap(find.text('Seguir editando'));
+      await tester.pumpAndSettle();
+      expect(find.text(fechaVisible(hoy)), findsOneWidget);
+      expect(notasVisibles(tester), 'Nota de hoy sin guardar');
+
+      await elegirOtraFecha(tester);
+      expect(find.text(titulo), findsOneWidget);
+      await tester.tap(find.text('Descartar'));
+      await tester.pumpAndSettle();
+      expect(formularioAbierto(), isTrue);
+      expect(find.text(fechaVisible(quinceDelMesPasado)), findsOneWidget);
+      expect(notasVisibles(tester), 'Nota del 15');
+      expect(await repo.getDay(hoy), isNull);
+
+      // La foto es la del dia nuevo: salir ahora no pregunta.
+      await flechaAtras(tester);
+      expect(find.text(titulo), findsNothing);
+      expect(formularioAbierto(), isFalse);
+    });
+  });
 }

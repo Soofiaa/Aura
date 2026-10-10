@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
@@ -33,10 +34,29 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   /// dia que no la tenia y se guarda vacio no se escribe (hallazgo #11).
   bool _teniaRegistro = false;
 
+  /// Foto de lo que se cargo para la fecha elegida, con los mismos valores
+  /// efectivos que se guardarian. Si el formulario difiere de ella, hay
+  /// cambios sin guardar y salir o cambiar de fecha pregunta (hallazgo #3).
+  _DatosDelDia _cargado = _DatosDelDia.vacio;
+
   @override
   void initState() {
     super.initState();
+    // Escribir en las notas no pasa por setState: se reconstruye para que
+    // PopScope sepa si hay cambios sin guardar.
+    _notasController.addListener(_alCambiarNotas);
     _cargarDia(_selectedDate);
+  }
+
+  void _alCambiarNotas() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _notasController.removeListener(_alCambiarNotas);
+    _notasController.dispose();
+    super.dispose();
   }
 
   /// Prellena el formulario con lo que ya existe para [date], o lo
@@ -62,7 +82,71 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
         _notasController.text = '';
         _selectedSymptoms = [];
       }
+      // En el mismo setState: la foto y el formulario nunca quedan
+      // desfasados.
+      _cargado = _datosDelFormulario;
     });
+  }
+
+  _DatosDelDia get _datosDelFormulario => _DatosDelDia(
+        sangrado: _esDiaDeSangrado,
+        // Con el sangrado apagado el flujo no se guarda: no es un cambio.
+        flujo: _esDiaDeSangrado ? _flujo : null,
+        animo: _estadoAnimo,
+        notas: _notasController.text.trim(),
+        sintomas: _selectedSymptoms.toSet(),
+      );
+
+  bool get _hayCambios => !_datosDelFormulario.igualA(_cargado);
+
+  /// Pregunta si se descartan los cambios. Devuelve true solo si la
+  /// usuaria elige "Descartar".
+  Future<bool> _confirmarDescarte() async {
+    final descartar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("¿Descartar los cambios?"),
+        content: const Text(
+            "No guardaste los cambios de este día. Si sales ahora, se pierden."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Seguir editando"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Descartar"),
+          ),
+        ],
+      ),
+    );
+    return descartar ?? false;
+  }
+
+  /// Atras del sistema o flecha de la barra con cambios sin guardar.
+  Future<void> _alIntentarSalir(bool didPop, Object? result) async {
+    if (didPop) return;
+    if (await _confirmarDescarte() && mounted) {
+      // Navigator.pop no pasa por PopScope: sale aunque canPop sea false.
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _elegirFecha() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (pickedDate == null || !mounted) return;
+    if (DayKey.fromDate(pickedDate) == DayKey.fromDate(_selectedDate)) return;
+    // Cambiar de fecha recarga el formulario: con cambios sin guardar
+    // pregunta igual que al salir; "Descartar" carga la otra fecha.
+    if (_hayCambios && !await _confirmarDescarte()) return;
+    if (!mounted) return;
+    setState(() => _selectedDate = pickedDate);
+    await _cargarDia(pickedDate);
   }
 
   /// Registro vacio: sangrado apagado, animo sin registrar, notas vacias
@@ -109,173 +193,193 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Registrar día"),
-        backgroundColor: const Color(0xFFA8D8EA),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Fecha del registro",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 5),
-              GestureDetector(
-                onTap: () async {
-                  final pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (pickedDate != null) {
-                    setState(() => _selectedDate = pickedDate);
-                    await _cargarDia(pickedDate);
-                  }
-                },
-                child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      const Icon(Icons.calendar_today, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 25),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  "Día de sangrado",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                value: _esDiaDeSangrado,
-                onChanged: (v) => setState(() => _esDiaDeSangrado = v),
-              ),
-
-              if (_esDiaDeSangrado) ...[
-                const SizedBox(height: 10),
+    return PopScope<Object?>(
+      canPop: !_hayCambios,
+      onPopInvokedWithResult: _alIntentarSalir,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Registrar día"),
+          backgroundColor: const Color(0xFFA8D8EA),
+          centerTitle: true,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const Text(
-                  "Flujo menstrual",
+                  "Fecha del registro",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 5),
-                DropdownButtonFormField<FlowIntensity?>(
-                  initialValue: _flujo,
-                  // isExpanded: el texto elegido se ajusta al ancho (con
-                  // "..." si no entra) en vez de desbordar.
+                GestureDetector(
+                  onTap: _elegirFecha,
+                  child: Container(
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        const Icon(Icons.calendar_today, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    "Día de sangrado",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  value: _esDiaDeSangrado,
+                  onChanged: (v) => setState(() => _esDiaDeSangrado = v),
+                ),
+
+                if (_esDiaDeSangrado) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Flujo menstrual",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 5),
+                  DropdownButtonFormField<FlowIntensity?>(
+                    initialValue: _flujo,
+                    // isExpanded: el texto elegido se ajusta al ancho (con
+                    // "..." si no entra) en vez de desbordar.
+                    isExpanded: true,
+                    hint: const Text("Sin especificar"),
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text("Sin especificar")),
+                      ...FlowIntensity.values.map((f) =>
+                          DropdownMenuItem(value: f, child: Text(f.label))),
+                    ],
+                    onChanged: (v) => setState(() => _flujo = v),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 25),
+                const Text(
+                  "Estado de ánimo",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 5),
+                DropdownButtonFormField<Mood?>(
+                  initialValue: _estadoAnimo,
                   isExpanded: true,
-                  hint: const Text("Sin especificar"),
+                  hint: const Text("Sin registrar"),
                   items: [
                     const DropdownMenuItem(
-                        value: null, child: Text("Sin especificar")),
-                    ...FlowIntensity.values.map((f) =>
-                        DropdownMenuItem(value: f, child: Text(f.label))),
+                        value: null, child: Text("Sin registrar")),
+                    ...Mood.values.map((a) =>
+                        DropdownMenuItem(value: a, child: Text(a.label))),
                   ],
-                  onChanged: (v) => setState(() => _flujo = v),
+                  onChanged: (v) => setState(() => _estadoAnimo = v),
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     filled: true,
                     fillColor: Colors.white,
                   ),
                 ),
-              ],
 
-              const SizedBox(height: 25),
-              const Text(
-                "Estado de ánimo",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 5),
-              DropdownButtonFormField<Mood?>(
-                initialValue: _estadoAnimo,
-                isExpanded: true,
-                hint: const Text("Sin registrar"),
-                items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text("Sin registrar")),
-                  ...Mood.values.map((a) =>
-                      DropdownMenuItem(value: a, child: Text(a.label))),
-                ],
-                onChanged: (v) => setState(() => _estadoAnimo = v),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
+                // 🔹 Sección de selección de síntomas
+                const SizedBox(height: 25),
+                const Text(
+                  "Síntomas",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
-              ),
-
-              // 🔹 Sección de selección de síntomas
-              const SizedBox(height: 25),
-              const Text(
-                "Síntomas",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              SymptomSelector(
-                selectedSymptoms: _selectedSymptoms,
-                onSelectionChanged: (newList) {
-                  setState(() => _selectedSymptoms = newList);
-                },
-              ),
-
-              const SizedBox(height: 25),
-              const Text(
-                "Notas adicionales",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 5),
-              TextFormField(
-                controller: _notasController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
+                const SizedBox(height: 8),
+                SymptomSelector(
+                  selectedSymptoms: _selectedSymptoms,
+                  onSelectionChanged: (newList) {
+                    setState(() => _selectedSymptoms = newList);
+                  },
                 ),
-              ),
 
-              const SizedBox(height: 30),
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: _guardarRegistro,
-                  icon: const Icon(Icons.save),
-                  label: const Text("Guardar registro"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA8D8EA),
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 25),
+                const Text(
+                  "Notas adicionales",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 5),
+                TextFormField(
+                  controller: _notasController,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 30),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _guardarRegistro,
+                    icon: const Icon(Icons.save),
+                    label: const Text("Guardar registro"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA8D8EA),
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Valores de un dia tal como se guardarian.
+class _DatosDelDia {
+  final bool sangrado;
+  final FlowIntensity? flujo;
+  final Mood? animo;
+  final String notas;
+  final Set<String> sintomas;
+
+  const _DatosDelDia({
+    required this.sangrado,
+    required this.flujo,
+    required this.animo,
+    required this.notas,
+    required this.sintomas,
+  });
+
+  static const vacio = _DatosDelDia(
+      sangrado: false, flujo: null, animo: null, notas: '', sintomas: {});
+
+  bool igualA(_DatosDelDia otro) =>
+      sangrado == otro.sangrado &&
+      flujo == otro.flujo &&
+      animo == otro.animo &&
+      notas == otro.notas &&
+      setEquals(sintomas, otro.sintomas);
 }
