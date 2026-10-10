@@ -785,4 +785,96 @@ void main() {
       expect(formularioAbierto(), isFalse);
     });
   });
+
+  // #10: "Guardar registro" fijo abajo, fuera del scroll.
+  group('guardar fijo', () {
+    final boton = find.widgetWithText(ElevatedButton, 'Guardar registro');
+    final notas = find.byType(TextFormField);
+
+    Future<void> abrir360(WidgetTester tester, double escala,
+        {bool guardado = true}) async {
+      if (guardado) {
+        await repo.upsertDay(
+          date: hoy,
+          isPeriodDaySwitch: true,
+          flow: FlowIntensity.abundante,
+          mood: Mood.irritable,
+          notes: 'Nota de prueba',
+          symptoms: Symptom.values.toSet(),
+        );
+      }
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = escala;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(const MaterialApp(home: AddCycleScreen()));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('el boton no esta dentro del scroll', (tester) async {
+      await abrir360(tester, 1.0);
+      expect(find.ancestor(of: boton, matching: find.byType(Scrollable)),
+          findsNothing);
+      expect(find.ancestor(of: notas, matching: find.byType(Scrollable)),
+          findsWidgets);
+    });
+
+    for (final escala in [1.0, 1.3, 1.5, 2.0]) {
+      testWidgets(
+          'texto $escala: se ve abajo sin desplazar y el ultimo campo no '
+          'queda tapado', (tester) async {
+        await abrir360(tester, escala);
+        expect(tester.takeException(), isNull);
+
+        final rectBoton = tester.getRect(boton);
+        expect(rectBoton.bottom, lessThanOrEqualTo(640));
+        expect(rectBoton.top, greaterThan(640 - 120));
+
+        // Al final del scroll, las notas terminan por encima del boton.
+        await tester.drag(find.byType(SingleChildScrollView),
+            const Offset(0, -5000));
+        await tester.pumpAndSettle();
+        expect(tester.getRect(notas).bottom,
+            lessThanOrEqualTo(tester.getRect(boton).top));
+        expect(tester.getRect(boton), rectBoton);
+      });
+    }
+
+    testWidgets(
+        'con el teclado abierto queda encima del teclado y las notas se ven',
+        (tester) async {
+      await abrir360(tester, 1.0);
+      await tester.ensureVisible(notas);
+      await tester.pumpAndSettle();
+      await tester.tap(notas);
+      await tester.pumpAndSettle();
+
+      const teclado = 300.0;
+      tester.view.viewInsets = const FakeViewPadding(bottom: teclado);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final rectBoton = tester.getRect(boton);
+      expect(rectBoton.bottom, lessThanOrEqualTo(640 - teclado));
+      // El area desplazable termina sobre el boton: nada queda debajo.
+      final area = tester.getRect(find.byType(SingleChildScrollView));
+      expect(area.bottom, lessThanOrEqualTo(rectBoton.top));
+      // El campo enfocado sigue a la vista y, desplazando, se ve entero
+      // por encima del boton.
+      expect(tester.getRect(notas).top, lessThan(area.bottom));
+      await tester.ensureVisible(notas);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(notas).bottom, lessThanOrEqualTo(area.bottom));
+    });
+
+    testWidgets('con teclado y texto 1.3 tampoco hay desbordes',
+        (tester) async {
+      await abrir360(tester, 1.3);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.getRect(boton).bottom, lessThanOrEqualTo(340));
+    });
+  });
 }

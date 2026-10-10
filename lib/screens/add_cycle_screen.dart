@@ -202,155 +202,167 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
           backgroundColor: const Color(0xFFA8D8EA),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Fecha del registro",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 5),
-                GestureDetector(
-                  onTap: _elegirFecha,
-                  child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                            style: const TextStyle(fontSize: 16),
+        // #10: "Guardar registro" queda fijo abajo, fuera del scroll. El
+        // Scaffold achica el cuerpo con el teclado abierto, asi que el boton
+        // queda encima del teclado; el formulario termina sobre el boton y
+        // ningun campo queda tapado.
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Fecha del registro",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 5),
+                      GestureDetector(
+                        onTap: _elegirFecha,
+                        child: Container(
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                              const Icon(Icons.calendar_today, color: Colors.grey),
+                            ],
                           ),
                         ),
-                        const Icon(Icons.calendar_today, color: Colors.grey),
+                      ),
+
+                      const SizedBox(height: 25),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          "Día de sangrado",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                        value: _esDiaDeSangrado,
+                        onChanged: (v) => setState(() => _esDiaDeSangrado = v),
+                      ),
+
+                      if (_esDiaDeSangrado) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Flujo menstrual",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 5),
+                        DropdownButtonFormField<FlowIntensity?>(
+                          initialValue: _flujo,
+                          // isExpanded: el texto elegido se ajusta al ancho (con
+                          // "..." si no entra) en vez de desbordar.
+                          isExpanded: true,
+                          hint: const Text("Sin especificar"),
+                          items: [
+                            const DropdownMenuItem(
+                                value: null, child: Text("Sin especificar")),
+                            ...FlowIntensity.values.map((f) =>
+                                DropdownMenuItem(value: f, child: Text(f.label))),
+                          ],
+                          onChanged: (v) => setState(() => _flujo = v),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        ),
                       ],
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: 25),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    "Día de sangrado",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  value: _esDiaDeSangrado,
-                  onChanged: (v) => setState(() => _esDiaDeSangrado = v),
-                ),
+                      const SizedBox(height: 25),
+                      const Text(
+                        "Estado de ánimo",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 5),
+                      DropdownButtonFormField<Mood?>(
+                        initialValue: _estadoAnimo,
+                        isExpanded: true,
+                        hint: const Text("Sin registrar"),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text("Sin registrar")),
+                          ...Mood.values.map((a) =>
+                              DropdownMenuItem(value: a, child: Text(a.label))),
+                        ],
+                        onChanged: (v) => setState(() => _estadoAnimo = v),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      ),
 
-                if (_esDiaDeSangrado) ...[
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Flujo menstrual",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 5),
-                  DropdownButtonFormField<FlowIntensity?>(
-                    initialValue: _flujo,
-                    // isExpanded: el texto elegido se ajusta al ancho (con
-                    // "..." si no entra) en vez de desbordar.
-                    isExpanded: true,
-                    hint: const Text("Sin especificar"),
-                    items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text("Sin especificar")),
-                      ...FlowIntensity.values.map((f) =>
-                          DropdownMenuItem(value: f, child: Text(f.label))),
+                      // 🔹 Sección de selección de síntomas
+                      const SizedBox(height: 25),
+                      const Text(
+                        "Síntomas",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      SymptomSelector(
+                        selectedSymptoms: _selectedSymptoms,
+                        onSelectionChanged: (newList) {
+                          setState(() => _selectedSymptoms = newList);
+                        },
+                      ),
+
+                      const SizedBox(height: 25),
+                      const Text(
+                        "Notas adicionales",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 5),
+                      TextFormField(
+                        controller: _notasController,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      ),
                     ],
-                    onChanged: (v) => setState(() => _flujo = v),
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 25),
-                const Text(
-                  "Estado de ánimo",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 5),
-                DropdownButtonFormField<Mood?>(
-                  initialValue: _estadoAnimo,
-                  isExpanded: true,
-                  hint: const Text("Sin registrar"),
-                  items: [
-                    const DropdownMenuItem(
-                        value: null, child: Text("Sin registrar")),
-                    ...Mood.values.map((a) =>
-                        DropdownMenuItem(value: a, child: Text(a.label))),
-                  ],
-                  onChanged: (v) => setState(() => _estadoAnimo = v),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                 ),
-
-                // 🔹 Sección de selección de síntomas
-                const SizedBox(height: 25),
-                const Text(
-                  "Síntomas",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 8),
-                SymptomSelector(
-                  selectedSymptoms: _selectedSymptoms,
-                  onSelectionChanged: (newList) {
-                    setState(() => _selectedSymptoms = newList);
-                  },
-                ),
-
-                const SizedBox(height: 25),
-                const Text(
-                  "Notas adicionales",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 5),
-                TextFormField(
-                  controller: _notasController,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: _guardarRegistro,
-                    icon: const Icon(Icons.save),
-                    label: const Text("Guardar registro"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA8D8EA),
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: ElevatedButton.icon(
+                  onPressed: _guardarRegistro,
+                  icon: const Icon(Icons.save),
+                  label: const Text("Guardar registro"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFA8D8EA),
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
