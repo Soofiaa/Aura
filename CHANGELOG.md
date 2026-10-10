@@ -52,9 +52,14 @@
 - Los números de los días futuros del Calendario se ven en un gris más oscuro, más fácil de leer.
 - Los datos pasan a un formato nuevo (v5) que guarda el interruptor de la ovulación y la ventana fértil; no cambia ningún día ni síntoma. Los respaldos nuevos lo incluyen, y los anteriores se restauran con el interruptor activado. Una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos, y no puede abrir los datos ya actualizados: hay que seguir con esta versión o una más nueva.
 - Los respaldos nuevos usan un formato que incluye el fin de cada período. Los respaldos anteriores se siguen pudiendo restaurar; una versión anterior de Aura rechaza un respaldo nuevo sin tocar tus datos.
+- Los chips de síntomas tienen un área táctil de 48 dp sin cambiar su aspecto, y su ícono crece con el tamaño de texto del sistema.
+- Los interruptores de Ajustes tienen el mismo estilo que el de "Registrar día". "Borrar todos los datos" pasa a ser un botón con borde y texto rojos, más discreto; su confirmación no cambia.
+- Más contraste, manteniendo los colores pastel: los textos de "Confianza", "Período atrasado", la versión y los textos secundarios son más oscuros, y los bordes e íconos usan un rosa más profundo (hoy, días estimados, − y +, síntoma marcado). El período registrado del Calendario, el rango elegido y las barras de síntomas tienen un borde fino, y la pestaña seleccionada de la barra inferior, un borde azul.
 
 ### Corregido
 
+- El selector de fecha y otros textos del sistema ("Back", "Tab 1 of 4") aparecían en inglés: ahora están en español.
+- El lector de pantalla no decía si un síntoma estaba marcado, no leía el gráfico de ánimo y en el Calendario no distinguía el período registrado ni el día de hoy. Ahora anuncia el estado de cada síntoma, cada ánimo con su porcentaje, "período registrado" y "hoy", y las flechas "Mes anterior" y "Mes siguiente"; el título del mes ya no se anuncia como un botón.
 - "Registrar día" no mostraba marcados los síntomas ya guardados al abrir un día registrado: ahora se ven marcados. Además, si en ese día tocabas otro síntoma, al guardar se borraban los que ya estaban guardados; eso ya no pasa.
 
 ## 1.0.1

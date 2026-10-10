@@ -653,12 +653,20 @@ copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar (
   `drift/remote.dart` no se importan; el paquete `web` es solo para la plataforma web. `url_launcher` 6.3.2 y
   `url_launcher_android` 6.3.23 solo lanzan la intención del sistema. `url_launcher_android` va con versión exacta: desde la
   6.3.29 trae `androidx.browser` 1.9.0, que exige AGP 8.9.1 o más nuevo (el proyecto usa 8.7.3).
+- **Localización** (rama `fix/accesibilidad-contraste`): `flutter_localizations` viene con el SDK de Flutter (solo Dart, sin
+  código Android ni red) y da los textos del sistema en español (selector de fecha, "Atrás", "Pestaña 1 de 4"). Obliga a usar
+  `intl` 0.20.2 (antes 0.19.0), la versión que fija el SDK, y por eso `table_calendar` pasa de 3.1.3 a 3.2.1 (la 3.1.3 exige
+  `intl` ^0.19.0; la 3.2.x solo agrega una propiedad opcional y corrige una aserción). No se agregó ningún otro paquete,
+  tampoco transitivo, ni ningún plugin Android.
 - **Solo de desarrollo:** los paquetes de red de `pubspec.lock` (`http_multi_server`, `shelf_web_socket`, `web_socket` y
   `web_socket_channel`) no entran en la app.
 - **Permisos del release** (`aapt`): `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` y
   `com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Sin `INTERNET`.** Verificado otra vez el 2026-10-09 con
   `url_launcher`, en un release firmado de la rama `feat/limpieza-release` (sin instalar): los mismos cuatro permisos, las
-  mismas consultas y el mismo certificado (SHA-256 `a932d218…a82c`).
+  mismas consultas y el mismo certificado (SHA-256 `a932d218…a82c`). Verificado de nuevo el 2026-10-09 con
+  `flutter_localizations`, `intl` 0.20.2 y `table_calendar` 3.2.1, en un release firmado de la rama
+  `fix/accesibilidad-contraste` (sin instalar): los mismos cuatro permisos, **sin `INTERNET`**, las mismas consultas
+  (`PROCESS_TEXT` y `GET_CONTENT`) y el mismo certificado (SHA-256 `a932d218…a82c`).
 
 **Bibliotecas nativas del release** (✅, `app-release.apk` de la 1.1.0+3, SHA-256 `4d666f2c…737e2b`; tamaños en bytes):
 
