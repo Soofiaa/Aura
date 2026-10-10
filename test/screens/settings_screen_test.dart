@@ -7,9 +7,11 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/main.dart';
 import 'package:aura/screens/settings_screen.dart';
 import 'package:aura/utils/app_version.dart';
 
+import '../support/contrast.dart';
 import '../support/fake_backup.dart';
 import '../support/fake_notification_scheduler.dart';
 import '../support/fake_url_launcher.dart';
@@ -591,6 +593,74 @@ void main() {
       await repo.setShowFertileWindow(false);
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(mostrar).value, isFalse);
+      await db.close();
+    });
+  });
+
+  group('estilo de interruptores y de "Borrar todos los datos"', () {
+    Future<void> pumpConTema(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(420, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        theme: auraTheme(),
+        home: SettingsScreen(
+          repository: repo,
+          scheduler: scheduler,
+          backupService: backup,
+          fileGateway: FakeBackupFileGateway(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+        'los interruptores usan el estilo del tema (sin el celeste palido)',
+        (tester) async {
+      await pumpConTema(tester);
+      final tiles = <SwitchListTile>[];
+      for (var i = 0; i < 6; i++) {
+        tiles.addAll(tester.widgetList<SwitchListTile>(
+            find.byType(SwitchListTile, skipOffstage: false)));
+        await tester.drag(find.byType(ListView), const Offset(0, -300));
+        await tester.pumpAndSettle();
+      }
+      expect(tiles, isNotEmpty);
+      for (final t in tiles) {
+        expect(t.activeThumbColor, isNull, reason: '${t.title}');
+        expect(t.activeTrackColor, isNull, reason: '${t.title}');
+      }
+      await db.close();
+    });
+
+    testWidgets(
+        'borrar: boton con borde en color de error, legible y menos '
+        'prominente', (tester) async {
+      await pumpConTema(tester);
+      final finder = find.byKey(const Key('borrar_todos_los_datos'));
+      await tester.scrollUntilVisible(finder, 200);
+      final boton = tester.widget<OutlinedButton>(finder);
+      final contexto = tester.element(finder);
+      final error = Theme.of(contexto).colorScheme.error;
+      final estado = <WidgetState>{};
+      expect(boton.style!.foregroundColor!.resolve(estado), error);
+      expect(boton.style!.side!.resolve(estado)!.color, error);
+      // Texto en color de error sobre el fondo de la app: al menos 4,5:1.
+      expect(contrastRatio(error, Theme.of(contexto).scaffoldBackgroundColor),
+          greaterThanOrEqualTo(4.5));
+      // Compacto: no ocupa todo el ancho; area tactil de 48 de alto.
+      final tamano = tester.getSize(finder);
+      expect(tamano.width, lessThan(420 - 40));
+      expect(tamano.height, greaterThanOrEqualTo(48));
+      expect(find.byType(ElevatedButton), findsNothing);
+
+      // El dialogo de confirmacion sigue igual.
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+      expect(find.text('¿Borrar todos los datos?'), findsOneWidget);
+      expect(find.text('Borrar todo'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
       await db.close();
     });
   });

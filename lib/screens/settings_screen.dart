@@ -267,7 +267,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             "Son estimaciones, no un método anticonceptivo. Si lo apagas, "
             "no se muestran en Inicio ni en el Calendario.",
           ),
-          activeThumbColor: const Color(0xFFA8D8EA),
           value: _mostrarFertil,
           onChanged: _cambiarMostrarFertil,
         ),
@@ -382,7 +381,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               "Interruptor general. Actívalo para habilitar los "
               "recordatorios de abajo.",
             ),
-            activeThumbColor: const Color(0xFFA8D8EA),
             value: _notificaciones,
             onChanged: (val) => _cambiarNotificacionesGeneral(val),
           ),
@@ -392,7 +390,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text(
               "Un aviso el día antes del inicio estimado de tu período.",
             ),
-            activeThumbColor: const Color(0xFFA8D8EA),
             value: _recordatorioPeriodo,
             onChanged: _notificaciones
                 ? (val) => _cambiarRecordatorioPeriodo(val)
@@ -426,7 +423,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ],
                   ),
-            activeThumbColor: const Color(0xFFA8D8EA),
             value: _recordatorioFertil && _mostrarFertil,
             onChanged: _notificaciones && _mostrarFertil
                 ? (val) => _cambiarRecordatorioFertil(val)
@@ -440,7 +436,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               "El detalle puede verse en relojes u otros dispositivos "
               "conectados.",
             ),
-            activeThumbColor: const Color(0xFFA8D8EA),
             value: _mostrarDetalles,
             onChanged:
                 _notificaciones ? (val) => _cambiarMostrarDetalles(val) : null,
@@ -468,16 +463,22 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 10),
           BackupSection(service: _backupService, gateway: widget.fileGateway),
           const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _confirmarYBorrarDatos,
-            icon: const Icon(Icons.delete_forever),
-            label: const Text("Borrar todos los datos"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.pinkAccent.withValues(alpha: 0.8),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+          // Accion destructiva: boton con borde en el color de error del
+          // tema, compacto y menos prominente que "Crear respaldo". El
+          // dialogo de confirmacion no cambia.
+          Center(
+            child: OutlinedButton.icon(
+              key: const Key('borrar_todos_los_datos'),
+              onPressed: _confirmarYBorrarDatos,
+              icon: const Icon(Icons.delete_forever),
+              label: const Text("Borrar todos los datos"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(color: Theme.of(context).colorScheme.error),
+                minimumSize: const Size(48, 48),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
 

@@ -295,6 +295,14 @@ void main() {
     expect(row.flow, isNull);
   });
 
+  testWidgets('el interruptor "Día de sangrado" usa el estilo del tema',
+      (tester) async {
+    await _abrirFormulario(tester);
+    final interruptor = tester.widget<Switch>(find.byType(Switch));
+    expect(interruptor.activeThumbColor, isNull);
+    expect(interruptor.activeTrackColor, isNull);
+  });
+
   testWidgets('el titulo es "Registrar día", igual que el boton de Inicio',
       (tester) async {
     await _abrirFormulario(tester);
