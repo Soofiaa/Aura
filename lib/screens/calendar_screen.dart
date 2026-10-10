@@ -551,46 +551,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
             // aunque el texto de uno se parta en dos lineas.
             IntrinsicHeight(
               child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => showPeriodStartSheet(context,
-                        repository: _repository, today: _today),
-                    icon: const Icon(Icons.water_drop_outlined),
-                    label: const Text('Me llegó hoy'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textPrimary,
-                      minimumSize: const Size(48, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => showPeriodStartSheet(context,
+                          repository: _repository, today: _today),
+                      icon: const Icon(Icons.water_drop_outlined),
+                      label: const Text('Me llegó hoy'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.textPrimary,
+                        minimumSize: const Size(48, 48),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _alternarModoRango,
-                    icon: Icon(_rangeMode ? Icons.close : Icons.date_range),
-                    // En modo rango se ve "Cancelar" (entra en una linea),
-                    // pero el lector de pantalla sigue diciendo "Cancelar
-                    // seleccion": semanticsLabel reemplaza al texto en el
-                    // mismo nodo del boton.
-                    label: _rangeMode
-                        ? const Text('Cancelar',
-                            semanticsLabel: 'Cancelar selección')
-                        : const Text('Elegir varios días'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      minimumSize: const Size(48, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _alternarModoRango,
+                      icon: Icon(_rangeMode ? Icons.close : Icons.date_range),
+                      // En modo rango se ve "Cancelar" (entra en una linea),
+                      // pero el lector de pantalla sigue diciendo "Cancelar
+                      // seleccion": semanticsLabel reemplaza al texto en el
+                      // mismo nodo del boton.
+                      label: _rangeMode
+                          ? const Text('Cancelar',
+                              semanticsLabel: 'Cancelar selección')
+                          : const Text('Elegir varios días'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        minimumSize: const Size(48, 48),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ),
             const SizedBox(height: 4),
             // <dynamic> explicito: con markerBuilder se inferiria otro tipo
