@@ -34,47 +34,79 @@ class SymptomSelector extends StatelessWidget {
     onSelectionChanged(updated);
   }
 
+  /// Alto minimo del area tactil de cada chip (pautas de Android y
+  /// Material). El chip visible sigue midiendo lo mismo: el resto es
+  /// margen transparente que tambien responde al toque.
+  static const double minTapHeight = 48;
+
   @override
   Widget build(BuildContext context) {
+    // El icono crece con el tamano de texto del sistema, igual que la
+    // etiqueta.
+    final iconSize = MediaQuery.textScalerOf(context).scale(18);
     return Wrap(
       spacing: 8,
-      runSpacing: 8,
+      // 3 + 2 + 3: con el margen vertical de cada chip, la separacion
+      // visible entre filas sigue siendo de 8.
+      runSpacing: 2,
       children: _allSymptoms.map((symptom) {
         final isSelected = selectedSymptoms.contains(symptom);
-        return GestureDetector(
+        return Semantics(
+          container: true,
+          checked: isSelected,
+          label: symptom,
           onTap: () => _toggleSymptom(symptom),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFFAD4D8)
-                  : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFFEE8CA7)
-                    : Colors.grey.shade300,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  size: 18,
-                  color:
-                  isSelected ? const Color(0xFFEE8CA7) : Colors.grey[600],
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  symptom,
-                  style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.grey[800],
-                    fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _toggleSymptom(symptom),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: minTapHeight),
+              child: Align(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFFAD4D8)
+                          : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFFEE8CA7)
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          size: iconSize,
+                          color: isSelected
+                              ? const Color(0xFFEE8CA7)
+                              : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          symptom,
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.grey[800],
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );

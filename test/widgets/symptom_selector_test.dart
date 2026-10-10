@@ -110,4 +110,82 @@ void main() {
     expect(identical(host.recibidas[0], host.recibidas[1]), isFalse);
     expect(host.recibidas[0], ['Cansancio', 'Antojos']);
   });
+
+  testWidgets(
+      'el lector de pantalla anuncia cada chip con su nombre y si esta '
+      'marcado', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(const _Host(inicial: ['Cansancio']));
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Cansancio')),
+      matchesSemantics(
+        label: 'Cansancio',
+        hasCheckedState: true,
+        isChecked: true,
+        hasTapAction: true,
+      ),
+    );
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Antojos')),
+      matchesSemantics(
+        label: 'Antojos',
+        hasCheckedState: true,
+        isChecked: false,
+        hasTapAction: true,
+      ),
+    );
+
+    // Marcar desde el lector (accion de toque) cambia el estado anunciado.
+    final host = tester.state<_HostState>(find.byType(_Host));
+    tester.semantics.tap(find.semantics.byLabel('Antojos'));
+    await tester.pump();
+    expect(host.recibidas.last, ['Cansancio', 'Antojos']);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Antojos')),
+      matchesSemantics(
+        label: 'Antojos',
+        hasCheckedState: true,
+        isChecked: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('cada chip tiene un area tactil de al menos 48 de alto',
+      (tester) async {
+    await tester.pumpWidget(const _Host(inicial: []));
+    for (final nombre in ['Acné', 'Dolor de espalda', 'Cansancio']) {
+      final area = find.ancestor(
+        of: find.text(nombre),
+        matching: find.byType(GestureDetector),
+      );
+      expect(tester.getSize(area.first).height,
+          greaterThanOrEqualTo(SymptomSelector.minTapHeight),
+          reason: nombre);
+    }
+    // Tocar el margen transparente sobre el chip tambien lo marca.
+    final area = find
+        .ancestor(of: find.text('Acné'), matching: find.byType(GestureDetector))
+        .first;
+    final arriba = tester.getTopLeft(area) + const Offset(20, 1);
+    await tester.tapAt(arriba);
+    await tester.pump();
+    expect(_marcado(tester, 'Acné'), isTrue);
+  });
+
+  testWidgets('el icono del chip crece con el tamano de texto del sistema',
+      (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(const _Host(inicial: []));
+    final icono = tester.widget<Icon>(find.descendant(
+      of: find
+          .ancestor(of: find.text('Acné'), matching: find.byType(GestureDetector))
+          .first,
+      matching: find.byType(Icon),
+    ));
+    expect(icono.size, 27); // 18 * 1,5
+  });
 }
