@@ -23,6 +23,10 @@
   - La contraseña protege solo el archivo del respaldo: los datos dentro de la app y la copia que Aura guarda antes de importar no se cifran.
 - **"Política de privacidad"** al pie de Ajustes, junto a la versión: abre la política en el navegador del teléfono. Aura no se conecta a Internet: la página la abre el navegador. Si no se puede abrir, Aura muestra la dirección para abrirla desde un navegador.
 - Nueva sección **"Tus datos"** en Ajustes, con las dos opciones de respaldo antes de "Borrar todos los datos".
+- **Recordatorio de respaldo:** si pasan 30 días sin crear un respaldo (o nunca creaste uno, desde la primera semana de uso), Inicio muestra una tarjeta con "Crear respaldo", que abre el mismo paso a paso que Ajustes, "Ahora no" (vuelve en 7 días) y "No recordármelo más". Cuenta como respaldo guardarlo en el teléfono o compartirlo eligiendo una app de destino; cancelar no cuenta. Es solo una tarjeta dentro de la app, sin notificación.
+- **"Recordarme crear un respaldo"** en Ajustes → "Tus datos", activado por defecto.
+- **Fecha del último respaldo** en Ajustes, bajo "Crear respaldo": "Último respaldo: 4 de octubre" o "Todavía no has creado un respaldo en este teléfono".
+- **4.ª página en la bienvenida** (solo en instalaciones nuevas): "Tus datos se quedan contigo", que explica que Aura guarda todo solo en el teléfono y recomienda crear un respaldo de vez en cuando.
 - La confirmación de importar cuenta los **días con registro (M de período)**: los días marcados como "no hubo sangrado" cuentan como registro, pero no como período.
 - **"Tus ciclos"** en Estadísticas: cuántos ciclos se consideran, la duración típica del ciclo, el más corto y el más largo, la regularidad ("Regular", "Algo variable" o "Muy variable") y la duración típica del período, indicando si sale de tus períodos o de tu ajuste. Avisa cuántos ciclos no se cuentan por durar menos de 15 o más de 60 días. La duración típica del ciclo es el mismo número que usa la predicción.
 - **"Mostrar ovulación y ventana fértil"** en Ajustes → "Tu ciclo", activado por defecto. Si lo apagas, Inicio y el Calendario no las muestran y no se envía el aviso de la ventana fértil; ese aviso conserva su valor y vuelve cuando enciendes el interruptor.
@@ -42,7 +46,7 @@
 - Un mensaje nuevo reemplaza al anterior en vez de esperar en cola.
 - El Calendario y Ajustes se actualizan solos cuando los datos cambian en otra pestaña (por ejemplo, al importar o borrar todo).
 - La versión que muestra Ajustes sale de una constante única, comprobada con un test contra `pubspec.yaml`.
-- "Borrar todos los datos" también borra la copia guardada antes de la última importación, la copia guardada antes de actualizar y los archivos temporales del respaldo.
+- "Borrar todos los datos" también borra la copia guardada antes de la última importación, la copia guardada antes de actualizar, los archivos temporales del respaldo y la fecha del último respaldo del recordatorio.
 - La duración del período que se usa para estimar la fase menstrual solo cuenta períodos terminados: registrar solo el primer día ya no la acorta. Si no hay ningún período terminado, se usa la duración habitual de Ajustes (5 días si no la cambias).
 - Al actualizar, los períodos que ya tenías se marcan como terminados solo cuando se puede deducir con seguridad: dos o más días marcados, sin huecos de más de un día y, si es el más reciente, terminado hace más de 7 días. Los demás quedan abiertos. Ningún día ni síntoma cambia.
 - Con confianza baja, Inicio ya no muestra la ovulación, la ventana fértil ni la fase ovulatoria: muestra el próximo período con su rango ("(valor por defecto)" si hay menos de 2 ciclos) y una línea que explica por qué no hay ventana.

@@ -146,7 +146,7 @@ usuaria va al Calendario a revisar los días importados.
 | Versión | Contenido |
 |---|---|
 | **1.0.1** | Parche del formulario "Registrar día" (entonces titulado "Registrar síntomas"): hallazgos B-1, B-2 y B-3 (sección 2) |
-| **1.1** | HU-01 a HU-06 (HU-04 incluye la mejora U-1) + tareas T-01, T-02 y T-03 (íconos) |
+| **1.1** | HU-01 a HU-06 (HU-04 incluye la mejora U-1) + HU-08 (recordatorio de respaldo) + tareas T-01, T-02 y T-03 (íconos) |
 | **1.2** | HU-07 (historial de anticonceptivos) |
 | Fuera de alcance | Recordatorio de toma de pastilla, cuenta o sincronización en la nube, publicidad, pagos, exportar a PDF clínico |
 
@@ -719,6 +719,51 @@ inventario existe para respaldar esa consulta. Aquí no se afirma ninguna clasif
 
 ---
 
+### HU-08 · Recordarme crear un respaldo
+**Como** usuaria **quiero** que Aura me recuerde de vez en cuando crear un respaldo **para** no perder mis registros si cambio,
+pierdo o daño el teléfono.
+
+**Estado:** implementada en la rama `feat/recordatorio-respaldo` (Parte 1: CP1 a CP3; Parte 2: corrección de lectura, CP4,
+CP5a, CP5b, CP6 y CP7), sin merge. Decisiones RR-1 a RR-7 y D-8 en la sección 10. Aura guarda todo solo en el teléfono
+(`allowBackup="false"`, sin `INTERNET`): sin un respaldo propio, perder el teléfono es perder los registros.
+
+**Criterios de aceptación**
+1. **Cuándo aparece:** Inicio muestra una tarjeta si el recordatorio está activado, hay al menos un día registrado, pasaron 7 días o
+   más desde `primerUso` (gracia), no hay un "Ahora no" vigente y, además, nunca se creó un respaldo o el último tiene 30 días o
+   más (RR-3). "Hoy" es el reloj de Inicio. Mientras no se haya leído el estado, o si no se puede leer, no se muestra nada.
+2. **Dónde:** dentro del área desplazable de Inicio, debajo de la tarjeta del ciclo y de "¿Sigue tu período hoy?", antes del aviso
+   del pie. Los botones fijos de T2-5 no cambian.
+3. **Textos.** Sin respaldo previo: "Guarda una copia de tus registros" y "Aura guarda todo solo en este teléfono. Si lo pierdes o
+   se daña, tus registros no se pueden recuperar. Un respaldo crea una copia en el lugar que elijas.". Con respaldo previo: "Hace
+   N días que no creas un respaldo" y "Tu último respaldo es del {fecha}. Lo que registraste después está solo en este
+   teléfono.". La fecha usa el formato de `dayMonthLabel` ("4 de octubre") y lleva el año si es de otro año ("28 de diciembre
+   de 2025").
+4. **Botones:** "Crear respaldo" abre el mismo flujo que Ajustes (RR-5); "Ahora no" la oculta por 7 días; "No recordármelo más"
+   apaga el interruptor y avisa "Puedes volver a activarlo en Ajustes.". Tras crear un respaldo, la tarjeta desaparece sola.
+5. **Qué cuenta como respaldo:** "Guardar en el teléfono" terminado (con o sin contraseña) o "Compartir" con resultado `success`
+   del sistema (RR-2). Cancelar el "Guardar como", cerrar la hoja de compartir, un resultado `unavailable` o un error no anotan
+   nada. Un respaldo anotado también quita un "Ahora no" pendiente.
+6. **Ajustes → "Tus datos":** "Crear respaldo" suma una segunda línea, "Último respaldo: {fecha}" o "Todavía no has creado un
+   respaldo en este teléfono", y hay un interruptor "Recordarme crear un respaldo" ("Un aviso en Inicio si pasan 30 días sin
+   respaldo"), activado por defecto.
+7. **Onboarding:** una 4.ª página, "Tus datos se quedan contigo 🔒", con el ícono de candado y el texto "Aura funciona sin
+   internet y guarda todo solo en este teléfono. Para no perder tus registros si cambias o pierdes el teléfono, crea un respaldo
+   de vez en cuando desde Ajustes.". La ven solo las instalaciones nuevas; las páginas se pueden desplazar con letra grande.
+8. **Accesibilidad:** la tarjeta es un contenedor semántico con el título como encabezado y el orden de lectura título, texto y
+   botones; ícono `save_outlined` decorativo; botones de 48 dp en un `Wrap`; sin `liveRegion`; no depende solo del color. A
+   360 × 640 con texto de 1,0 a 2,0 no desborda, también con la tarjeta del período a la vez, y el área desplazable sigue sobre
+   200 dp.
+9. **Sin notificación del sistema** en la 1.1.0 (RR-4).
+
+**Datos:** sin migración ni cambio de schema (la base sigue en v5 y `currentBackupSchemaVersion` en 5). El estado va en
+`files/recordatorio_respaldo.json` (`getApplicationSupportDirectory`), con `version` 1, `primerUso`, `ultimoRespaldo`,
+`pospuestoHasta` y `activado`. Las escrituras son atómicas (temporal + rename) y van en fila. Un archivo inválido (no es JSON,
+otra versión, una fecha que no existe, UTF-8 dañado) se reemplaza por los valores por defecto con `primerUso` = hoy; si el
+archivo existe pero falla la **lectura**, se usan los valores por defecto sin escribir, y anotar, posponer o cambiar el
+interruptor fallan en vez de pisarlo.
+
+---
+
 ### T-01 · Ícono con fondo blanco (técnica)
 Fondo del círculo del ícono adaptativo en blanco `#FFFFFF`, con la misma flor de cuatro pétalos.
 
@@ -815,6 +860,7 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
 | **D-5** | ¿El Calendario debe marcar el próximo período estimado? Hoy solo marca los días que faltan del período en curso, y es intencional según E-1. | Consultar a las testers antes de decidir. Si se marca, no debe confundirse con un día registrado ni con los estimados del período en curso (principio 1). | Pendiente: consultar a las testers |
+| **D-8** | ¿La transferencia entre dispositivos de Android (cable o Wi-Fi al cambiar de teléfono) copia los datos de Aura? Con `targetSdk` 36, `allowBackup="false"` apaga el respaldo en la nube, pero no necesariamente la transferencia directa si no hay `dataExtractionRules`. | No prometerla: el camino documentado para cambiar de teléfono es el respaldo propio (HU-06) y su recordatorio (HU-08). | Resuelta: ver sección 10 (RR-6) |
 | **D-6** | ¿Volvió tu período o es manchado? Cuando aparece sangrado después de un período cerrado, la app no lo distingue: a 7 días o menos del último día se suma a ese período y lo reabre (R-4); a más de 7 días empieza un período nuevo. | Preguntar a las testers. Una opción es preguntarlo al marcar el día ("¿Volvió tu período o es manchado?"). No se implementa en la 1.1. | Pendiente: consultar a las testers |
 
 ### Limitaciones conocidas de la 1.1.0
@@ -831,6 +877,12 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
   formulario permitía fechas hasta 2030; un respaldo importado, que las acepta hasta 2030-12-31; o el reloj del teléfono
   atrasado) queda deshabilitado en el Calendario: no se ve con el relleno de período registrado ni recibe "período registrado"
   en su etiqueta.
+- **Recordatorio de respaldo y "Compartir" (HU-08, RR-2):** un `success` de la hoja de compartir solo dice que se eligió una app
+  de destino, no que el archivo llegó (por ejemplo, un correo que queda en borradores). Ese respaldo igual cuenta y el
+  recordatorio no vuelve hasta 30 días después. "Guardar en el teléfono" no tiene esta limitación.
+- **Recordatorio de respaldo en una actualización (HU-08):** el archivo del recordatorio no existía antes, así que para testers y
+  usuarias que actualizan desde una 1.1.0 anterior `primerUso` es el día en que abren la versión nueva, aunque usen Aura desde
+  antes, y Aura no sabe de los respaldos creados antes de actualizar: si tienen registros, la tarjeta aparece 7 días después.
 - **Marca de la ovulación con letra grande (para la 1.1.1):** con el texto del sistema a 1,3 o más, el número del día de la
   ovulación puede tocar o pisar el punto que va debajo (T2-6); la altura de la fila del Calendario es fija. Mejora prevista:
   ajustar la altura de la fila según la escala del texto.
@@ -863,8 +915,8 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03),
 tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7),
-en HU-05 (H5-1 a H5-4), tras la Etapa A de HU-06b (HU6b-1 a HU6b-12), en la coherencia de Inicio (H3-1) y en la tanda 2
-de formulario y diseño (T2-1 a T2-7).
+en HU-05 (H5-1 a H5-4), tras la Etapa A de HU-06b (HU6b-1 a HU6b-12), en la coherencia de Inicio (H3-1), en la tanda 2
+de formulario y diseño (T2-1 a T2-7) y en el recordatorio de respaldo de HU-08 (RR-1 a RR-7, con D-8).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -920,13 +972,20 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **T2-6** | El punto de la ovulación del Calendario va justo sobre la barra de la ventana, debajo del número, como en la leyenda. No se acota la escala del número ni cambia `rowHeight`. | Hallazgo #23: dibujado arriba del número parecía del día de la fila anterior. Con texto 1,3 o más el número puede tocar el punto (ver "Limitaciones conocidas"). |
 | **T2-7** | En modo rango del Calendario el botón dice "Cancelar", pero su nombre accesible sigue siendo "Cancelar selección", en un solo nodo. Los dos botones ("Me llegó hoy" y el de rango) miden lo mismo (`IntrinsicHeight` y `stretch`). | "Cancelar selección" se partía en dos líneas y el botón quedaba más alto que "Me llegó hoy". |
 | **HU6-7** | Con la migración v4, el respaldo pasa a `schemaVersion` 4: cada día lleva `periodEnd` (`null`, `"declared"` o `"inferred"`) y los ajustes llevan `typicalPeriodLength` (de 1 a 15). `formatVersion` sigue en 1. Un respaldo v3 se acepta y se convierte con la regla D-2 ("hoy" = el día de la importación); si trae una clave `periodEnd`, se ignora. La duración habitual de un respaldo v3 queda en 5. Un respaldo v4 se importa tal cual, incluida su duración habitual. La importación solo acepta datos ya convertidos al schema actual. La app v3 rechaza un respaldo v4 como de una versión más nueva, sin tocar nada. | `formatVersion` versiona el envoltorio (cambiará con el cifrado de HU-06b) y `schemaVersion` los datos. Convertir siempre antes de importar impide que algún camino importe datos v3 sin aplicar D-2. |
+| **RR-1** | El estado del recordatorio (HU-08) va en un archivo JSON propio, `files/recordatorio_respaldo.json`, **sin migración**: la base sigue en v5. | El esquema del respaldo exportado está acoplado al de la base (`currentBackupSchemaVersion` = `schemaVersion`): una columna o tabla nueva obligaría a pasar a v6, y una 1.1.0 anterior rechazaría esos respaldos como de una versión más nueva. Además es un dato de este teléfono, no un registro de salud. |
+| **RR-2** | "Compartir" cuenta como respaldo solo con `ShareResultStatus.success`; `dismissed` y `unavailable` no anotan nada. "Guardar en el teléfono" cuenta cuando el "Guardar como" termina. | `unavailable` no dice si se envió algo. Limitación: `success` tampoco garantiza que el archivo llegó a destino (ver "Limitaciones conocidas"). |
+| **RR-3** | Umbral de **30 días** desde el último respaldo; **7 días de gracia** desde `primerUso` antes del primer aviso; **"Ahora no" pospone 7 días** (vuelve el mismo día en que vence). | Un mes de registros es lo máximo que se arriesga sin que el aviso moleste; la gracia evita el aviso en los primeros días de uso. |
+| **RR-4** | Sin notificación del sistema en la 1.1.0: el recordatorio es solo la tarjeta de Inicio. | Privacidad en la pantalla de bloqueo: un aviso sobre respaldar "registros" deja ver que se usa una app de salud. |
+| **RR-5** | "Crear respaldo" de la tarjeta abre el mismo flujo que Ajustes (`CreateBackupFlow`: datos de salud → proteger → guardar o compartir → anotar), con una sola protección contra doble toque compartida entre Ajustes e Inicio (`BackupBusyScope`). | Un solo camino con los mismos avisos y pruebas; la extracción no cambió ningún test existente. |
+| **RR-6 (D-8)** | `allowBackup="false"` se mantiene y no se agregan reglas de extracción (`dataExtractionRules`): la transferencia directa entre dispositivos queda **no verificada y no prometida**. | El respaldo en la nube está desactivado (comprobado en el manifiesto fusionado, en el APK y con `dumpsys`); la transferencia directa depende del sistema y no se probó. La forma documentada de cambiar de teléfono es el respaldo propio. |
+| **RR-7** | El archivo del recordatorio **no** entra en el respaldo exportado, y ni importar ni "Deshacer" lo tocan; "Borrar todos los datos" lo borra. | Describe este teléfono (cuándo se respaldó desde aquí), no los datos: importar un respaldo de otro teléfono no significa que este tenga una copia reciente. Tras borrar todo, vuelve la gracia de 7 días. |
 
 **Ajustes obligatorios de HU-06** (aprobados con la Etapa A):
 
 | ID | Ajuste |
 |---|---|
 | **A** | Los archivos temporales de exportación se borran al abrir la app y antes de la siguiente exportación, **no** al volver de la hoja de compartir: la app de destino puede seguir leyéndolos. |
-| **B** | "Borrar todos los datos" borra también la carpeta `respaldos/` completa (`antes_de_importar.json` y, desde la v4, `antes_de_migrar_v4.sqlite`) y los temporales; intenta los tres pasos aunque uno falle. |
+| **B** | "Borrar todos los datos" borra también la carpeta `respaldos/` completa (`antes_de_importar.json` y, desde la v4, `antes_de_migrar_v4.sqlite`) y los temporales; desde HU-08, también el archivo del recordatorio de respaldo (RR-7). Intenta todos los pasos aunque uno falle. |
 | **C** | Si el respaldo trae **menos** días que los actuales, la confirmación lo avisa de forma destacada ("El respaldo tiene N días menos que los que tienes ahora; se perderán."). Se calcula con el total de días con registro. |
 | **D** | La versión sale de una **constante única** (`lib/utils/app_version.dart`), usada en Ajustes y en el respaldo, con un test que falla si no coincide con `pubspec.yaml`. |
 | **E** | La exportación es **determinista**: días ordenados por fecha, síntomas por nombre y claves siempre en el mismo orden; los mismos datos producen el mismo archivo, salvo `exportedAt`. Con HU-06b vale para el **contenido descifrado**: dos exportaciones cifradas de los mismos datos no son idénticas, por la sal y el nonce aleatorios. |
