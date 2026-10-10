@@ -12,6 +12,7 @@ import '../../domain/backup_crypto.dart';
 import '../../utils/app_version.dart';
 import '../../utils/day_key.dart';
 import '../repositories/cycle_repository.dart';
+import 'backup_reminder_store.dart';
 import 'pre_migration_copy.dart' as copy;
 
 /// Lo que la confirmacion de importar necesita mostrar: cuantos dias hay
@@ -72,7 +73,7 @@ class BackupWriteException implements Exception {
 }
 
 /// Pasos de "Borrar todos los datos" (ver [BackupService.deleteAllData]).
-enum BackupDeleteStep { database, backups, temporaryFiles }
+enum BackupDeleteStep { database, backups, temporaryFiles, backupReminder }
 
 /// Fallo uno o mas pasos de "Borrar todos los datos"; los demas se
 /// intentaron igual.
@@ -257,9 +258,13 @@ class BackupService {
     Argon2idParams encryptionParams = Argon2idParams.production,
     BackupEncryptFunction encrypt = encryptBackupDocument,
     int maxFileBytes = maxBackupSizeBytes,
+    BackupReminderStore? reminderStore,
   })  : _supportDirectory = supportDirectory,
         _temporaryDirectory = temporaryDirectory,
         _clock = clock ?? DateTime.now,
+        _reminderStore = reminderStore ??
+            BackupReminderStore(
+                supportDirectory: supportDirectory, clock: clock),
         _runTask = runTask,
         _encryptionParams = encryptionParams,
         _encrypt = encrypt,
@@ -269,6 +274,9 @@ class BackupService {
   final Future<Directory> Function() _supportDirectory;
   final Future<Directory> Function() _temporaryDirectory;
   final DateTime Function() _clock;
+
+  /// Recordatorio de respaldo: "Borrar todos los datos" tambien lo borra.
+  final BackupReminderStore _reminderStore;
 
   // Cifrado (HU-06b). La contrasena nunca se guarda en un campo: vive
   // solo durante la llamada que la recibe.
@@ -590,10 +598,11 @@ class BackupService {
 
   /// "Borrar todos los datos": la base, la carpeta respaldos/ completa
   /// (copia previa a importar, copia previa a la migracion v4 y cualquier
-  /// .tmp huerfano) y los temporales del
-  /// respaldo. Intenta siempre los tres pasos aunque alguno falle, para
-  /// no dejar datos de salud por un error en otro paso, y al final lanza
-  /// un unico [BackupDeleteException] si alguno fallo.
+  /// .tmp huerfano), los temporales del respaldo y el estado del
+  /// recordatorio de respaldo. Intenta siempre todos los pasos aunque
+  /// alguno falle, para no dejar datos de salud por un error en otro
+  /// paso, y al final lanza un unico [BackupDeleteException] si alguno
+  /// fallo.
   Future<void> deleteAllData() async {
     final failedSteps = <BackupDeleteStep>[];
     final errors = <Object>[];
@@ -613,6 +622,7 @@ class BackupService {
       if (await dir.exists()) await dir.delete(recursive: true);
     });
     await attempt(BackupDeleteStep.temporaryFiles, cleanTemporaryFiles);
+    await attempt(BackupDeleteStep.backupReminder, _reminderStore.delete);
 
     if (failedSteps.isNotEmpty) {
       throw BackupDeleteException(failedSteps, errors);
@@ -657,6 +667,7 @@ BackupService get backupService => _backupServiceInstance ??= BackupService(
       cycleRepository,
       supportDirectory: getApplicationSupportDirectory,
       temporaryDirectory: getTemporaryDirectory,
+      reminderStore: backupReminderStore,
     );
 
 /// Solo para tests: reemplaza el servicio global.

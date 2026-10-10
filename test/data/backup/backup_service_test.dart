@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/backup/pre_migration_copy.dart';
 import 'package:aura/data/database/app_database.dart';
@@ -13,6 +14,16 @@ import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/utils/app_version.dart';
+
+/// Almacen del recordatorio que no puede borrar su archivo.
+class _ReminderStoreQueFalla extends BackupReminderStore {
+  _ReminderStoreQueFalla(Directory support)
+      : super(supportDirectory: () async => support);
+
+  @override
+  Future<void> delete() async =>
+      throw const FileSystemException('sin acceso al recordatorio');
+}
 
 BackupData _fixture() {
   final result = decodeBackup(
@@ -417,6 +428,9 @@ void main() {
           throw const FileSystemException('sin acceso a respaldos/'),
       temporaryDirectory: () async => temp,
       clock: () => now,
+      // El recordatorio tiene su propia carpeta: aqui solo falla respaldos/.
+      reminderStore: BackupReminderStore(
+          supportDirectory: () async => support, clock: () => now),
     );
 
     await expectLater(
@@ -447,6 +461,90 @@ void main() {
         .existsSync(), isFalse);
     expect(Directory(p.join(temp.path, 'share_plus')).existsSync(), isFalse);
   });
+  // Recordatorio de respaldo (CP2): vive en files/, fuera de la base y del
+  // respaldo exportado.
+  group('recordatorio de respaldo', () {
+    File archivoRecordatorio() =>
+        File(p.join(support.path, BackupReminderStore.fileName));
+
+    BackupReminderStore store() => BackupReminderStore(
+        supportDirectory: () async => support, clock: () => now);
+
+    test('"Borrar todos los datos" borra su archivo y un .tmp huerfano',
+        () async {
+      await seedCurrentData();
+      await store().recordBackup();
+      final tmp = File('${archivoRecordatorio().path}.tmp')
+        ..writeAsStringSync('huerfano');
+      expect(archivoRecordatorio().existsSync(), isTrue);
+
+      await service.deleteAllData();
+
+      expect(archivoRecordatorio().existsSync(), isFalse);
+      expect(tmp.existsSync(), isFalse);
+      expect(await repo.countDays(), 0);
+    });
+
+    test('si falla su borrado, igual se borran la base, las copias y los '
+        'temporales, y se propaga un unico error', () async {
+      await seedCurrentData();
+      await service.importBackup(_fixture());
+      await service.writeExportFile();
+      service = BackupService(
+        repo,
+        supportDirectory: () async => support,
+        temporaryDirectory: () async => temp,
+        clock: () => now,
+        reminderStore: _ReminderStoreQueFalla(support),
+      );
+
+      await expectLater(
+        service.deleteAllData(),
+        throwsA(isA<BackupDeleteException>().having((e) => e.failedSteps,
+            'failedSteps', [BackupDeleteStep.backupReminder])),
+      );
+      expect(await repo.countDays(), 0);
+      expect(preImportFile().existsSync(), isFalse);
+      expect(Directory(p.join(temp.path, BackupService.exportDirName))
+          .existsSync(), isFalse);
+    });
+
+    test('importar y deshacer no lo tocan', () async {
+      await seedCurrentData();
+      await store().recordBackup();
+      await store().postpone();
+      final antes = archivoRecordatorio().readAsBytesSync();
+
+      await service.importBackup(_fixture());
+      expect(archivoRecordatorio().readAsBytesSync(), antes);
+      await service.undoLastImport();
+      expect(archivoRecordatorio().readAsBytesSync(), antes);
+    });
+
+    test('el respaldo exportado no contiene sus claves ni cambia de schema',
+        () async {
+      await seedCurrentData();
+      await store().recordBackup();
+      await store().postpone();
+      await store().setEnabled(false);
+
+      final json = await service.buildExportJson();
+      for (final clave in [
+        'primerUso',
+        'ultimoRespaldo',
+        'pospuestoHasta',
+        'activado',
+        'recordatorio',
+      ]) {
+        expect(json.contains(clave), isFalse, reason: clave);
+      }
+      final data =
+          (decodeBackup(utf8.encode(json)) as BackupParseSuccess).data;
+      expect(data.schemaVersion, 5);
+      expect(currentBackupSchemaVersion, 5);
+    });
+  });
+
   group('respaldo v4', () {
     BackupData v3With(List<String> periodDays) => BackupData(
           schemaVersion: 3,
