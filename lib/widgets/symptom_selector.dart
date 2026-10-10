@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/colors.dart';
+
 /// Chips de sintomas. Es un widget controlado: muestra siempre
 /// [selectedSymptoms] tal como llega y cada toque entrega una lista
 /// nueva por [onSelectionChanged]; quien lo usa guarda esa lista y la
@@ -77,7 +79,7 @@ class SymptomSelector extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected
-                            ? const Color(0xFFEE8CA7)
+                            ? AppColors.accentStrong
                             : Colors.grey.shade300,
                       ),
                     ),
@@ -90,7 +92,7 @@ class SymptomSelector extends StatelessWidget {
                               : Icons.circle_outlined,
                           size: iconSize,
                           color: isSelected
-                              ? const Color(0xFFEE8CA7)
+                              ? AppColors.chipCheckIcon
                               : Colors.grey[600],
                         ),
                         const SizedBox(width: 6),

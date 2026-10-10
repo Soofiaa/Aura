@@ -214,7 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             IconButton(
               key: const Key('duracion_menos'),
               constraints: tamanoMinimo,
-              color: AppColors.accent,
+              color: AppColors.accentStrong,
               disabledColor: AppColors.textSecondary,
               icon: const Icon(Icons.remove_circle_outline,
                   semanticLabel: "Disminuir duración"),
@@ -243,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             IconButton(
               key: const Key('duracion_mas'),
               constraints: tamanoMinimo,
-              color: AppColors.accent,
+              color: AppColors.accentStrong,
               disabledColor: AppColors.textSecondary,
               icon: const Icon(Icons.add_circle_outline,
                   semanticLabel: "Aumentar duración"),
@@ -493,7 +493,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           const Text(
             "Versión $appVersionName • Aura 🌸",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/screens/stats_screen.dart';
+import 'package:aura/utils/colors.dart';
 import 'package:aura/utils/day_key.dart';
 
 /// HU-05, CP1: caracterizacion de Estadisticas (flujo, sintomas y
@@ -241,6 +242,14 @@ void main() {
         of: find.byKey(const ValueKey('sintoma-acne')),
         matching: find.byType(FractionallySizedBox)));
     expect(barra.widthFactor, 0.25); // 1 de 4
+    final deco = tester
+        .widget<Container>(find.descendant(
+            of: find.byKey(const ValueKey('sintoma-acne')),
+            matching: find.byType(Container)))
+        .decoration! as BoxDecoration;
+    expect(deco.color, AppColors.secondary);
+    expect((deco.border! as Border).top.color, AppColors.accentStrong);
+    expect((deco.border! as Border).top.width, AppColors.thinBorderWidth);
     expect(anchoBarra('acne'), lessThan(anchoBarra('cansancio')));
   });
 

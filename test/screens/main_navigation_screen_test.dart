@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/main_navigation_screen.dart';
+import 'package:aura/utils/colors.dart';
 
 /// Toca el destino de la NavigationBar con esa etiqueta, no cualquier
 /// otro texto igual en pantalla (ej. "Calendario" tambien aparece como
@@ -76,6 +77,18 @@ void main() {
     // el stream de home_screen ya deberia reflejar el dia recien creado.
     expect(find.textContaining('Registra tu primer día'), findsNothing);
 
+    await db.close();
+  });
+
+  testWidgets('la pildora de la pestana seleccionada tiene borde de 3:1',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: MainNavigationScreen()));
+    await tester.pumpAndSettle();
+    final barra = tester.widget<NavigationBar>(find.byType(NavigationBar));
+    final forma = barra.indicatorShape! as StadiumBorder;
+    expect(forma.side.color, AppColors.navIndicatorBorder);
+    expect(forma.side.width, AppColors.thinBorderWidth);
+    expect(barra.indicatorColor, isNull); // el relleno del tema no cambia
     await db.close();
   });
 }

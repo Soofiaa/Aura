@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/widgets/symptom_selector.dart';
+import 'package:aura/utils/colors.dart';
 
 /// Contenedor que hace de formulario: guarda la lista que entrega el
 /// selector y se puede reconstruir por motivos ajenos (otro campo).
@@ -187,5 +188,19 @@ void main() {
       matching: find.byType(Icon),
     ));
     expect(icono.size, 27); // 18 * 1,5
+  });
+
+  testWidgets('chip marcado: borde e icono con los tonos profundos',
+      (tester) async {
+    await tester.pumpWidget(const _Host(inicial: ['Antojos']));
+    final chip = find
+        .ancestor(of: find.text('Antojos'), matching: find.byType(Container))
+        .first;
+    final deco = tester.widget<Container>(chip).decoration! as BoxDecoration;
+    expect(deco.color, AppColors.secondary); // relleno pastel igual
+    expect((deco.border! as Border).top.color, AppColors.accentStrong);
+    final icono = tester.widget<Icon>(find.descendant(
+        of: chip, matching: find.byType(Icon)));
+    expect(icono.color, AppColors.chipCheckIcon);
   });
 }

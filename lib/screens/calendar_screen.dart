@@ -488,9 +488,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           margin: EdgeInsets.all(extremo ? 2 : 6),
           decoration: BoxDecoration(
             color: AppColors.accent.withValues(alpha: extremo ? 0.35 : 0.2),
-            border: extremo
-                ? Border.all(color: AppColors.accent, width: 3)
-                : null,
+            // Extremos con borde grueso (inicio y fin); los dias de en
+            // medio, con borde fino para que la franja llegue a 3:1.
+            border: Border.all(
+              color: AppColors.accentStrong,
+              width: extremo ? 3 : AppColors.thinBorderWidth,
+            ),
             borderRadius: BorderRadius.circular(periodDayMarkRadius),
           ),
         ),
@@ -506,6 +509,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       margin: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.secondary,
+        border: Border.all(
+          color: AppColors.accentStrong,
+          width: AppColors.thinBorderWidth,
+        ),
         borderRadius: BorderRadius.circular(periodDayMarkRadius),
       ),
       alignment: Alignment.center,
@@ -605,7 +612,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 // para no confundirlo con un dia registrado (relleno). Hoy
                 // marcado usa todayBuilder.
                 todayDecoration: BoxDecoration(
-                  border: Border.all(color: AppColors.accent, width: 2),
+                  border: Border.all(color: AppColors.accentStrong, width: 2),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: const TextStyle(

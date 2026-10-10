@@ -504,7 +504,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Text(
         "Período atrasado por ${p.daysLate} día${p.daysLate == 1 ? '' : 's'}",
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            color: AppColors.lateText, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -525,6 +526,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       PredictionConfidence.medium => Colors.blueGrey,
       PredictionConfidence.high => Colors.green,
     };
+    final textColor = switch (p.confidence) {
+      PredictionConfidence.low => AppColors.confidenceLowText,
+      PredictionConfidence.medium => AppColors.confidenceMediumText,
+      PredictionConfidence.high => AppColors.confidenceHighText,
+    };
     return Column(
       children: [
         Container(
@@ -535,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           child: Text(
             "Confianza: ${p.confidence.label}",
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
           ),
         ),
         if (p.confidenceReasons.isNotEmpty)

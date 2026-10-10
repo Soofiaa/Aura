@@ -520,4 +520,17 @@ void main() {
       );
     });
   });
+
+  testCalendar('periodo registrado: relleno pastel con borde fino', (tester) async {
+    await seedRange('2026-07-10', 2);
+    await pumpCalendar(tester, '2026-07-15');
+    final celda = find
+        .ancestor(of: find.text('10'), matching: find.byType(Container))
+        .first;
+    final deco = tester.widget<Container>(celda).decoration! as BoxDecoration;
+    expect(deco.color, AppColors.secondary);
+    final borde = (deco.border! as Border).top;
+    expect(borde.color, AppColors.accentStrong);
+    expect(borde.width, AppColors.thinBorderWidth);
+  });
 }

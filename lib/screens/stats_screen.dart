@@ -198,6 +198,10 @@ class _SymptomBars extends StatelessWidget {
                           height: 18,
                           decoration: BoxDecoration(
                             color: AppColors.secondary,
+                            border: Border.all(
+                              color: AppColors.accentStrong,
+                              width: AppColors.thinBorderWidth,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),

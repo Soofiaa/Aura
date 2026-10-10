@@ -3,6 +3,7 @@ import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
+import '../utils/colors.dart';
 
 /// Shell de navegacion: NavigationBar de Material 3 con 4 destinos fijos.
 /// Cada pantalla conserva su propio Scaffold/AppBar; esto solo agrega la
@@ -30,6 +31,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
+        // Pildora de la pestaña seleccionada: mismo relleno del tema y un
+        // borde de 3,32:1 sobre la barra (antes 1,12:1 sin borde).
+        indicatorShape: const StadiumBorder(
+          side: BorderSide(
+            color: AppColors.navIndicatorBorder,
+            width: AppColors.thinBorderWidth,
+          ),
+        ),
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(

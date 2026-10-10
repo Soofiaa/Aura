@@ -10,7 +10,7 @@ const double periodDayMarkRadius = 8;
 /// AppColors.accent.
 class DashedBorderPainter extends CustomPainter {
   const DashedBorderPainter({
-    this.color = AppColors.accent,
+    this.color = AppColors.accentStrong,
     this.radius = periodDayMarkRadius,
     this.strokeWidth = 1.5,
     this.dash = 4,
@@ -149,6 +149,10 @@ class CalendarLegend extends StatelessWidget {
                 height: 20,
                 decoration: BoxDecoration(
                   color: AppColors.secondary,
+                  border: Border.all(
+                    color: AppColors.accentStrong,
+                    width: AppColors.thinBorderWidth,
+                  ),
                   borderRadius: BorderRadius.circular(periodDayMarkRadius / 2),
                 ),
               ),
