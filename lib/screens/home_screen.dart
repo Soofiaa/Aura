@@ -1,9 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
+import '../data/backup/backup_reminder_store.dart';
+import '../data/backup/backup_service.dart';
 import '../data/database/app_database.dart' show DailyLogRow;
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/backup_reminder.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
 import '../domain/fertile_marks.dart';
@@ -11,9 +15,11 @@ import '../utils/colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/day_key.dart';
 import '../utils/period_end_messages.dart';
+import '../widgets/backup_reminder_card.dart';
 import '../widgets/period_start_sheet.dart';
 import '../widgets/single_day_period_dialog.dart';
 import 'add_cycle_screen.dart';
+import 'backup_create_flow.dart';
 import '../utils/app_snackbar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,7 +36,22 @@ class HomeScreen extends StatefulWidget {
   /// singleton global [notificationReconciler].
   final NotificationReconciler? reconciler;
 
-  const HomeScreen({super.key, this.repository, this.clock, this.reconciler});
+  /// Recordatorio de respaldo: inyectables para tests. En la app real, los
+  /// singletons globales [backupReminderStore], [backupService] y
+  /// [backupFileGateway] (como en SettingsScreen).
+  final BackupReminderStore? reminderStore;
+  final BackupService? backupService;
+  final BackupFileGateway? fileGateway;
+
+  const HomeScreen({
+    super.key,
+    this.repository,
+    this.clock,
+    this.reconciler,
+    this.reminderStore,
+    this.backupService,
+    this.fileGateway,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -55,6 +76,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late String _today = DayKey.fromDate(_clock());
   late Stream<DailyLogRow?> _todayStream = _repository.watchDay(_today);
   Timer? _midnightTimer;
+
+  // Recordatorio de respaldo: estado del archivo y si hay algun registro,
+  // los dos en vivo (crear un respaldo, "Ahora no" o registrar el primer
+  // dia cambian la tarjeta sin recargar).
+  BackupReminderStore get _reminderStore =>
+      widget.reminderStore ?? backupReminderStore;
+  late final Stream<BackupReminderState> _recordatorio =
+      _reminderStore.watch();
+  late final Stream<bool> _hayRegistros = _repository.watchHasAnyLog();
+
+  /// Ver BackupBusyScope: compartido con Ajustes dentro de la app.
+  late ValueNotifier<bool> _backupBusy;
+  ValueNotifier<bool>? _backupBusyPropio;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _backupBusy = BackupBusyScope.maybeOf(context) ??
+        (_backupBusyPropio ??= ValueNotifier<bool>(false));
+  }
 
   @override
   void initState() {
@@ -227,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ]);
                         },
                       ),
+                      _buildBackupReminder(),
                       const SizedBox(height: 12),
                       _buildDisclaimer(),
                     ],
@@ -285,6 +327,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         },
       ),
     );
+  }
+
+  /// Tarjeta del recordatorio de respaldo, debajo de la del ciclo y de
+  /// "Sigue tu periodo hoy?". Nada mientras no se haya leido el estado o
+  /// si no se puede leer (sin parpadeo ni aviso por un error).
+  Widget _buildBackupReminder() {
+    return StreamBuilder<bool>(
+      stream: _hayRegistros,
+      builder: (context, registros) => StreamBuilder<BackupReminderState>(
+        stream: _recordatorio,
+        builder: (context, snapshot) {
+          final estado = snapshot.hasError ? null : snapshot.data;
+          final hayRegistros = registros.hasError ? null : registros.data;
+          if (estado == null || hayRegistros == null) {
+            return const SizedBox.shrink();
+          }
+          final mostrar = deberiaRecordarRespaldo(
+            today: _today,
+            activado: estado.activado,
+            hayRegistros: hayRegistros,
+            primerUso: estado.primerUso,
+            ultimoRespaldo: estado.ultimoRespaldo,
+            pospuestoHasta: estado.pospuestoHasta,
+          );
+          if (!mostrar) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _backupBusy,
+              builder: (context, ocupada, _) => BackupReminderCard(
+                estado: estado,
+                today: _today,
+                onCrear: ocupada ? null : _crearRespaldo,
+                onAhoraNo: _ahoraNo,
+                onNoRecordar: _noRecordarMas,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// El mismo flujo que "Crear respaldo" en Ajustes. Los dialogos y avisos
+  /// van sobre el contexto de Inicio, no el de la tarjeta: la tarjeta se
+  /// va sola al anotar el respaldo y "Respaldo guardado." debe verse igual.
+  Future<void> _crearRespaldo() => CreateBackupFlow(
+        service: widget.backupService ?? backupService,
+        busy: _backupBusy,
+        gateway: widget.fileGateway,
+        reminderStore: _reminderStore,
+      ).run(context);
+
+  Future<void> _ahoraNo() async {
+    try {
+      await _reminderStore.postpone();
+    } catch (_) {
+      if (!mounted) return;
+      showAppSnackBar(
+          context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+    }
+  }
+
+  Future<void> _noRecordarMas() async {
+    try {
+      await _reminderStore.setEnabled(false);
+    } catch (_) {
+      if (!mounted) return;
+      showAppSnackBar(
+          context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+      return;
+    }
+    if (!mounted) return;
+    showAppSnackBar(context, 'Puedes volver a activarlo en Ajustes.');
   }
 
   Widget _buildCardShell({required List<Widget> children}) {

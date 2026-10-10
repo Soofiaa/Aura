@@ -453,6 +453,17 @@ class CycleRepository {
     return (row.read(countExp) ?? 0) > 0;
   }
 
+  /// Igual que [hasAnyLog], pero reactivo: el recordatorio de respaldo de
+  /// Inicio aparece con el primer dia registrado y se va al borrar todo.
+  Stream<bool> watchHasAnyLog() {
+    final countExp = _db.dailyLogs.date.count();
+    final query = _db.selectOnly(_db.dailyLogs)..addColumns([countExp]);
+    return query
+        .watchSingle()
+        .map((row) => (row.read(countExp) ?? 0) > 0)
+        .distinct();
+  }
+
   // --- Estadisticas (consultas SQL, no agregadas en Dart) ---
 
   // Nota: se usa SQL crudo (customSelect) en vez de selectOnly()+groupBy()
