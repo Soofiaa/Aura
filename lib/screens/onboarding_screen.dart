@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // Solo la ven las instalaciones nuevas (el onboarding se muestra una
     // vez): a quien actualiza, se lo recuerda la tarjeta de Inicio.
     {
-      "titulo": "Tus datos se quedan contigo 🔒",
+      "titulo": "Tus datos son tuyos 🔒",
       "descripcion":
       "Aura funciona sin internet y guarda todo solo en este teléfono. Para "
           "no perder tus registros si cambias o pierdes el teléfono, crea un "

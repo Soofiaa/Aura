@@ -745,7 +745,7 @@ pierdo o daño el teléfono.
 6. **Ajustes → "Tus datos":** "Crear respaldo" suma una segunda línea, "Último respaldo: {fecha}" o "Todavía no has creado un
    respaldo en este teléfono", y hay un interruptor "Recordarme crear un respaldo" ("Un aviso en Inicio si pasan 30 días sin
    respaldo"), activado por defecto.
-7. **Onboarding:** una 4.ª página, "Tus datos se quedan contigo 🔒", con el ícono de candado y el texto "Aura funciona sin
+7. **Onboarding:** una 4.ª página, "Tus datos son tuyos 🔒", con el ícono de candado y el texto "Aura funciona sin
    internet y guarda todo solo en este teléfono. Para no perder tus registros si cambias o pierdes el teléfono, crea un respaldo
    de vez en cuando desde Ajustes.". La ven solo las instalaciones nuevas; las páginas se pueden desplazar con letra grande.
 8. **Accesibilidad:** la tarjeta es un contenedor semántico con el título como encabezado y el orden de lectura título, texto y

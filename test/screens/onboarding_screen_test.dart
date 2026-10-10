@@ -6,7 +6,7 @@ import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/onboarding_screen.dart';
 
-/// CP6: 4.a pagina del onboarding ("Tus datos se quedan contigo").
+/// CP6: 4.a pagina del onboarding ("Tus datos son tuyos").
 void main() {
   late AppDatabase db;
   late CycleRepository repo;
@@ -15,7 +15,7 @@ void main() {
     'Bienvenida a Aura 🌸',
     'Registra tu bienestar 💕',
     'Conoce tus patrones 🌙',
-    'Tus datos se quedan contigo 🔒',
+    'Tus datos son tuyos 🔒',
   ];
   const textoCuarta = 'Aura funciona sin internet y guarda todo solo en este '
       'teléfono. Para no perder tus registros si cambias o pierdes el '
