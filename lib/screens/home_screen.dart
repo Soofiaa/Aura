@@ -188,81 +188,99 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           );
           final current = findCurrentPeriod(
               cycles: inputs?.cycles ?? const [], today: _today);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 10),
-                const Text(
-                  "Tu ciclo actual",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 20),
-                _buildPredictionCard(prediction,
-                    mostrarFertilidad: inputs?.showFertileWindow ?? true,
-                    enCurso: _periodoEnCurso(prediction, current)),
-                StreamBuilder<DailyLogRow?>(
-                  stream: _todayStream,
-                  builder: (context, todaySnapshot) {
-                    final card = _buildPeriodCheckCard(
-                      prediction,
-                      todaySnapshot.data,
-                      current,
-                      estimatePeriodLength(
-                        cycles: inputs?.cycles ?? const [],
-                        config: inputs?.config ?? const PredictionConfig(),
-                      ).days,
-                    );
-                    if (card == null) return const SizedBox.shrink();
-                    return Column(children: [
+          // #17: los botones de accion quedan fijos abajo, fuera del
+          // scroll (mismo patron que "Guardar registro"): siempre a la
+          // vista aunque la tarjeta "Sigue tu periodo hoy?" alargue Inicio.
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Tu ciclo actual",
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildPredictionCard(prediction,
+                          mostrarFertilidad: inputs?.showFertileWindow ?? true,
+                          enCurso: _periodoEnCurso(prediction, current)),
+                      StreamBuilder<DailyLogRow?>(
+                        stream: _todayStream,
+                        builder: (context, todaySnapshot) {
+                          final card = _buildPeriodCheckCard(
+                            prediction,
+                            todaySnapshot.data,
+                            current,
+                            estimatePeriodLength(
+                              cycles: inputs?.cycles ?? const [],
+                              config: inputs?.config ?? const PredictionConfig(),
+                            ).days,
+                          );
+                          if (card == null) return const SizedBox.shrink();
+                          return Column(children: [
+                            const SizedBox(height: 12),
+                            card,
+                          ]);
+                        },
+                      ),
                       const SizedBox(height: 12),
-                      card,
-                    ]);
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildDisclaimer(),
-                const SizedBox(height: 30),
-
-                // Decision 1: "Me llego hoy" en Inicio solo cuando no hay
-                // un periodo abierto en curso.
-                if (current == null || current.isClosed) ...[
-                  ElevatedButton.icon(
-                    onPressed: () => showPeriodStartSheet(context,
-                        repository: _repository, today: _today),
-                    icon: const Icon(Icons.water_drop_outlined),
-                    label: const Text('Me llegó hoy'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textPrimary,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddCycleScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text("Registrar día"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFAD4D8),
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      _buildDisclaimer(),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Decision 1: "Me llego hoy" en Inicio solo cuando no hay
+                      // un periodo abierto en curso.
+                      if (current == null || current.isClosed) ...[
+                        ElevatedButton.icon(
+                          onPressed: () => showPeriodStartSheet(context,
+                              repository: _repository, today: _today),
+                          icon: const Icon(Icons.water_drop_outlined),
+                          label: const Text('Me llegó hoy'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: AppColors.textPrimary,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AddCycleScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text("Registrar día"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFAD4D8),
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
