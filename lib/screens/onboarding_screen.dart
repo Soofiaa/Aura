@@ -3,7 +3,12 @@ import '../data/repositories/cycle_repository.dart';
 import 'main_navigation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  /// Inyectables para tests. En la app real, [cycleRepository] y
+  /// MainNavigationScreen.
+  final CycleRepository? repository;
+  final WidgetBuilder? nextScreen;
+
+  const OnboardingScreen({super.key, this.repository, this.nextScreen});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -32,15 +37,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       "Aura analiza tus ciclos y te ayuda a identificar tendencias en tu salud.",
       "icono": Icons.insights_rounded,
     },
+    // Solo la ven las instalaciones nuevas (el onboarding se muestra una
+    // vez): a quien actualiza, se lo recuerda la tarjeta de Inicio.
+    {
+      "titulo": "Tus datos se quedan contigo 🔒",
+      "descripcion":
+      "Aura funciona sin internet y guarda todo solo en este teléfono. Para "
+          "no perder tus registros si cambias o pierdes el teléfono, crea un "
+          "respaldo de vez en cuando desde Ajustes.",
+      "icono": Icons.lock_rounded,
+    },
   ];
 
   void _finalizarOnboarding() async {
-    await cycleRepository.setOnboardingSeen(true);
+    await (widget.repository ?? cycleRepository).setOnboardingSeen(true);
 
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+      MaterialPageRoute(
+          builder: widget.nextScreen ?? (_) => const MainNavigationScreen()),
     );
   }
 
@@ -60,35 +76,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
                   final page = _pages[index];
-                  return Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          page["icono"] as IconData,
-                          size: 140,
-                          color: const Color(0xFFA8D8EA),
+                  // Desplazable: con letra grande o pantalla baja, el texto
+                  // mas largo (la 4.a pagina) no entra; centrado si sobra.
+                  return LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: (constraints.maxHeight - 48)
+                              .clamp(0, double.infinity),
                         ),
-                        const SizedBox(height: 40),
-                        Text(
-                          page["titulo"] as String,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              page["icono"] as IconData,
+                              size: 140,
+                              color: const Color(0xFFA8D8EA),
+                            ),
+                            const SizedBox(height: 40),
+                            Text(
+                              page["titulo"] as String,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              page["descripcion"] as String,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 20),
-                        Text(
-                          page["descripcion"] as String,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 },
