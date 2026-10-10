@@ -240,7 +240,8 @@ cambian.
 fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 
 - **B (tolerante):** con el rango ya completo, tocar un día **posterior** al final lo alarga; un día **anterior** al inicio mueve
-  el inicio; un día **dentro** del rango acorta el final. "Cancelar selección" vuelve a cero. Se permite extender el rango entre
+  el inicio; un día **dentro** del rango acorta el final. "Cancelar" (para el lector de pantalla, "Cancelar selección"; T2-7)
+  vuelve a cero. Se permite extender el rango entre
   meses. Se implementa en el estado propio de la pantalla (`RangeSelection`, en `lib/domain/range_selection.dart`), con el modo de
   rango de `table_calendar` desactivado y todos los toques por `onDaySelected`, **sin modificar `table_calendar`**. La
   confirmación de rango largo (más de `longRangeConfirmationThreshold` = 10 días) sigue protegiendo contra extensiones
@@ -258,7 +259,7 @@ fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 11. Con 10–12 listo, tocar el 11 → el final pasa a 11.
 12. Un rango de un solo día muestra "1 día" en el panel y, al marcarlo, el aviso dice "1 día registrado como menstruación".
 13. Marcar el rango deja exactamente esos días en la base de datos.
-14. "Cancelar selección" vuelve a cero.
+14. "Cancelar" (para el lector de pantalla, "Cancelar selección") vuelve a cero.
 15. Un rango de más de 10 días, alcanzado por extensión, sigue pidiendo confirmación al marcarlo.
 16. Con un rango ya completo, un tercer toque alarga, mueve o acorta el rango, y nunca lo reinicia. Como el modo de rango de
     `table_calendar` está desactivado, cada toque llega como un día por `onDaySelected` y `RangeSelection.tap` decide el rango
@@ -366,7 +367,8 @@ ponderada.
 
 - Se marcan solo cuando `visibleFertileMarks` las deja ver, con la misma predicción que Inicio.
 - **Ventana** (6 días, de la ovulación − 5 a la ovulación): una barra corta bajo el número. **Ovulación:** esa barra más un
-  punto relleno sobre el número. No depende solo del color: la forma, la etiqueta y la leyenda las distinguen. El color es
+  punto relleno justo sobre ella, debajo del número, como en la leyenda (T2-6). No depende solo del color: la forma, la
+  etiqueta y la leyenda las distinguen. El color es
   `AppColors.fertile`, con contraste de al menos 3:1 sobre el fondo de la app y sobre blanco (lo fija un test).
 - **Prioridad:** selección > período (registrado o estimado) > ventana u ovulación. Un día seleccionado, registrado o estimado no
   lleva la marca de la ventana ni de la ovulación.
@@ -766,6 +768,29 @@ configuración: con los íconos temáticos activos, Aura se ve a color entre íc
 
 ---
 
+### Pantalla "Registrar día" (estado en la 1.1.0)
+Cómo queda el formulario tras el parche v1.0.1 (B-1 a B-3) y la tanda 2 (T2-1 a T2-4):
+
+- **Carga:** al abrir o al cambiar de fecha se cargan los datos guardados de ese día; en un día sin registro, el interruptor
+  "Día de sangrado" está apagado, el flujo queda "Sin especificar" y el ánimo "Sin registrar". El selector de fecha no permite
+  días futuros.
+- **Guardar fijo (T2-3):** "Guardar registro" está al pie de la pantalla, fuera del formulario desplazable, y sube con el teclado.
+  El formulario termina sobre el botón, así que ningún campo queda tapado.
+- **Día vacío (T2-4):** en un día que no tenía registro, guardar con el interruptor apagado, el ánimo "Sin registrar", las notas
+  vacías (o solo con espacios) y ningún síntoma no escribe nada: se cierra con "No había nada para guardar.". Un flujo elegido con
+  el sangrado luego apagado no cuenta. Un día que ya tenía registro se guarda siempre (por ejemplo, un "no hubo sangrado"
+  explícito o datos borrados a propósito). `upsertDay` no cambia.
+- **Salir con cambios sin guardar (T2-1):** con la flecha de la barra o con el botón atrás, y también al elegir otra fecha, aparece
+  "¿Descartar los cambios?" / "No guardaste los cambios de este día. Si sales ahora, se pierden." con "Seguir editando" (vuelve al
+  formulario sin perder nada) y "Descartar" (sale, o abre la otra fecha, sin tocar la base). Hay cambios cuando el formulario
+  difiere de lo cargado en lo que se guardaría: el flujo cuenta solo con el sangrado encendido, las notas sin espacios al inicio
+  ni al final y los síntomas sin importar el orden. Abrir y salir sin cambios, o cambiar algo y volver a dejarlo como estaba, no
+  pregunta. Guardar sale sin preguntar.
+- **Letra grande (T2-2):** a 360 dp de ancho y con texto de 1,0 a 2,0, nada desborda: el texto elegido en los menús se acorta con
+  "…", y la fecha y los nombres de los síntomas pasan a otra línea si no entran.
+
+---
+
 ## 6. Requisitos no funcionales
 
 | ID | Requisito |
@@ -806,6 +831,9 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
   formulario permitía fechas hasta 2030; un respaldo importado, que las acepta hasta 2030-12-31; o el reloj del teléfono
   atrasado) queda deshabilitado en el Calendario: no se ve con el relleno de período registrado ni recibe "período registrado"
   en su etiqueta.
+- **Marca de la ovulación con letra grande (para la 1.1.1):** con el texto del sistema a 1,3 o más, el número del día de la
+  ovulación puede tocar o pisar el punto que va debajo (T2-6); la altura de la fila del Calendario es fija. Mejora prevista:
+  ajustar la altura de la fila según la escala del texto.
 
 ## 8. Definición de hecho (por historia)
 
@@ -835,7 +863,8 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03),
 tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7),
-en HU-05 (H5-1 a H5-4), tras la Etapa A de HU-06b (HU6b-1 a HU6b-12) y en la coherencia de Inicio (H3-1).
+en HU-05 (H5-1 a H5-4), tras la Etapa A de HU-06b (HU6b-1 a HU6b-12), en la coherencia de Inicio (H3-1) y en la tanda 2
+de formulario y diseño (T2-1 a T2-7).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -883,6 +912,13 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **H5-3** | Un solo interruptor, "Mostrar ovulación y ventana fértil", para las dos, en "Tu ciclo" y activado por defecto. Columna `show_fertile_window` (schema v5), sin copia previa a la migración, incluido en el respaldo. "Ventana fértil" (Notificaciones) necesita los dos encendidos y conserva su valor. Con el interruptor apagado se oculta también la línea gris de confianza baja. | Decisión de producto. La migración solo agrega una columna con valor por defecto, sin tocar datos, por eso no hace falta copia previa. |
 | **H5-4** | Las fases con promedios de ciclo cortos se dejan como están (ver "Casos extremos" en HU-05). | Decisión de producto: quedan documentados en vez de cambiar las reglas de las fases. |
 | **H3-1** | Inicio muestra el período en curso como fase menstrual, y mientras la fase mostrada es la menstrual no muestra la ovulación ni la ventana fértil. "Período en curso" = período abierto y, además, fase menstrual o último día con sangrado hoy o ayer (la condición de la tarjeta de HU-03). Si el día supera la duración estimada, la tarjeta dice "ya superó tu duración estimada" en vez de "duración estimada". | Evitar que Inicio se contradiga ("Fase folicular" junto a "Día 9 de tu período", o la ventana fértil desde el día siguiente) cuando un sangrado cercano reabre o alarga el período, o el día en que se cierra con "Terminó hoy". Es solo presentación: la regla de 7 días, R-4, el predictor, el Calendario, Estadísticas y los avisos no cambian; la lógica queda pendiente de D-6. |
+| **T2-1** | "Registrar día" pregunta "¿Descartar los cambios?" ("No guardaste los cambios de este día. Si sales ahora, se pierden.", con "Seguir editando" y "Descartar") al salir con la flecha o con el botón atrás, y al cambiar de fecha, si el formulario difiere de lo cargado en lo que se guardaría. Sin cambios reales no pregunta; "Descartar" en el cambio de fecha abre la otra fecha. La foto de lo cargado se fija en el mismo `setState` que carga el día, y guardar o descartar salen con `Navigator.pop`, que `PopScope` no bloquea. | Hallazgo #3: salir sin guardar perdía los cambios sin aviso. |
+| **T2-2** | Sin desbordes a 360 dp con texto de 1,0 a 2,0: los botones de la tarjeta "¿Sigue tu período hoy?" van en un `Wrap` centrado (espacio 12, entre líneas 8); los menús de flujo y ánimo usan `isExpanded`; la fecha y el nombre de cada síntoma van en `Flexible`. A texto 1,0 no cambia nada. | Hallazgo #9: con letra grande la tarjeta, los menús, la fecha y los chips se salían de la pantalla. Se prueba con tests de widget, sin cambiar ajustes del teléfono. |
+| **T2-3** | "Guardar registro" queda fijo al pie de "Registrar día", fuera del scroll, con `SafeArea` y encima del teclado; el formulario termina sobre el botón. | Hallazgo #10: en un formulario largo había que bajar hasta el final para guardar. |
+| **T2-4** | Registro vacío = sangrado apagado + ánimo sin registrar + notas vacías tras quitar espacios + ningún síntoma, en un día que **no** tenía fila al abrirlo. En ese caso no se llama a `upsertDay`: se cierra con "No había nada para guardar." (sin ✅). El flujo con el sangrado apagado no cuenta ni se guarda. Un día que ya tenía fila se guarda siempre. `upsertDay` no cambia. | Hallazgo #11: guardar sin datos creaba una fila vacía que contaba como día con registro (Estadísticas, respaldo). |
+| **T2-5** | En Inicio, "Me llegó hoy" y "Registrar día" quedan fijos al pie, fuera del scroll, como "Guardar registro". Condición: el área desplazable no baja de ~200 dp a 360 × 640 con texto 1,0 y 1,3. Medido con la barra inferior: 372 dp sin la tarjeta "¿Sigue tu período hoy?" y 434 dp con ella, igual a 1,0 y 1,3 (300 y 362 dp con barras del sistema de 24 y 48 dp). | Hallazgo #17: "Registrar día" quedaba casi fuera de la pantalla. |
+| **T2-6** | El punto de la ovulación del Calendario va justo sobre la barra de la ventana, debajo del número, como en la leyenda. No se acota la escala del número ni cambia `rowHeight`. | Hallazgo #23: dibujado arriba del número parecía del día de la fila anterior. Con texto 1,3 o más el número puede tocar el punto (ver "Limitaciones conocidas"). |
+| **T2-7** | En modo rango del Calendario el botón dice "Cancelar", pero su nombre accesible sigue siendo "Cancelar selección", en un solo nodo. Los dos botones ("Me llegó hoy" y el de rango) miden lo mismo (`IntrinsicHeight` y `stretch`). | "Cancelar selección" se partía en dos líneas y el botón quedaba más alto que "Me llegó hoy". |
 | **HU6-7** | Con la migración v4, el respaldo pasa a `schemaVersion` 4: cada día lleva `periodEnd` (`null`, `"declared"` o `"inferred"`) y los ajustes llevan `typicalPeriodLength` (de 1 a 15). `formatVersion` sigue en 1. Un respaldo v3 se acepta y se convierte con la regla D-2 ("hoy" = el día de la importación); si trae una clave `periodEnd`, se ignora. La duración habitual de un respaldo v3 queda en 5. Un respaldo v4 se importa tal cual, incluida su duración habitual. La importación solo acepta datos ya convertidos al schema actual. La app v3 rechaza un respaldo v4 como de una versión más nueva, sin tocar nada. | `formatVersion` versiona el envoltorio (cambiará con el cifrado de HU-06b) y `schemaVersion` los datos. Convertir siempre antes de importar impide que algún camino importe datos v3 sin aplicar D-2. |
 
 **Ajustes obligatorios de HU-06** (aprobados con la Etapa A):

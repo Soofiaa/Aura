@@ -55,9 +55,16 @@
 - Los chips de síntomas tienen un área táctil de 48 dp sin cambiar su aspecto, y su ícono crece con el tamaño de texto del sistema.
 - Los interruptores de Ajustes tienen el mismo estilo que el de "Registrar día". "Borrar todos los datos" pasa a ser un botón con borde y texto rojos, más discreto; su confirmación no cambia.
 - Más contraste, manteniendo los colores pastel: los textos de "Confianza", "Período atrasado", la versión y los textos secundarios son más oscuros, y los bordes e íconos usan un rosa más profundo (hoy, días estimados, − y +, síntoma marcado). El período registrado del Calendario, el rango elegido y las barras de síntomas tienen un borde fino, y la pestaña seleccionada de la barra inferior, un borde azul.
+- "Registrar día" pregunta "¿Descartar los cambios?" si sales (con la flecha o con el botón atrás) o cambias de fecha con cambios sin guardar: "Seguir editando" vuelve al formulario y "Descartar" sale o abre la otra fecha. Si no cambiaste nada, sale sin preguntar.
+- "Guardar registro" queda fijo al pie de "Registrar día", encima del teclado cuando está abierto: ya no hay que bajar hasta el final para guardar.
+- En Inicio, "Me llegó hoy" y "Registrar día" quedan fijos al pie de la pantalla, siempre a la vista aunque aparezca la tarjeta "¿Sigue tu período hoy?".
 
 ### Corregido
 
+- En el Calendario, en modo "Elegir varios días", el botón "Cancelar selección" partía su texto en dos líneas y quedaba más alto que "Me llegó hoy". Ahora dice "Cancelar" y los dos botones miden lo mismo; el lector de pantalla lo sigue anunciando como "Cancelar selección".
+- El punto de la ovulación del Calendario se dibujaba arriba del número y parecía del día de la fila anterior. Ahora va debajo del número, justo sobre la barra, como en la leyenda.
+- Con letra grande o en pantallas angostas, los menús de flujo y ánimo, la fecha y los síntomas de "Registrar día", y los botones de la tarjeta "¿Sigue tu período hoy?", ya no se salen de la pantalla: el texto elegido en los menús se acorta con "…", y los nombres largos y los botones pasan a otra línea.
+- Guardar "Registrar día" sin datos en un día que no tenía registro creaba un registro vacío (que contaba, por ejemplo, en Estadísticas). Ahora no se guarda nada y Aura avisa "No había nada para guardar.".
 - Inicio se contradecía con un período en curso, por ejemplo al volver a marcar sangrado pocos días después de cerrarlo: mostraba "Fase folicular" junto a "Día 9 de tu período" y la ventana fértil. Ahora el período en curso se muestra como fase menstrual; mientras la fase mostrada es la menstrual no se muestran la ovulación ni la ventana fértil; y si el período ya superó su duración estimada, la tarjeta lo dice en vez de mostrar una duración menor que el día actual.
 - El selector de fecha y otros textos del sistema ("Back", "Tab 1 of 4") aparecían en inglés: ahora están en español.
 - El lector de pantalla no decía si un síntoma estaba marcado, no leía el gráfico de ánimo y en el Calendario no distinguía el período registrado ni el día de hoy. Ahora anuncia el estado de cada síntoma, cada ánimo con su porcentaje, "período registrado" y "hoy", y las flechas "Mes anterior" y "Mes siguiente"; el título del mes ya no se anuncia como un botón.
