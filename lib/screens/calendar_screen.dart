@@ -395,6 +395,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// todos los dias, incluidos los futuros (deshabilitados) y hoy. Como
   /// table_calendar no recibe rangeStartDay/rangeEndDay, nunca dibuja su
   /// propio resaltado.
+  ///
+  /// Tambien dice en texto el estado que solo se ve por color: "periodo
+  /// registrado" (relleno) y "hoy" (borde). Va en un nodo propio y la
+  /// marca visible queda como nodo hijo con su etiqueta de siempre.
   Widget? _dayMark(
     DateTime day,
     Set<String> estimated,
@@ -402,10 +406,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ({Set<String> ventana, Set<String> ovulacion}) fertiles,
   ) {
     final clave = DayKey.fromDate(day);
+    final estado = [
+      if (registrados.contains(clave)) 'período registrado',
+      if (clave == _today) 'hoy',
+    ];
+    final marca = _dayMarkContent(day, clave, estimated, registrados, fertiles);
+    if (estado.isEmpty && marca == null) return null;
+    if (estado.isEmpty) return Positioned.fill(child: marca!);
+    return Positioned.fill(
+      child: Semantics(
+        container: true,
+        label: estado.join(', '),
+        child: marca ?? const SizedBox.expand(),
+      ),
+    );
+  }
+
+  /// La marca visible de [_dayMark], sin posicionar.
+  Widget? _dayMarkContent(
+    DateTime day,
+    String clave,
+    Set<String> estimated,
+    Set<String> registrados,
+    ({Set<String> ventana, Set<String> ovulacion}) fertiles,
+  ) {
     final rango = _rangeMark(clave);
     if (rango != null) return rango;
     if (estimated.contains(clave)) {
-      return Positioned.fill(
+      return SizedBox.expand(
         child: Padding(
           padding: const EdgeInsets.all(6),
           child: Semantics(
@@ -420,7 +448,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (!_rangeMode && isSameDay(_selectedDay, day)) return null;
     if (registrados.contains(clave)) return null;
     final ovulacion = fertiles.ovulacion.contains(clave);
-    return Positioned.fill(
+    return SizedBox.expand(
       child: Semantics(
         container: true,
         label: ovulacion ? 'ovulación estimada' : 'ventana fértil estimada',
@@ -452,7 +480,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ? 'fin del rango'
                 : 'dentro del rango';
     final extremo = esInicio || esFin;
-    return Positioned.fill(
+    return SizedBox.expand(
       child: Semantics(
         container: true,
         label: etiqueta,
@@ -562,6 +590,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
+                leftChevronIcon:
+                    Icon(Icons.chevron_left, semanticLabel: 'Mes anterior'),
+                rightChevronIcon:
+                    Icon(Icons.chevron_right, semanticLabel: 'Mes siguiente'),
               ),
               calendarStyle: CalendarStyle(
                 // Los dias del mes anterior/siguiente que rellenan la
@@ -617,6 +649,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _focusedDay = focusedDay;
               },
               calendarBuilders: CalendarBuilders(
+                // El titulo por defecto de table_calendar va dentro de un
+                // GestureDetector que no hace nada (no usamos
+                // onHeaderTapped) y se anuncia como boton: este es el
+                // mismo texto, como encabezado y sin gesto.
+                headerTitleBuilder: (context, month) => Semantics(
+                  header: true,
+                  child: Text(
+                    DateFormat.yMMMM('es_ES').format(month),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
                 outsideBuilder: (context, day, focusedDay) =>
                     const SizedBox.shrink(),
                 rangeHighlightBuilder: (context, day, isWithinRange) =>

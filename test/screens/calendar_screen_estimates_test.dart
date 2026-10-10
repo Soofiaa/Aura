@@ -456,4 +456,68 @@ void main() {
     expect(size('Registrar día de menstruación').height,
         greaterThanOrEqualTo(48));
   });
+
+  group('estado en texto y encabezado (accesibilidad)', () {
+    testCalendar('los dias registrados dicen "período registrado" y hoy dice '
+        '"hoy"', (tester) async {
+      await seedRange('2026-07-10', 3);
+      await repo.closePeriod('2026-07-10', '2026-07-12', today: '2026-07-15');
+      await pumpCalendar(tester, '2026-07-15');
+
+      expect(find.bySemanticsLabel('período registrado'), findsNWidgets(3));
+      expect(find.bySemanticsLabel('hoy'), findsOneWidget);
+      // El nodo de hoy esta sobre el dia 15.
+      final hoy = tester.getRect(find.bySemanticsLabel('hoy'));
+      expect(hoy.contains(tester.getCenter(find.text('15'))), isTrue);
+    });
+
+    testCalendar('hoy registrado dice las dos cosas', (tester) async {
+      await seedRange('2026-07-14', 2);
+      await pumpCalendar(tester, '2026-07-15');
+      expect(find.bySemanticsLabel('período registrado, hoy'), findsOneWidget);
+      expect(find.bySemanticsLabel('período registrado'), findsOneWidget);
+    });
+
+    testCalendar('las marcas de siempre conservan su etiqueta junto al estado',
+        (tester) async {
+      // Periodo abierto desde el 12: el 15 (hoy) y el 16 son estimados.
+      await seedRange('2026-07-12', 3);
+      await pumpCalendar(tester, '2026-07-15');
+      expect(estimado(), findsNWidgets(2));
+      expect(find.bySemanticsLabel('hoy'), findsOneWidget);
+    });
+
+    testCalendar('las flechas de mes tienen etiqueta y cambian de mes',
+        (tester) async {
+      await pumpCalendar(tester, '2026-07-15');
+      expect(find.text('julio de 2026'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Mes anterior'));
+      await tester.pumpAndSettle();
+      expect(find.text('junio de 2026'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Mes siguiente'));
+      await tester.pumpAndSettle();
+      expect(find.text('julio de 2026'), findsOneWidget);
+
+      final flecha = tester.getSize(find.ancestor(
+          of: find.byIcon(Icons.chevron_left), matching: find.byType(InkWell)));
+      expect(flecha.height, greaterThanOrEqualTo(48));
+    });
+
+    testCalendar('el titulo del mes es un encabezado, no un boton',
+        (tester) async {
+      await pumpCalendar(tester, '2026-07-15');
+      expect(
+        tester.getSemantics(find.text('julio de 2026')),
+        matchesSemantics(label: 'julio de 2026', isHeader: true),
+      );
+      expect(
+        find.ancestor(
+            of: find.text('julio de 2026'),
+            matching: find.byType(GestureDetector)),
+        findsNothing,
+      );
+    });
+  });
 }
