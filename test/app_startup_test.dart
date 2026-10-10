@@ -133,10 +133,10 @@ void main() {
         find.text('Aura no pudo abrir tus datos, pero no borró nada. Cierra '
             'la app y vuelve a abrirla. Si el problema sigue, no desinstales '
             'la app, porque se perderían tus datos, y escribe a '
-            'soofiaa.menzel@gmail.com'),
+            'sofia.menzel.dev@gmail.com'),
         findsOneWidget,
       );
-      expect(find.textContaining('soofiaa.menzel@gmail.com'), findsOneWidget);
+      expect(find.textContaining('sofia.menzel.dev@gmail.com'), findsOneWidget);
       expect(find.text(UpdateErrorScreen.outOfSpaceMessage), findsNothing);
 
       // Un reintento que vuelve a fallar deja la misma pantalla.

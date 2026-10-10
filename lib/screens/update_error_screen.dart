@@ -21,7 +21,7 @@ class UpdateErrorScreen extends StatelessWidget {
   static const String safeMessage =
       'Aura no pudo abrir tus datos, pero no borró nada. Cierra la app y '
       'vuelve a abrirla. Si el problema sigue, no desinstales la app, '
-      'porque se perderían tus datos, y escribe a soofiaa.menzel@gmail.com';
+      'porque se perderían tus datos, y escribe a sofia.menzel.dev@gmail.com';
   static const String outOfSpaceMessage =
       'Libera espacio en el teléfono e inténtalo de nuevo';
   static const String outOfSpaceSafeMessage =
