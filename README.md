@@ -17,6 +17,7 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 - Recordatorios locales (opcionales) con texto discreto por defecto.
 - Permite marcar el fin del período y quitar marcas.
 - Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con contraseña opcional para cifrar el archivo y "Deshacer" tras importar.
+- Recordatorio de respaldo: si pasan 30 días sin crear uno, Inicio muestra una tarjeta (sin notificación); solo guarda en el teléfono la fecha del último respaldo y no envía nada fuera de él.
 - Borrado total de datos desde Ajustes.
 
 ## Privacidad por diseño

@@ -723,8 +723,7 @@ inventario existe para respaldar esa consulta. Aquí no se afirma ninguna clasif
 **Como** usuaria **quiero** que Aura me recuerde de vez en cuando crear un respaldo **para** no perder mis registros si cambio,
 pierdo o daño el teléfono.
 
-**Estado:** implementada en la rama `feat/recordatorio-respaldo` (Parte 1: CP1 a CP3; Parte 2: corrección de lectura, CP4,
-CP5a, CP5b, CP6 y CP7), sin merge. Decisiones RR-1 a RR-7 y D-8 en la sección 10. Aura guarda todo solo en el teléfono
+**Estado:** implementada para la 1.1.0. Decisiones RR-1 a RR-7 y D-8 en la sección 10. Aura guarda todo solo en el teléfono
 (`allowBackup="false"`, sin `INTERNET`): sin un respaldo propio, perder el teléfono es perder los registros.
 
 **Criterios de aceptación**
@@ -860,8 +859,9 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
 | **D-5** | ¿El Calendario debe marcar el próximo período estimado? Hoy solo marca los días que faltan del período en curso, y es intencional según E-1. | Consultar a las testers antes de decidir. Si se marca, no debe confundirse con un día registrado ni con los estimados del período en curso (principio 1). | Pendiente: consultar a las testers |
-| **D-8** | ¿La transferencia entre dispositivos de Android (cable o Wi-Fi al cambiar de teléfono) copia los datos de Aura? Con `targetSdk` 36, `allowBackup="false"` apaga el respaldo en la nube, pero no necesariamente la transferencia directa si no hay `dataExtractionRules`. | No prometerla: el camino documentado para cambiar de teléfono es el respaldo propio (HU-06) y su recordatorio (HU-08). | Resuelta: ver sección 10 (RR-6) |
 | **D-6** | ¿Volvió tu período o es manchado? Cuando aparece sangrado después de un período cerrado, la app no lo distingue: a 7 días o menos del último día se suma a ese período y lo reabre (R-4); a más de 7 días empieza un período nuevo. | Preguntar a las testers. Una opción es preguntarlo al marcar el día ("¿Volvió tu período o es manchado?"). No se implementa en la 1.1. | Pendiente: consultar a las testers |
+| **D-7** | ¿Aura debe respaldar automáticamente a una carpeta elegida por la usuaria (por ejemplo, una carpeta sincronizada)? | Dos opciones: no hacerlo; o hacerlo en la 1.2 con su propio diseño de seguridad (clave derivada guardada en el Keystore de Android, sin pedir la contraseña cada vez). | Pendiente: consultar a las testers, junto con D-5 y D-6 |
+| **D-8** | ¿La transferencia entre dispositivos de Android (cable o Wi-Fi al cambiar de teléfono) copia los datos de Aura? Con `targetSdk` 36, `allowBackup="false"` apaga el respaldo en la nube, pero no necesariamente la transferencia directa si no hay `dataExtractionRules`. | No prometerla: el camino documentado para cambiar de teléfono es el respaldo propio (HU-06) y su recordatorio (HU-08). | Resuelta: ver sección 10 (RR-6) |
 
 ### Limitaciones conocidas de la 1.1.0
 

@@ -17,6 +17,7 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Optional local reminders, with discreet text by default.
 - Lets you mark the end of a period and remove marks.
 - Backup and restore to a JSON file from Settings → "Your data", with an optional password to encrypt the file and "Undo" after importing.
+- Backup reminder: if 30 days pass without one, Home shows a card (no notification); it only keeps the date of the last backup on the phone and sends nothing off it.
 - Full data wipe from Settings.
 
 ## Privacy by design
