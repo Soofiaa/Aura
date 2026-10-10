@@ -9,6 +9,7 @@ import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/calendar_screen.dart';
 import 'package:aura/utils/colors.dart';
 import 'package:aura/utils/day_key.dart';
+import 'package:aura/widgets/period_day_marks.dart';
 
 /// Calendario, HU-05 CP5d-2: marcas de la ventana fertil y de la
 /// ovulacion (misma regla que Inicio, visibleFertileMarks), su prioridad
@@ -336,5 +337,61 @@ void main() {
     expect(diasCon(tester, ventana), {10, 11, 12, 13, 14});
     expect(diasCon(tester, ovulacion), {15});
     conLeyendaFertil();
+  });
+
+  // #23: el punto de la ovulacion va justo encima de la barra, debajo del
+  // numero, como en la leyenda (antes iba arriba de la celda y parecia
+  // del dia de la fila anterior).
+  group('posicion del punto de la ovulacion', () {
+    Rect enLaColumnaDel15(WidgetTester tester, String key) {
+      final centro = tester.getCenter(find.text('15').hitTestable());
+      return find
+          .descendant(
+              of: find.byType(TableCalendar<dynamic>),
+              matching: find.byKey(ValueKey(key)))
+          .evaluate()
+          .map((e) => tester.getRect(find.byWidget(e.widget)))
+          .where((r) =>
+              (r.center.dx - centro.dx).abs() < 10 &&
+              (r.center.dy - centro.dy).abs() < 40)
+          .single;
+    }
+
+    for (final escala in [1.0, 1.3, 1.5]) {
+      testCalendar('texto $escala: justo sobre la barra, bajo el numero',
+          (tester) async {
+        await seedPeriods(altaJulio);
+        await pumpCalendar(tester, '2026-07-07', textScale: escala);
+        final punto = enLaColumnaDel15(tester, 'ovulation-dot');
+        final barra = enLaColumnaDel15(tester, 'fertile-bar');
+        final numero = tester.getRect(find.text('15').hitTestable());
+
+        expect((punto.center.dx - barra.center.dx).abs(), lessThan(0.5));
+        expect(barra.top - punto.bottom, FertileDayMark.dotGap);
+        // En la celda del 15, por debajo del centro de su numero.
+        expect(punto.top, greaterThan(numero.center.dy));
+        // Con el texto normal no toca el numero. Con letra grande (1,3 o
+        // mas) la caja del numero puede tocar el punto: limitacion conocida.
+        if (escala == 1.0) {
+          expect(punto.top, greaterThanOrEqualTo(numero.bottom));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testCalendar('la leyenda sigue con el punto sobre la barra',
+        (tester) async {
+      await seedPeriods(altaJulio);
+      await pumpCalendar(tester, '2026-07-07');
+      final leyenda = find.byType(CalendarLegend);
+      final punto = tester.getRect(find.descendant(
+          of: leyenda, matching: find.byKey(const ValueKey('ovulation-dot'))));
+      final barra = tester.getRect(find
+          .descendant(
+              of: leyenda, matching: find.byKey(const ValueKey('fertile-bar')))
+          .last);
+      expect(punto.bottom, lessThanOrEqualTo(barra.top));
+      expect((punto.center.dx - barra.center.dx).abs(), lessThan(0.5));
+    });
   });
 }

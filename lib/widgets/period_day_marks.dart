@@ -54,10 +54,11 @@ class DashedBorderPainter extends CustomPainter {
 
 /// Marca de un dia de la ventana fertil estimada (HU-05, CP5d-2): barra
 /// solida corta abajo, en AppColors.fertile. En el dia de la ovulacion
-/// ([ovulation]) ademas un punto relleno arriba, para que no dependa
-/// solo del color. [inset] separa la barra y el punto del borde: en la
-/// celda (52 de alto) quedan por debajo y por encima del numero, sin
-/// tocarlo, con el texto a 1,0 y a 1,5.
+/// ([ovulation]) ademas un punto relleno justo encima de la barra, para
+/// que no dependa solo del color. [inset] separa la barra del borde
+/// inferior. Punto y barra van juntos debajo del numero, igual que en la
+/// leyenda: antes el punto iba arriba de la celda, en el hueco entre
+/// filas, y parecia del dia de la fila anterior (hallazgo #23).
 class FertileDayMark extends StatelessWidget {
   const FertileDayMark({
     super.key,
@@ -72,6 +73,9 @@ class FertileDayMark extends StatelessWidget {
 
   static const double barHeight = 4;
   static const double dotDiameter = 6;
+
+  /// Separacion entre el punto y la barra.
+  static const double dotGap = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +101,7 @@ class FertileDayMark extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: inset,
+            bottom: inset + barHeight + dotGap,
             child: Center(
               child: Container(
                 key: const ValueKey('ovulation-dot'),
