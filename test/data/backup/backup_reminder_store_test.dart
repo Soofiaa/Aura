@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -194,6 +195,59 @@ void main() {
     });
   });
 
+  group('error al leer un archivo que existe: no se pisa', () {
+    const valido =
+        '{"version":1,"primerUso":"2026-01-01","ultimoRespaldo":"2026-09-01",'
+        '"pospuestoHasta":"2026-10-12","activado":false}';
+    const original = BackupReminderState(
+      primerUso: '2026-01-01',
+      ultimoRespaldo: '2026-09-01',
+      pospuestoHasta: '2026-10-12',
+      activado: false,
+    );
+
+    /// Corre [cuerpo] con la lectura del archivo del recordatorio fallando
+    /// (el resto del sistema de archivos es el real).
+    Future<T> conLecturaFallando<T>(Future<T> Function() cuerpo) =>
+        IOOverrides.runWithIOOverrides(
+            cuerpo, _LecturaQueFalla(archivo().path));
+
+    setUp(() => archivo().writeAsStringSync(valido));
+
+    test('read devuelve los valores por defecto y no reescribe', () async {
+      final state = await conLecturaFallando(() => store.read());
+
+      expect(state, const BackupReminderState(primerUso: '2026-10-10'));
+      expect(archivo().readAsStringSync(), valido);
+      expect(temporal().existsSync(), isFalse);
+      // Cuando la lectura vuelve a funcionar, el estado sigue ahi.
+      expect(await nuevoStore().read(), original);
+    });
+
+    for (final (nombre, op) in [
+      ('recordBackup', (BackupReminderStore s) => s.recordBackup()),
+      ('postpone', (BackupReminderStore s) => s.postpone()),
+      ('setEnabled', (BackupReminderStore s) => s.setEnabled(true)),
+    ]) {
+      test('$nombre lanza y no reescribe', () async {
+        await conLecturaFallando(() => expectLater(
+            op(store), throwsA(isA<FileSystemException>())));
+
+        expect(archivo().readAsStringSync(), valido);
+        expect(temporal().existsSync(), isFalse);
+        expect(await nuevoStore().read(), original);
+      });
+    }
+
+    test('un archivo con UTF-8 invalido es un archivo danado: se reemplaza',
+        () async {
+      archivo().writeAsBytesSync([0x7b, 0xff, 0xfe, 0x7d]);
+      expect(await store.read(),
+          const BackupReminderState(primerUso: '2026-10-10'));
+      expect(contenido()['primerUso'], '2026-10-10');
+    });
+  });
+
   group('borrar', () {
     test('delete borra el archivo y un .tmp huerfano', () async {
       await store.recordBackup();
@@ -246,4 +300,46 @@ void main() {
       expect(archivo().existsSync(), isFalse);
     });
   });
+}
+
+/// Sistema de archivos real, salvo que leer [ruta] falla como lo haria
+/// sin permiso o con un error de E/S.
+final class _LecturaQueFalla extends IOOverrides {
+  _LecturaQueFalla(this.ruta);
+
+  final String ruta;
+
+  @override
+  File createFile(String path) {
+    final real = super.createFile(path);
+    return path == ruta ? _ArchivoQueNoSeLee(real) : real;
+  }
+}
+
+class _ArchivoQueNoSeLee implements File {
+  _ArchivoQueNoSeLee(this._real);
+
+  final File _real;
+
+  @override
+  String get path => _real.path;
+
+  @override
+  Directory get parent => _real.parent;
+
+  @override
+  Future<bool> exists() => _real.exists();
+
+  @override
+  Future<Uint8List> readAsBytes() async =>
+      throw FileSystemException('lectura fallida', path);
+
+  @override
+  Future<String> readAsString({Encoding encoding = utf8}) async =>
+      throw FileSystemException('lectura fallida', path);
+
+  // El store no usa nada mas de este archivo al leer.
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('${invocation.memberName}');
 }

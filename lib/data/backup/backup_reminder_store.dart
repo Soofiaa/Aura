@@ -145,10 +145,12 @@ class BackupReminderStore {
     return controller.stream;
   }
 
-  /// Lee el estado. La primera vez (o si el archivo no se puede leer, esta
-  /// danado o es de una version desconocida) usa los valores por defecto
-  /// con primerUso = hoy y los guarda. Si no los puede guardar, igual los
-  /// devuelve: nunca impide usar la app.
+  /// Lee el estado. La primera vez (o si el archivo esta danado o es de
+  /// una version desconocida) usa los valores por defecto con primerUso =
+  /// hoy y los guarda. Si no los puede guardar, igual los devuelve: nunca
+  /// impide usar la app. Si el archivo existe pero falla la lectura, solo
+  /// devuelve los valores por defecto: no pisa un estado que puede ser
+  /// valido.
   Future<BackupReminderState> read() => _enFila(_leer);
 
   /// Un respaldo se guardo o se compartio con exito hoy. Tambien quita un
@@ -185,22 +187,30 @@ class BackupReminderStore {
   Future<BackupReminderState> _actualizar(
           BackupReminderState Function(BackupReminderState) cambio) =>
       _enFila(() async {
-        final nuevo = cambio(await _leer());
+        final nuevo = cambio(await _leer(paraEscribir: true));
         await _escribir(nuevo);
         _changes.add(nuevo);
         return nuevo;
       });
 
-  Future<BackupReminderState> _leer() async {
+  /// [paraEscribir]: si el archivo existe pero no se puede leer, lanza en
+  /// vez de devolver los valores por defecto, para que la escritura que
+  /// sigue no reemplace un estado valido por uno nuevo.
+  Future<BackupReminderState> _leer({bool paraEscribir = false}) async {
     final file = await _file();
     try {
       if (await file.exists()) {
-        final state = BackupReminderState.fromJson(
-            jsonDecode(await file.readAsString()));
+        // Bytes y decodificacion aparte: un UTF-8 invalido es un archivo
+        // danado (FormatException), no un error de lectura.
+        final bytes = await file.readAsBytes();
+        final state =
+            BackupReminderState.fromJson(jsonDecode(utf8.decode(bytes)));
         if (state != null) return state;
       }
     } on FileSystemException {
-      // Se usan los valores por defecto.
+      // Existe pero no se pudo leer (permisos, E/S): no se reescribe.
+      if (paraEscribir) rethrow;
+      return BackupReminderState(primerUso: _today());
     } on FormatException {
       // Archivo danado: se usan los valores por defecto.
     }
