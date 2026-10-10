@@ -547,7 +547,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Column(
           children: [
             // HU-04 crit. 1 y 6: los dos botones siempre visibles.
-            Row(
+            // IntrinsicHeight + stretch: los dos botones miden lo mismo
+            // aunque el texto de uno se parta en dos lineas.
+            IntrinsicHeight(
+              child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
@@ -569,9 +573,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _alternarModoRango,
                     icon: Icon(_rangeMode ? Icons.close : Icons.date_range),
-                    label: Text(
-                      _rangeMode ? 'Cancelar selección' : 'Elegir varios días',
-                    ),
+                    // En modo rango se ve "Cancelar" (entra en una linea),
+                    // pero el lector de pantalla sigue diciendo "Cancelar
+                    // seleccion": semanticsLabel reemplaza al texto en el
+                    // mismo nodo del boton.
+                    label: _rangeMode
+                        ? const Text('Cancelar',
+                            semanticsLabel: 'Cancelar selección')
+                        : const Text('Elegir varios días'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       minimumSize: const Size(48, 48),
@@ -581,6 +590,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ),
               ],
+            ),
             ),
             const SizedBox(height: 4),
             // <dynamic> explicito: con markerBuilder se inferiria otro tipo

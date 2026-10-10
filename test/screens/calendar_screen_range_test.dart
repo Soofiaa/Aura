@@ -76,6 +76,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // El boton de modo rango dice "Cancelar" (visible); los dialogos
+  // tambien tienen un "Cancelar": este toca el del dialogo abierto.
+  Future<void> tapEnDialogo(WidgetTester tester, String text) async {
+    await tester.tap(find.descendant(
+        of: find.byType(Dialog), matching: find.text(text)));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> tapDay(WidgetTester tester, int day) async {
     await tester.tap(find.text('$day'));
     await tester.pumpAndSettle();
@@ -159,7 +167,7 @@ void main() {
       final antes = await dump();
       await pumpCalendar(tester);
       await elegirRango(tester, 5, 8);
-      await tapText(tester, 'Cancelar selección');
+      await tapText(tester, 'Cancelar');
 
       expect(etiqueta('inicio del rango'), findsNothing);
       expect(find.text(marcar), findsNothing);
@@ -178,7 +186,7 @@ void main() {
 
       await tapText(tester, marcar);
       expect(find.text('Confirmar rango largo'), findsOneWidget);
-      await tapText(tester, 'Cancelar');
+      await tapEnDialogo(tester, 'Cancelar');
       expect(await markedDays(), isEmpty);
 
       await tapText(tester, marcar);
@@ -258,7 +266,7 @@ void main() {
       await elegirRango(tester, 10, 10);
       await tapText(tester, marcar);
       expect(find.text('¿Tu período duró solo 1 día?'), findsOneWidget);
-      await tapText(tester, 'Cancelar');
+      await tapEnDialogo(tester, 'Cancelar');
       expect(await dump(), antes);
     });
 
@@ -376,7 +384,7 @@ void main() {
       await elegirRango(tester, 10, 10);
       await tapText(tester, marcar);
       expect(find.text('¿Tu período duró solo 1 día?'), findsOneWidget);
-      await tapText(tester, 'Cancelar');
+      await tapEnDialogo(tester, 'Cancelar');
       expect(await dump(), antes);
       // Cancelar deja la seleccion como estaba.
       expect(etiqueta('inicio y fin del rango'), findsOneWidget);
@@ -406,7 +414,58 @@ void main() {
     expect(size(elegir).height, greaterThanOrEqualTo(48));
     expect(size('Me llegó hoy').height, greaterThanOrEqualTo(48));
     await elegirRango(tester, 5, 6);
-    expect(size('Cancelar selección').height, greaterThanOrEqualTo(48));
+    expect(size('Cancelar').height, greaterThanOrEqualTo(48));
     expect(size(marcar).height, greaterThanOrEqualTo(48));
   });
+
+  testCalendar(
+      'modo rango: se ve "Cancelar" y el lector dice "Cancelar selección" en '
+      'un solo nodo', (tester) async {
+    await pumpCalendar(tester);
+    await tapText(tester, elegir);
+
+    expect(find.text('Cancelar'), findsOneWidget);
+    expect(find.text('Cancelar selección'), findsNothing);
+    final boton = find.ancestor(
+        of: find.text('Cancelar'), matching: find.byType(OutlinedButton));
+    expect(
+      tester.getSemantics(boton),
+      matchesSemantics(
+        label: 'Cancelar selección',
+        isButton: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        isFocusable: true,
+      ),
+    );
+    // Sin un segundo nodo que repita la lectura.
+    expect(find.bySemanticsLabel('Cancelar'), findsNothing);
+    expect(find.bySemanticsLabel('Cancelar selección'), findsOneWidget);
+  });
+
+  for (final escala in [1.0, 1.3]) {
+    testWidgets('360 x 640, texto $escala: los dos botones miden lo mismo',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = escala;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpCalendar(tester);
+      double alto(String texto) => tester
+          .getSize(find.ancestor(
+              of: find.text(texto),
+              matching: find.bySubtype<ButtonStyleButton>()))
+          .height;
+
+      expect(alto(elegir), alto('Me llegó hoy'));
+      await tester.tap(find.text(elegir));
+      await tester.pumpAndSettle();
+      expect(alto('Cancelar'), alto('Me llegó hoy'));
+      expect(tester.takeException(), isNull);
+      await db.close();
+    });
+  }
 }

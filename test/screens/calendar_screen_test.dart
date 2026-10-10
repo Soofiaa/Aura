@@ -167,7 +167,9 @@ void main() {
 
     expect(find.text('Confirmar rango largo'), findsOneWidget);
 
-    await tester.tap(find.text('Cancelar'));
+    // El "Cancelar" del dialogo (el boton de rango tambien dice "Cancelar").
+    await tester.tap(
+        find.descendant(of: find.byType(Dialog), matching: find.text('Cancelar')));
     await tester.pumpAndSettle();
 
     expect(await repo.getPeriodDayDates(), isEmpty);
