@@ -98,6 +98,8 @@ class _AuraRootState extends State<AuraRoot> {
           debugShowCheckedModeBanner: false,
           theme: auraTheme(),
           localizationsDelegates: auraLocalizationsDelegates,
+          supportedLocales: auraSupportedLocales,
+          locale: auraLocale,
           home: UpdateErrorScreen(
             outOfSpace: outOfSpace,
             retrying: _retrying,
@@ -119,6 +121,8 @@ class AuraApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: auraTheme(),
       localizationsDelegates: auraLocalizationsDelegates,
+      supportedLocales: auraSupportedLocales,
+      locale: auraLocale,
       home: onboardingVisto
           ? const MainNavigationScreen()
           : const OnboardingScreen(),
