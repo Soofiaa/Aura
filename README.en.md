@@ -10,9 +10,9 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 
 - Logs bleeding days, flow intensity, mood, symptoms and notes.
 - Derives cycles from those logs (cycles are never created by hand).
-- Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late, and can be hidden in Settings.
+- Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late (on Home, not during the menstrual phase either), and can be hidden in Settings.
 - Shows the current phase: menstrual, follicular, ovulatory and luteal (none while the period is late).
-- Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under the same conditions as Home) and multi-day selection.
+- Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under Home's confidence, lateness and toggle conditions) and multi-day selection.
 - Statistics with "Your cycles": typical cycle length, shortest and longest cycle, regularity and typical period length.
 - Optional local reminders, with discreet text by default.
 - Lets you mark the end of a period and remove marks.

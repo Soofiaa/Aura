@@ -10,9 +10,9 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 
 - Registra días de sangrado, intensidad del flujo, ánimo, síntomas y notas.
 - Deriva los ciclos a partir de esos registros (no se "crean" ciclos a mano).
-- Predice el próximo período con un **rango** y un nivel de confianza (baja / media / alta). La ovulación y la ventana fértil estimadas solo se muestran con confianza media o alta y sin período atrasado, y se pueden ocultar desde Ajustes.
+- Predice el próximo período con un **rango** y un nivel de confianza (baja / media / alta). La ovulación y la ventana fértil estimadas solo se muestran con confianza media o alta y sin período atrasado (en Inicio, tampoco durante la fase menstrual), y se pueden ocultar desde Ajustes.
 - Muestra la fase actual: menstrual, folicular, ovulatoria y lútea (ninguna con el período atrasado).
-- Calendario con los días registrados, los días estimados del período en curso (borde punteado), la ventana fértil y la ovulación estimadas (con las mismas condiciones que Inicio) y selección de varios días.
+- Calendario con los días registrados, los días estimados del período en curso (borde punteado), la ventana fértil y la ovulación estimadas (con las condiciones de confianza, atraso e interruptor de Inicio) y selección de varios días.
 - Estadísticas con "Tus ciclos": duración típica del ciclo, el más corto y el más largo, regularidad y duración típica del período.
 - Recordatorios locales (opcionales) con texto discreto por defecto.
 - Permite marcar el fin del período y quitar marcas.

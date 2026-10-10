@@ -124,7 +124,9 @@ teléfono.
 **Ajuste posterior** (rama `fix/snackbar-autodismiss`): `showAppSnackBar` recibe el texto y la acción, y fija la duración con
 constantes de `lib/utils/app_snackbar.dart`: 5 segundos los avisos simples (`snackBarDuration`) y 7 los que tienen "Deshacer"
 (`undoSnackBarDuration`, antes 8 segundos), con `persist: false`. El éxito de la importación usa `persistent: true` (no se cierra solo) y lleva
-la "×" de cerrar, que el lector de pantalla anuncia como "Cerrar" (`lib/utils/aura_localizations.dart`).
+la "×" de cerrar, que el lector de pantalla anuncia como "Cerrar". Desde la rama `fix/accesibilidad-contraste`, ese texto viene de
+las localizaciones oficiales en español de Flutter (`flutter_localizations`, cargadas en `lib/utils/aura_localizations.dart`), y
+ya no del delegado propio que solo traducía "Cerrar".
 
 **Relacionado** (commit `9960dff`): `ScaffoldMessenger` encola los SnackBar, así que el éxito persistente de la importación
 bloqueaba todos los mensajes siguientes. Toda la app muestra los SnackBar con `showAppSnackBar`, que descarta los anteriores
@@ -208,6 +210,13 @@ La interfaz está en Inicio: la tarjeta "¿Sigue tu período hoy?" con "Sigue", 
 entre el inicio del período y hoy). Aparece con un período abierto, hoy sin respuesta y la fase menstrual o el último día marcado
 ayer. Al cerrar se completan los días sin registro y se respetan los "No" explícitos; si hay días marcados después del elegido, se
 bloquea con un mensaje. Un período de 1 día pide confirmación. Todas las acciones tienen "Deshacer".
+
+**Qué muestra Inicio con el período en curso** (rama `fix/inicio-coherencia`, decisión H3-1): el período en curso se muestra
+como fase menstrual, y mientras la fase mostrada es la menstrual no se muestran la ovulación ni la ventana fértil. "Período en
+curso" es la misma condición de la tarjeta: período abierto y, además, fase menstrual o último día con sangrado hoy o ayer. Si el
+día actual supera la duración estimada, la tarjeta dice "Día N de tu período · ya superó tu duración estimada (M días)" en lugar
+de "duración estimada: M días". Solo cambia lo que presenta Inicio: el predictor, el Calendario, Estadísticas y los avisos no
+cambian.
 
 ---
 
@@ -298,7 +307,7 @@ Pospuestos:
   ovulatoria. Con el interruptor de HU-05c encendido, una línea gris explica por qué: "Con más ciclos registrados podremos estimar
   tu ventana fértil." (pocos ciclos) o "Tus ciclos varían mucho, así que no mostramos tu ventana fértil." (variabilidad alta).
 - **Confianza media o alta:** muestra la ovulación estimada y la ventana fértil, y justo debajo "Estimación; no es un método
-  anticonceptivo.". El aviso del pie de Inicio ("Esta es una estimación, no un método anticonceptivo.") se mantiene siempre.
+  anticonceptivo.", salvo mientras la fase mostrada es la menstrual (H3-1). El aviso del pie de Inicio ("Esta es una estimación, no un método anticonceptivo.") se mantiene siempre.
 - **Período atrasado** (hoy es posterior al extremo tardío del rango): Inicio muestra "Período atrasado por N días" y el próximo
   período con su rango, pero ninguna fase, ni la ovulación ni la ventana fértil. El Calendario tampoco las marca (HU-05d).
 - **Datos viejos** (más de 60 días desde el último inicio): "Tu último período empezó el dd/MM/yyyy (hace N días). Registra un
@@ -312,7 +321,9 @@ Pospuestos:
 ovulación y la ventana fértil, y la usan Inicio y el Calendario. Devuelve las fechas solo si se cumplen todas: hay una
 predicción activa (no datos viejos), el interruptor de HU-05c está encendido, la confianza es media o alta y el período no está
 atrasado. El predictor no cambia: siempre calcula las fechas, y la regla solo decide qué se ve. Las notificaciones no usan esta
-función; `planNotifications` llega al mismo resultado con sus propias condiciones (ver HU-05a).
+función; `planNotifications` llega al mismo resultado con sus propias condiciones (ver HU-05a). Inicio suma una condición propia:
+no muestra la ovulación ni la ventana mientras la fase mostrada es la menstrual (H3-1); el Calendario sigue usando solo
+`visibleFertileMarks`.
 
 #### HU-05b · "Tus ciclos" en Estadísticas
 
@@ -392,7 +403,8 @@ casos d):
 - Con un promedio de 15 a 17 días, la fase ovulatoria queda tapada por la menstrual (con 15, la ovulación cae el día 2 y después
   del día 5 se pasa directo a la lútea).
 
-Con un período más corto, estos límites cambian.
+Con un período más corto, estos límites cambian. Por la regla H3-1, en esos casos Inicio no muestra la ovulación ni la ventana
+mientras la fase mostrada sea la menstrual.
 
 #### Compatibilidad entre versiones
 
@@ -778,6 +790,22 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **U-1** | ¿Cómo se evita que la selección de rango del calendario descarte un rango sin que se note? | Hacer más visible el resumen que ya existe; evaluar un aviso al empezar un rango nuevo y que un toque posterior alargue el rango. | Resuelta: ver sección 10 |
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
 | **D-5** | ¿El Calendario debe marcar el próximo período estimado? Hoy solo marca los días que faltan del período en curso, y es intencional según E-1. | Consultar a las testers antes de decidir. Si se marca, no debe confundirse con un día registrado ni con los estimados del período en curso (principio 1). | Pendiente: consultar a las testers |
+| **D-6** | ¿Volvió tu período o es manchado? Cuando aparece sangrado después de un período cerrado, la app no lo distingue: a 7 días o menos del último día se suma a ese período y lo reabre (R-4); a más de 7 días empieza un período nuevo. | Preguntar a las testers. Una opción es preguntarlo al marcar el día ("¿Volvió tu período o es manchado?"). No se implementa en la 1.1. | Pendiente: consultar a las testers |
+
+### Limitaciones conocidas de la 1.1.0
+
+- **Sangrado cerca de un período cerrado** (regla de 7 días y R-4): un día de sangrado marcado a 7 días o menos del último día
+  de un período se suma a ese período y, si estaba cerrado, lo reabre (R-4); su duración pasa a incluir los días intermedios. A
+  más de 7 días empieza un período nuevo, y la predicción se recalcula desde él aunque haya sido un manchado de un día. Inicio lo
+  presenta de forma coherente (H3-1), pero la lógica no cambia hasta decidir D-6.
+- **Accesibilidad, modo rango (para la 1.1.1):** en "Elegir varios días", los extremos del rango exponen "inicio del rango" y "fin
+  del rango" (y los días intermedios, "dentro del rango") como un nodo hijo aparte de la celda, y ningún nodo marca `selected`.
+  Un lector de pantalla puede leerlo en otro gesto u omitirlo al explorar con el dedo. Mejora prevista: unir esas marcas a la
+  etiqueta de la celda, como ya se hizo con "período registrado" y "hoy", y marcar `selected` en los extremos.
+- **Accesibilidad, día registrado en el futuro (para la 1.1.1):** un día de sangrado con fecha futura (datos de la v1.0, cuyo
+  formulario permitía fechas hasta 2030; un respaldo importado, que las acepta hasta 2030-12-31; o el reloj del teléfono
+  atrasado) queda deshabilitado en el Calendario: no se ve con el relleno de período registrado ni recibe "período registrado"
+  en su etiqueta.
 
 ## 8. Definición de hecho (por historia)
 
@@ -807,7 +835,7 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 
 Decisiones tomadas tras la Etapa A del modelo de período cerrado (D-1 a R-8), tras el parche v1.0.1 (U-1 y T-01 a T-03),
 tras la Etapa A de HU-06 (HU6-1 a HU6-6 y ajustes A a H), durante la implementación de la migración v4 (M-1 a M-4 y HU6-7),
-en HU-05 (H5-1 a H5-4) y tras la Etapa A de HU-06b (HU6b-1 a HU6b-12).
+en HU-05 (H5-1 a H5-4), tras la Etapa A de HU-06b (HU6b-1 a HU6b-12) y en la coherencia de Inicio (H3-1).
 Reemplazan las recomendaciones de la sección 7 donde difieran.
 
 | ID | Decisión | Motivo |
@@ -854,6 +882,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **H5-2** | "Tus ciclos" en Estadísticas usa la misma función que el predictor para la duración del ciclo (`estimateCycleLength`), y la regularidad usa el mismo umbral de 0,18 que baja la confianza. | Que Estadísticas y la predicción no se contradigan. |
 | **H5-3** | Un solo interruptor, "Mostrar ovulación y ventana fértil", para las dos, en "Tu ciclo" y activado por defecto. Columna `show_fertile_window` (schema v5), sin copia previa a la migración, incluido en el respaldo. "Ventana fértil" (Notificaciones) necesita los dos encendidos y conserva su valor. Con el interruptor apagado se oculta también la línea gris de confianza baja. | Decisión de producto. La migración solo agrega una columna con valor por defecto, sin tocar datos, por eso no hace falta copia previa. |
 | **H5-4** | Las fases con promedios de ciclo cortos se dejan como están (ver "Casos extremos" en HU-05). | Decisión de producto: quedan documentados en vez de cambiar las reglas de las fases. |
+| **H3-1** | Inicio muestra el período en curso como fase menstrual, y mientras la fase mostrada es la menstrual no muestra la ovulación ni la ventana fértil. "Período en curso" = período abierto y, además, fase menstrual o último día con sangrado hoy o ayer (la condición de la tarjeta de HU-03). Si el día supera la duración estimada, la tarjeta dice "ya superó tu duración estimada" en vez de "duración estimada". | Evitar que Inicio se contradiga ("Fase folicular" junto a "Día 9 de tu período", o la ventana fértil desde el día siguiente) cuando un sangrado cercano reabre o alarga el período, o el día en que se cierra con "Terminó hoy". Es solo presentación: la regla de 7 días, R-4, el predictor, el Calendario, Estadísticas y los avisos no cambian; la lógica queda pendiente de D-6. |
 | **HU6-7** | Con la migración v4, el respaldo pasa a `schemaVersion` 4: cada día lleva `periodEnd` (`null`, `"declared"` o `"inferred"`) y los ajustes llevan `typicalPeriodLength` (de 1 a 15). `formatVersion` sigue en 1. Un respaldo v3 se acepta y se convierte con la regla D-2 ("hoy" = el día de la importación); si trae una clave `periodEnd`, se ignora. La duración habitual de un respaldo v3 queda en 5. Un respaldo v4 se importa tal cual, incluida su duración habitual. La importación solo acepta datos ya convertidos al schema actual. La app v3 rechaza un respaldo v4 como de una versión más nueva, sin tocar nada. | `formatVersion` versiona el envoltorio (cambiará con el cifrado de HU-06b) y `schemaVersion` los datos. Convertir siempre antes de importar impide que algún camino importe datos v3 sin aplicar D-2. |
 
 **Ajustes obligatorios de HU-06** (aprobados con la Etapa A):
