@@ -1,6 +1,18 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+/// Resultado de la hoja de compartir del sistema.
+enum BackupShareResult {
+  /// La usuaria eligio una app de destino.
+  success,
+
+  /// La cerro sin elegir destino.
+  dismissed,
+
+  /// La plataforma no puede informar que paso.
+  unavailable,
+}
+
 /// Puente entre el respaldo y el sistema de archivos del telefono: la
 /// hoja de compartir, el "Guardar como" y el selector de archivos. Las
 /// pantallas dependen solo de esta interfaz (nunca de share_plus ni de
@@ -8,12 +20,11 @@ import 'dart:typed_data';
 /// plataforma. La implementacion real esta en
 /// plugin_backup_file_gateway.dart.
 abstract class BackupFileGateway {
-  /// Abre la hoja de compartir del sistema con [file]. Devuelve false si
-  /// la usuaria la cierra sin elegir destino, y true si eligio uno o si
-  /// la plataforma no puede informar que paso. No borra el archivo al
-  /// volver: la app de destino puede seguir leyendolo (ver
+  /// Abre la hoja de compartir del sistema con [file] y devuelve que
+  /// paso (ver [BackupShareResult]). No borra el archivo al volver: la
+  /// app de destino puede seguir leyendolo (ver
   /// BackupService.cleanTemporaryFiles).
-  Future<bool> shareFile(File file);
+  Future<BackupShareResult> shareFile(File file);
 
   /// Abre el "Guardar como" del sistema y escribe [bytes] donde la
   /// usuaria elija. Devuelve false si cancela; lanza si la escritura

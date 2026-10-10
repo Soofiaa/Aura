@@ -12,13 +12,15 @@ class PluginBackupFileGateway implements BackupFileGateway {
   const PluginBackupFileGateway();
 
   @override
-  Future<bool> shareFile(File file) async {
+  Future<BackupShareResult> shareFile(File file) async {
     final result = await SharePlus.instance.share(ShareParams(
       files: [XFile(file.path, mimeType: 'application/json')],
     ));
-    // dismissed: se cerro sin elegir destino. unavailable: no se sabe
-    // (se trata como compartido, para no esconder un exito real).
-    return result.status != ShareResultStatus.dismissed;
+    return switch (result.status) {
+      ShareResultStatus.success => BackupShareResult.success,
+      ShareResultStatus.dismissed => BackupShareResult.dismissed,
+      ShareResultStatus.unavailable => BackupShareResult.unavailable,
+    };
   }
 
   @override

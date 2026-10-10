@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
@@ -38,6 +39,9 @@ void main() {
     repo = CycleRepository(db);
     backup = FakeBackupService(repo);
     gateway = FakeBackupFileGateway();
+    // Respaldo exitoso: anota la fecha en memoria (la E/S real no
+    // avanza dentro de testWidgets).
+    backupReminderStore = FakeBackupReminderStore();
   });
 
   Future<void> pumpSettings(WidgetTester tester) async {

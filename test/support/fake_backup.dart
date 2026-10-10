@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:aura/data/backup/backup_file_gateway.dart';
+import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
@@ -19,9 +20,9 @@ class FakeBackupFileGateway implements BackupFileGateway {
   final List<File> sharedFiles = [];
   Object? shareError;
 
-  /// Resultado de la hoja de compartir: false simula que la usuaria la
-  /// cierra sin elegir destino.
-  bool shareResult = true;
+  /// Resultado de la hoja de compartir: dismissed simula que la usuaria
+  /// la cierra sin elegir destino.
+  BackupShareResult shareResult = BackupShareResult.success;
 
   /// Resultado del "Guardar como": false simula que la usuaria cancela.
   bool saveResult = true;
@@ -36,7 +37,7 @@ class FakeBackupFileGateway implements BackupFileGateway {
   }
 
   @override
-  Future<bool> shareFile(File file) async {
+  Future<BackupShareResult> shareFile(File file) async {
     if (shareError != null) throw shareError!;
     sharedFiles.add(file);
     return shareResult;
@@ -52,6 +53,38 @@ class FakeBackupFileGateway implements BackupFileGateway {
     savedFileName = fileName;
     savedBytes = bytes;
     return true;
+  }
+}
+
+/// Recordatorio de respaldo en memoria para tests de widget: la E/S real
+/// de archivos no avanza dentro del reloj falso de testWidgets. El
+/// almacen real se prueba en test/data/backup/backup_reminder_store_test.dart.
+class FakeBackupReminderStore extends BackupReminderStore {
+  FakeBackupReminderStore({DateTime Function()? clock})
+      : _now = clock ?? (() => DateTime(2026, 10, 4, 10, 15)),
+        super(supportDirectory: () => throw UnimplementedError());
+
+  final DateTime Function() _now;
+  BackupReminderState? _state;
+
+  /// Veces que se anoto un respaldo con exito.
+  int recordCount = 0;
+
+  /// Si no es null, recordBackup lo lanza (no se puede escribir).
+  Object? recordError;
+
+  BackupReminderState get _actual =>
+      _state ??= BackupReminderState(primerUso: DayKey.fromDate(_now()));
+
+  @override
+  Future<BackupReminderState> read() async => _actual;
+
+  @override
+  Future<BackupReminderState> recordBackup() async {
+    if (recordError != null) throw recordError!;
+    recordCount++;
+    return _state = _actual.copyWith(
+        ultimoRespaldo: DayKey.fromDate(_now()), clearPospuestoHasta: true);
   }
 }
 

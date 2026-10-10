@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/backup/backup_file_gateway.dart';
+import '../data/backup/backup_reminder_store.dart';
 import '../data/backup/backup_service.dart';
 import '../domain/backup_codec.dart';
 import '../utils/day_key.dart';
@@ -134,19 +135,23 @@ class _BackupSectionState extends State<BackupSection> {
       'Recuerda tu contraseña: Aura no puede recuperarla.';
 
   Future<void> _compartir(File file, {required bool protegido}) async {
-    final compartido = await _gateway.shareFile(file);
+    final resultado = await _gateway.shareFile(file);
     // Cerrar la hoja sin elegir destino no es un error: sin mensaje.
-    if (compartido) {
-      _aviso(protegido
-          ? 'Respaldo protegido listo. $_recuerda'
-          : 'Respaldo listo. Guárdalo en un lugar seguro.');
-    }
+    if (resultado == BackupShareResult.dismissed) return;
+    // Solo "success" cuenta para el recordatorio: "unavailable" no dice si
+    // se envio algo. El mensaje se muestra igual, para no esconder un
+    // exito real.
+    if (resultado == BackupShareResult.success) await _anotarRespaldo();
+    _aviso(protegido
+        ? 'Respaldo protegido listo. $_recuerda'
+        : 'Respaldo listo. Guárdalo en un lugar seguro.');
   }
 
   Future<void> _despuesDeGuardar(bool guardado,
       {required bool protegido}) async {
     // Cancelar el "Guardar como" no es un error: sin mensaje.
     if (!guardado) return;
+    await _anotarRespaldo();
     _aviso(protegido
         ? 'Respaldo protegido guardado. $_recuerda'
         : 'Respaldo guardado.');
@@ -155,6 +160,15 @@ class _BackupSectionState extends State<BackupSection> {
     // reintenta a los 30 dias o al borrar los datos.
     try {
       await widget.service.deletePreMigrationCopy();
+    } catch (_) {}
+  }
+
+  /// Anota hoy como ultimo respaldo para el recordatorio. Si no se puede
+  /// anotar, el respaldo igual quedo hecho: no se avisa nada y, en el peor
+  /// caso, el recordatorio aparece antes de tiempo.
+  Future<void> _anotarRespaldo() async {
+    try {
+      await backupReminderStore.recordBackup();
     } catch (_) {}
   }
 

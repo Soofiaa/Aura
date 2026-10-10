@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:aura/data/backup/backup_file_gateway.dart';
+import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/notifications/notification_reconciler.dart';
@@ -38,6 +39,9 @@ void main() {
     repo = CycleRepository(db);
     backup = FakeBackupService(repo);
     gateway = FakeBackupFileGateway();
+    // Respaldo exitoso: anota la fecha en memoria (la E/S real no
+    // avanza dentro de testWidgets).
+    backupReminderStore = FakeBackupReminderStore();
   });
 
   /// Pantalla alta para que toda la lista de Ajustes quepa sin scroll.
@@ -170,7 +174,7 @@ void main() {
     testWidgets('si se cierra la hoja de compartir sin elegir destino no '
         'aparece ningun mensaje', (tester) async {
       await seedDays(2);
-      gateway.shareResult = false;
+      gateway.shareResult = BackupShareResult.dismissed;
       await pumpSettings(tester);
 
       await tester.tap(find.text('Crear respaldo'));
