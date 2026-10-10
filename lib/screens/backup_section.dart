@@ -1,9 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../data/backup/backup_file_gateway.dart';
 import '../data/backup/backup_reminder_store.dart';
@@ -13,13 +8,12 @@ import '../domain/backup_reminder.dart';
 import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
-import '../widgets/protect_backup_dialog.dart';
 import '../widgets/unlock_backup_dialog.dart';
+import 'backup_create_flow.dart';
 
-enum _AccionRespaldo { guardar, compartir }
-
-/// "Crear respaldo" y "Restaurar un respaldo" de la seccion "Tus datos"
-/// de Ajustes (HU-06). Nunca usa share_plus ni file_picker directamente:
+/// "Crear respaldo" (ver [CreateBackupFlow]) y "Restaurar un respaldo" de
+/// la seccion "Tus datos" de Ajustes (HU-06). Nunca usa share_plus ni
+/// file_picker directamente:
 /// todo pasa por [BackupFileGateway]. Los mensajes a la usuaria se arman
 /// con datos estructurados (BackupError, BackupWriteException.cause),
 /// nunca con el texto de una excepcion.
@@ -46,8 +40,21 @@ class BackupSection extends StatefulWidget {
 
 class _BackupSectionState extends State<BackupSection> {
   /// true mientras se exporta, importa o deshace: impide empezar otra
-  /// operacion (doble toque) hasta que termine la anterior.
-  bool _ocupada = false;
+  /// operacion (doble toque) hasta que termine la anterior. Compartido con
+  /// Inicio si hay un [BackupBusyScope]; si no, uno propio. El propio no
+  /// se libera: el flujo lo vuelve a false al terminar, aunque esta
+  /// pantalla ya no este.
+  late ValueNotifier<bool> _busy;
+  ValueNotifier<bool>? _busyPropio;
+
+  bool get _ocupada => _busy.value;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _busy = BackupBusyScope.maybeOf(context) ??
+        (_busyPropio ??= ValueNotifier<bool>(false));
+  }
 
   BackupFileGateway get _gateway => widget.gateway ?? backupFileGateway;
 
@@ -59,134 +66,12 @@ class _BackupSectionState extends State<BackupSection> {
 
   // --- Crear respaldo ---
 
-  Future<void> _crearRespaldo() async {
-    if (_ocupada) return;
-    final accion = await showDialog<_AccionRespaldo>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tu respaldo tiene datos de salud'),
-        content: const Text(
-          'Incluye tus días de período, síntomas, ánimo y notas. Guárdalo en '
-          'un lugar que solo tú uses. Si lo compartes con una app, esa app '
-          'tendrá una copia.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AccionRespaldo.guardar),
-            child: const Text('Guardar en el teléfono'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, _AccionRespaldo.compartir),
-            child: const Text('Compartir'),
-          ),
-        ],
-      ),
-    );
-    if (accion == null || !mounted || _ocupada) return;
-
-    // HU-06b CP3: con contrasena (cifrado) o, tras confirmarlo, sin ella.
-    final eleccion = await showProtectBackupDialog(context);
-    if (eleccion == null || !mounted || _ocupada) return;
-
-    setState(() => _ocupada = true);
-    try {
-      switch ((accion, eleccion)) {
-        case (_AccionRespaldo.compartir, ProtectWithoutPassword()):
-          final file = await widget.service.writeExportFile();
-          await _compartir(file, protegido: false);
-        case (_AccionRespaldo.compartir, ProtectWithPassword(:final password)):
-          final file = await _protegiendo(password);
-          await _compartir(file, protegido: true);
-        case (_AccionRespaldo.guardar, ProtectWithoutPassword()):
-          final json = await widget.service.buildExportJson();
-          final guardado = await _gateway.saveToDevice(
-            fileName: widget.service.exportFileName(),
-            bytes: Uint8List.fromList(utf8.encode(json)),
-          );
-          await _despuesDeGuardar(guardado, protegido: false);
-        case (_AccionRespaldo.guardar, ProtectWithPassword(:final password)):
-          // Se guardan los bytes del archivo ya verificado (HU6b-10) y el
-          // temporal se borra siempre, tambien si guardar falla.
-          final file = await _protegiendo(password);
-          try {
-            final guardado = await _gateway.saveToDevice(
-              fileName: widget.service.exportFileName(protected: true),
-              bytes: await widget.service.readExportFile(file),
-            );
-            await _despuesDeGuardar(guardado, protegido: true);
-          } finally {
-            await widget.service.deleteExportFile(file);
-          }
-      }
-    } on BackupEncryptionException catch (e) {
-      _aviso(e.message);
-    } on BackupWriteException catch (e) {
-      _aviso(_mensajeNoSeCreo(e));
-    } catch (_) {
-      _aviso(
-        accion == _AccionRespaldo.guardar
-            ? 'No se pudo guardar el respaldo.'
-            : 'No se pudo compartir el respaldo.',
-      );
-    } finally {
-      if (mounted) setState(() => _ocupada = false);
-    }
-  }
-
-  /// Cifra y verifica el respaldo con la pantalla bloqueada (puede tardar
-  /// unos segundos: la derivacion corre en otro isolate).
-  Future<File> _protegiendo(String password) => _conProgreso(
-        'Protegiendo tu respaldo…',
-        () => widget.service.writeExportFile(password: password),
-        detalle: 'Esto puede tardar unos segundos.',
-      );
-
-  // Con contrasena, el aviso final recuerda que no hay recuperacion
-  // (HU-06b). Sin contrasena, los mensajes de siempre.
-  static const _recuerda =
-      'Recuerda tu contraseña: Aura no puede recuperarla.';
-
-  Future<void> _compartir(File file, {required bool protegido}) async {
-    final resultado = await _gateway.shareFile(file);
-    // Cerrar la hoja sin elegir destino no es un error: sin mensaje.
-    if (resultado == BackupShareResult.dismissed) return;
-    // Solo "success" cuenta para el recordatorio: "unavailable" no dice si
-    // se envio algo. El mensaje se muestra igual, para no esconder un
-    // exito real.
-    if (resultado == BackupShareResult.success) await _anotarRespaldo();
-    _aviso(protegido
-        ? 'Respaldo protegido listo. $_recuerda'
-        : 'Respaldo listo. Guárdalo en un lugar seguro.');
-  }
-
-  Future<void> _despuesDeGuardar(bool guardado,
-      {required bool protegido}) async {
-    // Cancelar el "Guardar como" no es un error: sin mensaje.
-    if (!guardado) return;
-    await _anotarRespaldo();
-    _aviso(protegido
-        ? 'Respaldo protegido guardado. $_recuerda'
-        : 'Respaldo guardado.');
-    // Ya hay una copia completa fuera de la app: la copia previa a la
-    // migracion v4 deja de hacer falta. Si no se puede borrar, se
-    // reintenta a los 30 dias o al borrar los datos.
-    try {
-      await widget.service.deletePreMigrationCopy();
-    } catch (_) {}
-  }
-
-  /// Anota hoy como ultimo respaldo para el recordatorio. Si no se puede
-  /// anotar, el respaldo igual quedo hecho: no se avisa nada y, en el peor
-  /// caso, el recordatorio aparece antes de tiempo.
-  Future<void> _anotarRespaldo() async {
-    try {
-      await _store.recordBackup();
-    } catch (_) {}
-  }
+  Future<void> _crearRespaldo() => CreateBackupFlow(
+        service: widget.service,
+        busy: _busy,
+        gateway: widget.gateway,
+        reminderStore: widget.reminderStore,
+      ).run(context);
 
   /// Interruptor "Recordarme crear un respaldo". La pantalla cambia
   /// cuando el almacen confirma (watch).
@@ -198,24 +83,11 @@ class _BackupSectionState extends State<BackupSection> {
     }
   }
 
-  String _mensajeNoSeCreo(BackupWriteException e) {
-    switch (e.cause) {
-      case BackupWriteCause.dateOutOfRange:
-        return 'No se pudo crear el respaldo: hay un día con una fecha fuera '
-            'de rango (${_fechaLegible(e.outOfRangeDate)}).';
-      case BackupWriteCause.invalidData:
-        return 'No se pudo crear el respaldo: hay datos guardados que no son '
-            'válidos.';
-      case BackupWriteCause.fileSystem:
-        return 'No se pudo crear el respaldo.';
-    }
-  }
-
   // --- Restaurar un respaldo ---
 
   Future<void> _restaurar() async {
     if (_ocupada) return;
-    setState(() => _ocupada = true);
+    _busy.value = true;
     try {
       final String? path;
       try {
@@ -276,7 +148,7 @@ class _BackupSectionState extends State<BackupSection> {
         _aviso(
           e.cause == BackupWriteCause.dateOutOfRange
               ? 'No se pudo importar: en tus datos actuales hay un día con una '
-                    'fecha fuera de rango (${_fechaLegible(e.outOfRangeDate)}). '
+                    'fecha fuera de rango (${backupDayLabel(e.outOfRangeDate)}). '
                     'Tus datos no cambiaron.'
               : 'No se pudo importar. Tus datos no cambiaron.',
         );
@@ -287,7 +159,7 @@ class _BackupSectionState extends State<BackupSection> {
       }
       _mostrarExito(vista.incomingDayCount);
     } finally {
-      if (mounted) setState(() => _ocupada = false);
+      _busy.value = false;
     }
   }
 
@@ -389,7 +261,7 @@ class _BackupSectionState extends State<BackupSection> {
 
   Future<void> _deshacer() async {
     if (_ocupada || !mounted) return;
-    setState(() => _ocupada = true);
+    _busy.value = true;
     try {
       await _conProgreso(
         'Restaurando tus datos anteriores…',
@@ -399,64 +271,30 @@ class _BackupSectionState extends State<BackupSection> {
     } catch (_) {
       _aviso('No se pudo deshacer la importación. Tus datos no cambiaron.');
     } finally {
-      if (mounted) setState(() => _ocupada = false);
+      _busy.value = false;
     }
   }
 
   // --- Utilidades ---
 
-  /// Bloquea la pantalla con un dialogo de progreso que no se puede
-  /// cerrar (ni con "atras") mientras corre [tarea], para que no entren
-  /// otras escrituras a mitad de camino.
   Future<T> _conProgreso<T>(String texto, Future<T> Function() tarea,
-      {String? detalle}) async {
-    final navigator = Navigator.of(context, rootNavigator: true);
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          content: Row(
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(width: 20),
-              Expanded(
-                child: detalle == null
-                    ? Text(texto)
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            texto,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w500),
-                          ),
-                          Text(detalle),
-                        ],
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    try {
-      return await tarea();
-    } finally {
-      navigator.pop();
-    }
-  }
+          {String? detalle}) =>
+      showBlockingProgress(context, texto, tarea, detalle: detalle);
 
   void _aviso(String texto) {
     if (!mounted) return;
-    showAppSnackBar(context, texto);
+    showBackupNotice(context, texto);
   }
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _busy,
+      builder: (context, _, _) => _contenido(),
+    );
+  }
+
+  Widget _contenido() {
     return StreamBuilder<BackupReminderState>(
       stream: _recordatorio,
       builder: (context, snapshot) {
@@ -619,20 +457,13 @@ String _diasConRegistro(int total, int periodo) =>
     '${total == 1 ? '1 día' : '$total días'} con registro '
     '($periodo de período)';
 
-final DateFormat _formatoFecha = DateFormat("d 'de' MMMM 'de' y", 'es');
-
 /// Fecha de exportacion tal como la vio el telefono que la creo (la parte
 /// yyyy-MM-dd de exportedAt, sin convertir de zona).
 String _fechaRespaldo(String exportedAt) {
   final dia = exportedAt.length >= 10 ? exportedAt.substring(0, 10) : '';
   try {
-    return _formatoFecha.format(DayKey.toUtcAnchor(dia));
+    return backupDateFormat.format(DayKey.toUtcAnchor(dia));
   } on FormatException {
-    return _formatoFecha.format(DateTime.parse(exportedAt));
+    return backupDateFormat.format(DateTime.parse(exportedAt));
   }
-}
-
-String _fechaLegible(String? dayKey) {
-  if (dayKey == null) return 'fecha desconocida';
-  return _formatoFecha.format(DayKey.toUtcAnchor(dayKey));
 }

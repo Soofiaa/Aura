@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'backup_create_flow.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
@@ -18,6 +19,11 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
+  // Una sola operacion de respaldo a la vez entre Ajustes e Inicio (la
+  // tarjeta del recordatorio abre el mismo flujo que "Crear respaldo").
+  // No se libera: un flujo en curso lo vuelve a false al terminar.
+  final ValueNotifier<bool> _backupBusy = ValueNotifier<bool>(false);
+
   static const _screens = [
     HomeScreen(),
     CalendarScreen(),
@@ -27,6 +33,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackupBusyScope(
+      busy: _backupBusy,
+      child: _scaffold(),
+    );
+  }
+
+  Widget _scaffold() {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: NavigationBar(
