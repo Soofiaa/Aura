@@ -377,4 +377,39 @@ void main() {
     );
     expect(picker.lastDate, DateUtils.dateOnly(DateTime.now()));
   });
+
+  // #9: sin desbordes a 360 x 640 con letra grande (menus, fecha y chips).
+  group('360 x 640 sin desbordes', () {
+    for (final guardado in [false, true]) {
+      for (final escala in [1.0, 1.3, 1.5, 2.0]) {
+        testWidgets(
+            '${guardado ? 'dia guardado (sangrado, todos los sintomas)' : 'dia vacio'}'
+            ', texto $escala', (tester) async {
+          if (guardado) {
+            await repo.upsertDay(
+              date: hoy,
+              isPeriodDaySwitch: true,
+              flow: FlowIntensity.abundante,
+              mood: Mood.irritable,
+              notes: 'Nota de prueba',
+              symptoms: Symptom.values.toSet(),
+            );
+          }
+          tester.view.physicalSize = const Size(360, 640);
+          tester.view.devicePixelRatio = 1;
+          tester.platformDispatcher.textScaleFactorTestValue = escala;
+          addTearDown(tester.view.reset);
+          addTearDown(
+              tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await tester.pumpWidget(const MaterialApp(home: AddCycleScreen()));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          if (guardado) {
+            expect(find.text('Abundante'), findsOneWidget);
+            expect(find.text('Irritable'), findsOneWidget);
+          }
+        });
+      }
+    }
+  });
 }

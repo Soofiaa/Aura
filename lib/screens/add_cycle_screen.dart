@@ -126,9 +126,11 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                        style: const TextStyle(fontSize: 16),
+                      Flexible(
+                        child: Text(
+                          "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
                       const Icon(Icons.calendar_today, color: Colors.grey),
                     ],
@@ -156,6 +158,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                 const SizedBox(height: 5),
                 DropdownButtonFormField<FlowIntensity?>(
                   initialValue: _flujo,
+                  // isExpanded: el texto elegido se ajusta al ancho (con
+                  // "..." si no entra) en vez de desbordar.
+                  isExpanded: true,
                   hint: const Text("Sin especificar"),
                   items: [
                     const DropdownMenuItem(
@@ -180,6 +185,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
               const SizedBox(height: 5),
               DropdownButtonFormField<Mood?>(
                 initialValue: _estadoAnimo,
+                isExpanded: true,
                 hint: const Text("Sin registrar"),
                 items: [
                   const DropdownMenuItem(

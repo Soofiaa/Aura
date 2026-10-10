@@ -203,4 +203,38 @@ void main() {
         of: chip, matching: find.byType(Icon)));
     expect(icono.color, AppColors.chipCheckIcon);
   });
+
+  // #9: con letra grande en 360 de ancho el nombre del chip pasa a otra
+  // linea en vez de desbordar.
+  for (final escala in [1.0, 1.3, 1.5, 2.0]) {
+    testWidgets('360 de ancho, texto $escala, todos marcados: sin desbordes',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = escala;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: SymptomSelector(
+              selectedSymptoms: const [
+                'Dolor abdominal', 'Dolor de cabeza', 'Cansancio', 'Antojos',
+                'Cambios de humor', 'Hinchazón', 'Acné', 'Dolor de espalda',
+              ],
+              onSelectionChanged: (_) {},
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // Ningun chip mas ancho que el espacio disponible.
+      for (final e in find.byType(GestureDetector).evaluate()) {
+        expect(tester.getSize(find.byWidget(e.widget)).width,
+            lessThanOrEqualTo(320));
+      }
+    });
+  }
 }

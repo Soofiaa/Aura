@@ -96,12 +96,20 @@ class SymptomSelector extends StatelessWidget {
                               : Colors.grey[600],
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          symptom,
-                          style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.grey[800],
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.normal,
+                        // Flexible: con letra grande o pantalla angosta el
+                        // nombre pasa a otra linea en vez de desbordar. El
+                        // ancho del chip ya lo limita el Wrap (el de la
+                        // pantalla).
+                        Flexible(
+                          child: Text(
+                            symptom,
+                            style: TextStyle(
+                              color:
+                                  isSelected ? Colors.black : Colors.grey[800],
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
                       ],
