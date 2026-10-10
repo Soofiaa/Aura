@@ -134,17 +134,15 @@ class BackupReminderStore {
   Future<File> _file() async =>
       File(p.join((await _supportDirectory()).path, fileName));
 
-  /// El estado actual y despues cada cambio, para la interfaz.
-  Stream<BackupReminderState> watch() {
-    late StreamSubscription<BackupReminderState> sub;
-    final controller = StreamController<BackupReminderState>();
-    controller.onListen = () {
-      sub = _changes.stream.listen(controller.add);
-      read().then(controller.add, onError: controller.addError);
-    };
-    controller.onCancel = () => sub.cancel();
-    return controller.stream;
-  }
+  /// El estado actual y despues cada cambio, para la interfaz. Admite
+  /// varias suscripciones (tambien volver a escuchar el mismo stream):
+  /// cada una lee el estado por su cuenta y suelta la suya al cancelar.
+  Stream<BackupReminderState> watch() =>
+      Stream.multi((controller) {
+        final sub = _changes.stream.listen(controller.add);
+        read().then(controller.add, onError: controller.addError);
+        controller.onCancel = sub.cancel;
+      });
 
   /// Lee el estado. La primera vez (o si el archivo esta danado o es de
   /// una version desconocida) usa los valores por defecto con primerUso =

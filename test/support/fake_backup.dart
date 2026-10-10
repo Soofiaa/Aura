@@ -98,16 +98,12 @@ class FakeBackupReminderStore extends BackupReminderStore {
   BackupReminderState? get current => _state;
 
   @override
-  Stream<BackupReminderState> watch() {
-    late StreamSubscription<BackupReminderState> sub;
-    final controller = StreamController<BackupReminderState>();
-    controller.onListen = () {
-      sub = _cambios.stream.listen(controller.add);
-      read().then(controller.add, onError: controller.addError);
-    };
-    controller.onCancel = () => sub.cancel();
-    return controller.stream;
-  }
+  Stream<BackupReminderState> watch() =>
+      Stream.multi((controller) {
+        final sub = _cambios.stream.listen(controller.add);
+        read().then(controller.add, onError: controller.addError);
+        controller.onCancel = sub.cancel;
+      });
 
   @override
   Future<BackupReminderState> read() async {

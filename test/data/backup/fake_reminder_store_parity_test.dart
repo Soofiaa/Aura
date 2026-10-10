@@ -62,4 +62,100 @@ void main() {
     expect(deReal.$2.first, const BackupReminderState(primerUso: '2026-10-10'));
     expect(deReal.$1.last, const BackupReminderState(primerUso: '2026-11-02'));
   });
+
+  // watch() con varias suscripciones, igual en el real y en el falso.
+  final hora = DateTime(2026, 10, 10, 9, 30);
+  final almacenes = <String, BackupReminderStore Function()>{
+    'real': () => BackupReminderStore(
+          supportDirectory: () async => Directory(p.join(root.path, 'files')),
+          clock: () => hora,
+        ),
+    'falso': () => FakeBackupReminderStore(clock: () => hora),
+  };
+  final queNoSeLeen = <String, BackupReminderStore Function()>{
+    'real': () => BackupReminderStore(
+          supportDirectory: () async => throw StateError('sin carpeta'),
+          clock: () => hora,
+        ),
+    'falso': () =>
+        FakeBackupReminderStore(clock: () => hora)
+          ..readError = StateError('sin carpeta'),
+  };
+  const inicial = BackupReminderState(primerUso: '2026-10-10');
+  const pospuesto =
+      BackupReminderState(primerUso: '2026-10-10', pospuestoHasta: '2026-10-17');
+
+  almacenes.forEach((nombre, crear) {
+    group('watch, almacen $nombre', () {
+      test('dos suscriptores a la vez reciben el estado actual y los cambios',
+          () async {
+        final store = crear();
+        final stream = store.watch();
+        final a = <BackupReminderState>[];
+        final b = <BackupReminderState>[];
+        final subA = stream.listen(a.add);
+        final subB = stream.listen(b.add);
+        await store.read();
+        await pumpEventQueue();
+        await store.postpone();
+        await pumpEventQueue();
+        await subA.cancel();
+        await subB.cancel();
+
+        expect(a, [inicial, pospuesto]);
+        expect(b, [inicial, pospuesto]);
+      });
+
+      test('cancelar suelta la suscripcion y se puede volver a escuchar',
+          () async {
+        final store = crear();
+        final stream = store.watch();
+        final primera = <BackupReminderState>[];
+        final sub = stream.listen(primera.add);
+        // La lectura de watch va en la fila: esta termina despues.
+        await store.read();
+        await pumpEventQueue();
+        await sub.cancel();
+        await store.postpone();
+        await pumpEventQueue();
+        expect(primera, [inicial]);
+
+        final segunda = <BackupReminderState>[];
+        final otra = stream.listen(segunda.add);
+        await store.read();
+        await pumpEventQueue();
+        await store.setEnabled(false);
+        await pumpEventQueue();
+        await otra.cancel();
+        expect(segunda, [
+          pospuesto,
+          const BackupReminderState(
+              primerUso: '2026-10-10',
+              pospuestoHasta: '2026-10-17',
+              activado: false),
+        ]);
+      });
+    });
+  });
+
+  queNoSeLeen.forEach((nombre, crear) {
+    test('watch, almacen $nombre: un error de lectura llega a cada '
+        'suscriptor como error del stream', () async {
+      final stream = crear().watch();
+      final errores = <List<Object>>[[], []];
+      final datos = <BackupReminderState>[];
+      final subs = [
+        for (final lista in errores)
+          stream.listen(datos.add, onError: (Object e) => lista.add(e)),
+      ];
+      await pumpEventQueue();
+      for (final s in subs) {
+        await s.cancel();
+      }
+      expect(datos, isEmpty);
+      for (final lista in errores) {
+        expect(lista, [isA<StateError>()]);
+      }
+    });
+  });
 }
