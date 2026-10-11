@@ -62,6 +62,7 @@
 - "Registrar día" pregunta "¿Descartar los cambios?" si sales (con la flecha o con el botón atrás) o cambias de fecha con cambios sin guardar: "Seguir editando" vuelve al formulario y "Descartar" sale o abre la otra fecha. Si no cambiaste nada, sale sin preguntar.
 - "Guardar registro" queda fijo al pie de "Registrar día", encima del teclado cuando está abierto: ya no hay que bajar hasta el final para guardar.
 - En Inicio, "Me llegó hoy" y "Registrar día" quedan fijos al pie de la pantalla, siempre a la vista aunque aparezca la tarjeta "¿Sigue tu período hoy?".
+- Aura se mantiene en vertical en los teléfonos: girar el teléfono ya no pone la pantalla en horizontal. En tablets y plegables abiertos sigue girando (lo decide Android).
 
 ### Corregido
 

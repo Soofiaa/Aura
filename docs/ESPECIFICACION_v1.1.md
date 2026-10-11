@@ -885,6 +885,11 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 - **Marca de la ovulación con letra grande (para la 1.1.1):** con el texto del sistema a 1,3 o más, el número del día de la
   ovulación puede tocar o pisar el punto que va debajo (T2-6); la altura de la fila del Calendario es fija. Mejora prevista:
   ajustar la altura de la fila según la escala del texto.
+- **Orientación vertical solo en teléfonos:** la orientación está bloqueada en vertical con `android:screenOrientation="portrait"`
+  en el manifest. En pantallas de ancho mínimo de 600 dp o más (tablets y plegables abiertos), Android 16 ignora ese bloqueo con
+  `targetSdk` 36 y la app gira. Se comprobó con un test de widgets temporal (no versionado) que las seis pantallas principales
+  (Inicio, Calendario, Estadísticas, Ajustes, Registrar día y la bienvenida) no desbordan en horizontal a 800x360 y 1280x800.
+  Límites de esa prueba: escala de texto 1, sin teclado abierto y sin diálogos ni hojas inferiores.
 
 ## 8. Definición de hecho (por historia)
 
