@@ -91,7 +91,7 @@ void main() {
       await pumpCalendar(tester, 10);
 
       await tapDay(tester, 5);
-      expect(find.text('Registrar día de menstruación'), findsOneWidget);
+      expect(find.text('Marcar período'), findsOneWidget);
       await tapText(tester, termino);
 
       expect(find.text('Período terminado el 5 de julio.'), findsOneWidget);
@@ -274,7 +274,7 @@ void main() {
       await pumpCalendar(tester, 15);
       await tapDay(tester, 15);
       expect(find.text('Confirmar días'), findsNothing);
-      expect(find.text('Registrar día de menstruación'), findsOneWidget);
+      expect(find.text('Marcar período'), findsOneWidget);
       expect(find.text(termino), findsOneWidget);
     });
   });

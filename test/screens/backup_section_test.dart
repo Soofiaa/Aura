@@ -461,7 +461,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(backup.importCount, 1);
-      expect(find.text('Configuración'), findsOneWidget);
+      expect(find.text('Ajustes'), findsOneWidget);
       expect(find.text(exito), findsOneWidget);
       await db.close();
     });
@@ -502,15 +502,15 @@ void main() {
       await pumpSettings(tester);
       ScaffoldMessenger.of(tester.element(find.byType(SettingsScreen)))
           .showSnackBar(SnackBar(
-        content: const Text('Marca quitada'),
+        content: const Text('Marca quitada.'),
         action: SnackBarAction(label: 'Deshacer', onPressed: () {}),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Marca quitada'), findsOneWidget);
+      expect(find.text('Marca quitada.'), findsOneWidget);
 
       await importarFixture(tester);
 
-      expect(find.text('Marca quitada'), findsNothing);
+      expect(find.text('Marca quitada.'), findsNothing);
       expect(find.text(exito), findsOneWidget);
       await db.close();
     });
@@ -589,7 +589,7 @@ void main() {
       await tester.tap(find.text('Quitar marca'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Marca quitada'), findsOneWidget);
+      expect(find.text('Marca quitada.'), findsOneWidget);
       expect((await repo.getDay(dia))!.isPeriodDay, isFalse);
 
       await tester.tap(find.widgetWithText(SnackBarAction, 'Deshacer'));

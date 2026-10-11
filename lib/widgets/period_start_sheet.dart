@@ -263,7 +263,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
           ),
           onPressed:
               alreadyMarked ? null : () => Navigator.pop(context, day),
-          child: const Text('Marcar mi período'),
+          child: const Text('Marcar período'),
         ),
       ],
     );

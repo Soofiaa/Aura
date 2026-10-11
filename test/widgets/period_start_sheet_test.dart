@@ -48,7 +48,7 @@ void main() {
   }
 
   Future<void> confirm(WidgetTester tester) async {
-    await tester.tap(find.text('Marcar mi período'));
+    await tester.tap(find.text('Marcar período'));
     await tester.pumpAndSettle();
   }
 
@@ -71,7 +71,7 @@ void main() {
   bool confirmEnabled(WidgetTester tester) =>
       tester
           .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Marcar mi período'))
+              find.widgetWithText(FilledButton, 'Marcar período'))
           .onPressed !=
       null;
 
@@ -266,14 +266,14 @@ void main() {
     final semantics = tester.ensureSemantics();
     await openSheet(tester);
 
-    for (final label in ['Hoy', 'Ayer', 'Otro día', 'Marcar mi período']) {
+    for (final label in ['Hoy', 'Ayer', 'Otro día', 'Marcar período']) {
       expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
     }
     for (final finder in [
       find.widgetWithText(RadioListTile<PeriodStartOption>, 'Hoy'),
       find.widgetWithText(RadioListTile<PeriodStartOption>, 'Ayer'),
       find.widgetWithText(RadioListTile<PeriodStartOption>, 'Otro día'),
-      find.widgetWithText(FilledButton, 'Marcar mi período'),
+      find.widgetWithText(FilledButton, 'Marcar período'),
     ]) {
       expect(tester.getSize(finder).height, greaterThanOrEqualTo(48));
     }

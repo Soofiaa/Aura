@@ -181,7 +181,7 @@ void main() {
       await pumpCalendar(tester, '2026-07-15');
       await tapDay(tester, 15);
       expect(find.text('Confirmar días'), findsNothing);
-      expect(find.text('Registrar día de menstruación'), findsOneWidget);
+      expect(find.text('Marcar período'), findsOneWidget);
     });
 
     testCalendar('visible cuando el ultimo estimado es hoy; confirma, cierra '
@@ -275,7 +275,7 @@ void main() {
       expect(estimado(), findsNWidgets(10));
       await tapDay(tester, 3);
       expect(find.text('Confirmar días'), findsNothing);
-      expect(find.text('Registrar día de menstruación'), findsOneWidget);
+      expect(find.text('Marcar período'), findsOneWidget);
     });
 
     testCalendar('el dia 9: siguen los 10 (7 ya pasados), todavia sin '
@@ -305,7 +305,7 @@ void main() {
       final antes = await dump();
       await pumpCalendar(tester, '2026-07-15');
       await tapDay(tester, 5);
-      await tapText(tester, 'Registrar día de menstruación');
+      await tapText(tester, 'Marcar período');
 
       expect(find.text('Día registrado como menstruación.'), findsOneWidget);
       expect((await repo.getDay('2026-07-05'))!.isPeriodDay, isTrue);
@@ -370,7 +370,7 @@ void main() {
       await pumpCalendar(tester, '2026-07-15');
 
       await tapDay(tester, 5);
-      await tapText(tester, 'Registrar día de menstruación');
+      await tapText(tester, 'Marcar período');
 
       expect((await repo.getDay('2026-07-04'))!.periodEnd,
           PeriodEndSource.declared);
@@ -454,7 +454,7 @@ void main() {
     await tapDay(tester, 12);
     expect(size('Quitar marca').height, greaterThanOrEqualTo(48));
     await tapDay(tester, 5);
-    expect(size('Registrar día de menstruación').height,
+    expect(size('Marcar período').height,
         greaterThanOrEqualTo(48));
   });
 

@@ -64,7 +64,7 @@ void main() {
     await _irAMesAnterior(tester, 2);
 
     await _tapDay(tester, 10);
-    await tester.tap(find.text('Registrar día de menstruación'));
+    await tester.tap(find.text('Marcar período'));
     await tester.pumpAndSettle();
 
     expect(find.text('Quitar marca'), findsOneWidget);
@@ -91,7 +91,7 @@ void main() {
     final despues = await repo.getDay(key);
     expect(despues!.isPeriodDay, isFalse);
     expect(despues.periodDayExplicit, isTrue);
-    expect(find.text('Registrar día de menstruación'), findsOneWidget);
+    expect(find.text('Marcar período'), findsOneWidget);
 
     await tester.tap(find.text('Deshacer'));
     await tester.pumpAndSettle();
@@ -113,14 +113,14 @@ void main() {
 
     await tester.tap(find.text('Quitar marca'));
     await tester.pumpAndSettle();
-    expect(find.text('Marca quitada'), findsOneWidget);
+    expect(find.text('Marca quitada.'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 6900));
-    expect(find.text('Marca quitada'), findsOneWidget);
+    expect(find.text('Marca quitada.'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
-    expect(find.text('Marca quitada'), findsNothing);
+    expect(find.text('Marca quitada.'), findsNothing);
 
     await db.close();
   });
@@ -195,7 +195,7 @@ void main() {
     await tester.pumpAndSettle();
     await _irAMesAnterior(tester, 2);
     await _tapDay(tester, 10);
-    expect(find.text('Registrar día de menstruación'), findsOneWidget);
+    expect(find.text('Marcar período'), findsOneWidget);
 
     await repo.replaceAllWithBackup(BackupData(
       schemaVersion: currentBackupSchemaVersion,

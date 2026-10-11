@@ -478,7 +478,7 @@ void main() {
 
       await tapAndSettle(tester, 'Me llegó hoy');
       expect(find.text('¿Cuándo empezó tu período?'), findsOneWidget);
-      await tester.tap(find.text('Marcar mi período'));
+      await tester.tap(find.text('Marcar período'));
       await tester.pumpAndSettle();
 
       expect((await repo.getDay('2026-03-20'))!.isPeriodDay, isTrue);

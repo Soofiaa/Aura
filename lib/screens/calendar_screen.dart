@@ -150,7 +150,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (!mounted) return;
     if (!result.changedAnything) {
-      showAppSnackBar(context, 'Ese día ya estaba registrado');
+      showAppSnackBar(context, 'Ese día ya está registrado.');
       return;
     }
     _showUndo('Día registrado como menstruación.', result.snapshot);
@@ -164,7 +164,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     await _repository.setPeriodDayExplicitly(key, isPeriodDay: false);
 
     if (!mounted) return;
-    _showUndo('Marca quitada', snapshot);
+    _showUndo('Marca quitada.', snapshot);
   }
 
   /// "Confirmar dias" (HU-04 crit. 4, decision 4A): los estimados pasan a
@@ -367,8 +367,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       showAppSnackBar(
         context,
         dias.length == 1
-            ? 'Ese día ya estaba registrado'
-            : 'Esos días ya estaban registrados',
+            ? 'Ese día ya está registrado.'
+            : 'Esos días ya están registrados.',
       );
       return;
     }
@@ -766,7 +766,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ElevatedButton.icon(
           onPressed: () => registrarDia(seleccionado),
           icon: const Icon(Icons.favorite),
-          label: const Text("Registrar día de menstruación"),
+          label: const Text("Marcar período"),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.textPrimary,
