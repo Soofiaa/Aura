@@ -12,10 +12,10 @@ void main() {
   late CycleRepository repo;
 
   const titulos = [
-    'Bienvenida a Aura 🌸',
-    'Registra tu bienestar 💕',
-    'Conoce tus patrones 🌙',
-    'Tus datos son tuyos 🔒',
+    'Bienvenida a Aura',
+    'Registra tu bienestar',
+    'Conoce tus patrones',
+    'Tus datos son tuyos',
   ];
   const textoCuarta = 'Aura funciona sin internet y guarda todo solo en este '
       'teléfono. Para no perder tus registros si cambias o pierdes el '

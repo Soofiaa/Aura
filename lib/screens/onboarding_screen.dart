@@ -20,19 +20,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, Object>> _pages = [
     {
-      "titulo": "Bienvenida a Aura 🌸",
+      "titulo": "Bienvenida a Aura",
       "descripcion":
       "Tu espacio personal para entender, registrar y cuidar tu ciclo menstrual.",
       "icono": Icons.favorite_rounded,
     },
     {
-      "titulo": "Registra tu bienestar 💕",
+      "titulo": "Registra tu bienestar",
       "descripcion":
       "Anota tus síntomas, emociones y observaciones día a día para conocerte mejor.",
       "icono": Icons.edit_note_rounded,
     },
     {
-      "titulo": "Conoce tus patrones 🌙",
+      "titulo": "Conoce tus patrones",
       "descripcion":
       "Aura analiza tus ciclos y te ayuda a identificar tendencias en tu salud.",
       "icono": Icons.insights_rounded,
@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // Solo la ven las instalaciones nuevas (el onboarding se muestra una
     // vez): a quien actualiza, se lo recuerda la tarjeta de Inicio.
     {
-      "titulo": "Tus datos son tuyos 🔒",
+      "titulo": "Tus datos son tuyos",
       "descripcion":
       "Aura funciona sin internet y guarda todo solo en este teléfono. Para "
           "no perder tus registros si cambias o pierdes el teléfono, crea un "

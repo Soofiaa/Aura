@@ -185,7 +185,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
       );
 
       if (!mounted) return;
-      showAppSnackBar(context, "Registro guardado correctamente ✅");
+      showAppSnackBar(context, "Registro guardado correctamente.");
 
       Navigator.pop(context);
     }

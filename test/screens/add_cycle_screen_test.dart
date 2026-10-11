@@ -417,7 +417,7 @@ void main() {
   // #11: un dia sin registro que se guarda vacio no crea una fila.
   group('registro vacio', () {
     const nada = 'No había nada para guardar.';
-    const guardado = 'Registro guardado correctamente ✅';
+    const guardado = 'Registro guardado correctamente.';
 
     // Como _abrirFormulario, pero la ruta base tiene Scaffold para ver el
     // aviso que se muestra al volver.
@@ -581,7 +581,7 @@ void main() {
       await _guardar(tester);
       await tester.pumpWidget(const MaterialApp(home: StatsScreen()));
       await tester.pumpAndSettle();
-      expect(find.text('Aún no hay registros guardados 🩷'), findsOneWidget);
+      expect(find.text('Aún no hay registros guardados'), findsOneWidget);
       // Estadisticas observa la base: se cierra dentro del test (en
       // tearDown quedan timers de drift pendientes).
       await db.close();

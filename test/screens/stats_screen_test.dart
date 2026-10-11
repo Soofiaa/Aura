@@ -45,7 +45,7 @@ void main() {
   testStats('sin registros: solo el estado vacio', (tester) async {
     await pumpStats(tester);
     expect(find.text('Estadísticas'), findsOneWidget);
-    expect(find.text('Aún no hay registros guardados 🩷'), findsOneWidget);
+    expect(find.text('Aún no hay registros guardados'), findsOneWidget);
     expect(find.text('Promedio de flujo'), findsNothing);
     expect(find.text('Tus ciclos'), findsNothing);
     expect(find.text('Síntomas más frecuentes'), findsNothing);
@@ -76,7 +76,7 @@ void main() {
         ));
     await pumpStats(tester);
 
-    expect(find.text('Aún no hay registros guardados 🩷'), findsNothing);
+    expect(find.text('Aún no hay registros guardados'), findsNothing);
     expect(find.text('Promedio de flujo'), findsOneWidget);
     expect(find.text('Abundante'), findsOneWidget);
     expect(find.text('Síntomas más frecuentes'), findsOneWidget);

@@ -609,7 +609,7 @@ void main() {
       await tester.tap(find.text('Borrar todo'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Datos borrados correctamente 💧'), findsOneWidget);
+      expect(find.text('Datos borrados correctamente.'), findsOneWidget);
       expect(find.widgetWithText(SnackBarAction, 'Deshacer'), findsNothing);
       await db.close();
     });

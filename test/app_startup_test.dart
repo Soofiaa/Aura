@@ -150,7 +150,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(UpdateErrorScreen.title), findsNothing);
-      expect(find.text('Bienvenida a Aura 🌸'), findsOneWidget);
+      expect(find.text('Bienvenida a Aura'), findsOneWidget);
       expect(readyCount, 1);
       await appDatabase.close();
     });
@@ -181,7 +181,7 @@ void main() {
     await tester.pumpWidget(AuraRoot(startup: startup, initialResult: initial));
     await tester.pumpAndSettle();
 
-    final pantalla = tester.element(find.text('Bienvenida a Aura 🌸'));
+    final pantalla = tester.element(find.text('Bienvenida a Aura'));
     expect(MaterialLocalizations.of(pantalla).closeButtonTooltip, 'Cerrar');
     await appDatabase.close();
   });

@@ -26,7 +26,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: HomeScreen(repository: repo)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Aura 🌸'), findsOneWidget);
+    expect(find.text('Aura'), findsOneWidget);
 
     // Cerrar explicitamente aca (no via addTearDown): drift deja un
     // Timer interno pendiente hasta que la conexion se cierra, y el
@@ -40,6 +40,6 @@ void main() {
     await tester.pumpWidget(const AuraApp(onboardingVisto: false));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bienvenida a Aura 🌸'), findsOneWidget);
+    expect(find.text('Bienvenida a Aura'), findsOneWidget);
   });
 }

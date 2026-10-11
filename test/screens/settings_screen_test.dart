@@ -141,7 +141,7 @@ void main() {
   testWidgets('ya no hay boton de notificacion de prueba', (tester) async {
     await pumpScreen(tester);
     await tester.scrollUntilVisible(
-        find.text('Versión $appVersionName • Aura 🌸'), 200);
+        find.text('Versión $appVersionName • Aura'), 200);
     expect(find.textContaining('notificación de prueba'), findsNothing);
     await db.close();
   });
@@ -162,7 +162,7 @@ void main() {
     testWidgets('esta junto a la version, al pie de Ajustes', (tester) async {
       await pumpScreen(tester);
       final enlace = find.text('Política de privacidad');
-      final version = find.text('Versión $appVersionName • Aura 🌸');
+      final version = find.text('Versión $appVersionName • Aura');
       await tester.scrollUntilVisible(version, 200);
       expect(enlace, findsOneWidget);
       // Debajo de "Borrar todos los datos" y justo encima de la version.
@@ -214,8 +214,8 @@ void main() {
   testWidgets('muestra la version de la constante unica', (tester) async {
     await pumpScreen(tester);
     await tester.scrollUntilVisible(
-        find.text('Versión $appVersionName • Aura 🌸'), 200);
-    expect(find.text('Versión $appVersionName • Aura 🌸'), findsOneWidget);
+        find.text('Versión $appVersionName • Aura'), 200);
+    expect(find.text('Versión $appVersionName • Aura'), findsOneWidget);
     expect(find.textContaining('1.0.0'), findsNothing);
     await db.close();
   });
@@ -283,7 +283,7 @@ void main() {
 
     expect(backup.deleteAllDataCallCount, 1);
     expect(await repo.countDays(), 0);
-    expect(find.text('Datos borrados correctamente 💧'), findsOneWidget);
+    expect(find.text('Datos borrados correctamente.'), findsOneWidget);
 
     await tester.scrollUntilVisible(
         find.widgetWithText(SwitchListTile, 'Notificaciones'), -200);
@@ -315,7 +315,7 @@ void main() {
         find.text('No se pudieron borrar todos los datos. Inténtalo de nuevo.'),
         findsOneWidget);
     expect(find.textContaining('detalle interno'), findsNothing);
-    expect(find.text('Datos borrados correctamente 💧'), findsNothing);
+    expect(find.text('Datos borrados correctamente.'), findsNothing);
 
     await db.close();
   });
@@ -496,8 +496,8 @@ void main() {
         'cuando tu estimación es confiable.';
     const ventanaApagado = 'Aviso opcional al comenzar tu ventana de mayor '
         'fertilidad (estimación, no método anticonceptivo).';
-    const ayuda = 'Para usarlo, activa «Mostrar ovulación y ventana fértil» '
-        'en Tu ciclo.';
+    const ayuda = 'Para usarlo, activa la opción Mostrar ovulación y ventana '
+        'fértil en Tu ciclo.';
 
     final mostrar = find.widgetWithText(SwitchListTile, titulo);
     final ventana = find.widgetWithText(SwitchListTile, 'Ventana fértil');

@@ -352,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
 
     if (!mounted) return;
-    showAppSnackBar(context, "Datos borrados correctamente 💧");
+    showAppSnackBar(context, "Datos borrados correctamente.");
   }
 
   @override
@@ -419,8 +419,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Para usarlo, activa «Mostrar ovulación y ventana "
-                        "fértil» en Tu ciclo.",
+                        "Para usarlo, activa la opción Mostrar ovulación y "
+                        "ventana fértil en Tu ciclo.",
                         style:
                             TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
@@ -435,9 +435,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           SwitchListTile(
             title: const Text("Mostrar detalles en la notificación"),
             subtitle: const Text(
-              "Sin esto, la notificación solo dice 'Aura: recordatorio'. "
-              "El detalle puede verse en relojes u otros dispositivos "
-              "conectados.",
+              "Sin esto, la notificación solo dice que es un recordatorio "
+              "de Aura. El detalle puede verse en relojes u otros "
+              "dispositivos conectados.",
             ),
             value: _mostrarDetalles,
             onChanged:
@@ -498,7 +498,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const SizedBox(height: 10),
           const Text(
-            "Versión $appVersionName • Aura 🌸",
+            "Versión $appVersionName • Aura",
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),

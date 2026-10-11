@@ -48,7 +48,7 @@ class _StatsScreenState extends State<StatsScreen> {
           if (!stats.hasAnyLog) {
             return const Center(
               child: Text(
-                "Aún no hay registros guardados 🩷",
+                "Aún no hay registros guardados",
                 style: TextStyle(fontSize: 18),
               ),
             );

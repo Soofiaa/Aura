@@ -209,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Aura 🌸',
+          'Aura',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
