@@ -890,6 +890,49 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
   `targetSdk` 36 y la app gira. Se comprobó con un test de widgets temporal (no versionado) que las seis pantallas principales
   (Inicio, Calendario, Estadísticas, Ajustes, Registrar día y la bienvenida) no desbordan en horizontal a 800x360 y 1280x800.
   Límites de esa prueba: escala de texto 1, sin teclado abierto y sin diálogos ni hojas inferiores.
+- **Lint de release (2026-10-11, `61761fa`):** `:app:lintRelease` informa 4 errores `NewApi` y 16 avisos conocidos, todos en
+  archivos generados por `flutter_native_splash`, `flutter_launcher_icons` o la plantilla de Flutter, salvo `DataExtractionRules`
+  (decisión RR-6) y `GradleDependency` (`desugar_jdk_libs` 2.1.4; existe 2.1.5). `lintVitalRelease`, que corre al compilar
+  release, no encuentra problemas. Los 4 errores son atributos de tema del `LaunchTheme` con `minSdk` 24: `forceDarkAllowed`
+  (API 29, desconocido en Android 7 a 9) y `windowLayoutInDisplayCutoutMode` (API 27, desconocido en Android 7 a 8.0). Se espera
+  que esas versiones los ignoren, pero no se comprobó; el informe previo al lanzamiento de Play puede mostrar si causan algún
+  problema. `:app:lintRelease` sin más falla por Jetifier con byte-buddy (versión de clase 68); se esquiva con
+  `-Pandroid.enableJetifier=false`.
+
+### Pendientes para la 1.1.1
+
+- **Calendario, capas de la celda:** ordenar en un solo rediseño las capas de la celda (hoy, selección, rango, día estimado,
+  ventana fértil y ovulación). Hoy dentro de la ventana fértil: con 396 dp o más de ancho de pantalla el anillo tapa 1 dp de la
+  barra; en anchos menores tapa unos 1,6 dp del punto de la ovulación. Hoy en un día estimado: el anillo coincide con el borde
+  punteado, del mismo color. Incluye los pendientes ya anotados en "Limitaciones conocidas": "Accesibilidad, modo rango" y
+  "Marca de la ovulación con letra grande" (altura de la fila, T2-6).
+- **Inicio, aviso repetido:** con la ventana fértil visible, la tarjeta dice "Estimación; no es un método anticonceptivo." y
+  debajo aparece "Esta es una estimación, no un método anticonceptivo.". Decidir si se unifican.
+- **Avisos al marcar el período:** "Me llegó hoy" muestra "Inicio del período registrado." y marcar un día en el Calendario
+  muestra "Día registrado como menstruación." para la misma acción. Unificar.
+- **Resto de la tanda 3 de la auditoría de interfaz** (`auditoria_ui.md`, fuera del repositorio): guía en el Calendario vacío,
+  formatos de fecha coherentes entre pantallas, pesos de los títulos, sangría de Ajustes y estilos de borde de los campos de
+  "Registrar día".
+- **Copia previa a importar:** `respaldos/antes_de_importar.json` queda sin cifrar después de una importación (ya anotado en
+  HU-06b, "No protege"). Borrarla tras una importación correcta o cifrarla, sin perder el "Deshacer" de la importación, que la
+  lee. Que "Borrar todos los datos" elimina `files/respaldos` ya está decidido (B, sección 10) y comprobado en el teléfono
+  (HU-06a).
+- **Día registrado en el futuro:** ya anotado en "Limitaciones conocidas" ("Accesibilidad, día registrado en el futuro").
+
+### Pendientes para la 1.2
+
+- **Actualizar AGP** (hoy 8.7.3): permite quitar el pin de `url_launcher_android` 6.3.23 (6.3.29 o más nueva exige AGP 8.9.1 o
+  más) y pasar `desugar_jdk_libs` de 2.1.4 a 2.1.5.
+- **Jetifier:** revisar `android.enableJetifier=true` (hoy hace fallar `lintRelease`); probar a desactivarlo. No se comprobó que
+  actualizar AGP lo resuelva.
+- **T-03, ícono monocromo** (aviso `MonochromeLauncherIcon`).
+- **`NewApi` del splash:** mover `forceDarkAllowed` y `windowLayoutInDisplayCutoutMode` a `values-v29` y `values-v27`, o
+  actualizar `flutter_native_splash`, y comprobar que al regenerar no vuelvan a `values/`.
+- **Respaldo automático a una carpeta elegida:** ya anotado como D-7 (sección 7), con clave derivada guardada en el Keystore de
+  Android; pendiente de consultar a las testers.
+- **HU-07, historial de anticonceptivos:** ya anotada (sección 5, y alcance en la sección 4).
+- **README:** actualizar `README.md` y `README.en.md`.
+- **Integración continua** con GitHub Actions.
 
 ## 8. Definición de hecho (por historia)
 
