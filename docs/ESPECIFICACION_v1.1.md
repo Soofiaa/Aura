@@ -182,7 +182,7 @@ ayuda de Ajustes). `privacy.html` (es/en) ya menciona la duración habitual entr
 
 **Criterios de aceptación**
 1. **Dado** que toco "Me llegó hoy", **entonces** veo una hoja con fecha (Hoy / Ayer / Otro día) y la duración estimada.
-2. **Cuando** confirmo "Marcar mi período", **entonces** se guarda **solo el primer día** como `is_period_day = true`.
+2. **Cuando** confirmo "Marcar período", **entonces** se guarda **solo el primer día** como `is_period_day = true`.
 3. Los días siguientes hasta la duración habitual se muestran como **estimados** (borde punteado) y **no se guardan**.
 4. No puedo elegir una fecha futura.
 5. Si la fecha elegida ya está marcada, la app lo informa y no duplica el registro.
@@ -267,7 +267,7 @@ fijado se descarte sin que la usuaria lo note (ver hallazgo U-1).
 17. Con 10–12 listo, tocar el 10 (el inicio) deja un rango de 1 día (10–10); tocar el 12 (el final) no cambia nada.
 18. Un rango puede cruzar de mes; si supera los 10 días, el resumen del panel lo advierte en ese momento.
 
-**Etapa A de HU-04:** ya no decide qué hacer, solo cómo: los textos exactos del panel; el SnackBar "Marca quitada · Deshacer", que
+**Etapa A de HU-04:** ya no decide qué hacer, solo cómo: los textos exactos del panel; el SnackBar "Marca quitada. · Deshacer", que
 no se cerraba solo (**resuelto**: ver hallazgo S-1, se cierra a los 7 segundos); y los casos límite (rango que cruza de mes,
 tocar el mismo día dos veces, fechas futuras).
 
@@ -328,8 +328,7 @@ no muestra la ovulación ni la ventana mientras la fase mostrada es la menstrual
 
 #### HU-05b · "Tus ciclos" en Estadísticas
 
-Sección arriba de Estadísticas, visible cuando hay algún registro (si no, sigue el estado vacío "Aún no hay registros guardados
-🩷"). Se actualiza sola con cada cambio en los días o los ajustes.
+Sección arriba de Estadísticas, visible cuando hay algún registro (si no, sigue el estado vacío "Aún no hay registros guardados"). Se actualiza sola con cada cambio en los días o los ajustes.
 
 - Sin ciclos completos: "Registra al menos dos períodos para ver tus ciclos."
 - Con ciclos completos: "Ciclos considerados: N", con "(los más recientes)" cuando N llega al máximo de 6.
@@ -354,8 +353,8 @@ ponderada.
   Calendario, las marcas y sus entradas de la leyenda. Además, el aviso de la ventana fértil no se programa.
 - **Relación con "Ventana fértil"** (Ajustes → Notificaciones): el aviso necesita los dos encendidos. Apagar el interruptor no
   cambia el valor guardado de "Ventana fértil"; al volver a encenderlo, el aviso recupera ese valor. Con el interruptor apagado,
-  "Ventana fértil" se ve apagado y deshabilitado, con la ayuda "Para usarlo, activa «Mostrar ovulación y ventana fértil» en Tu
-  ciclo."
+  "Ventana fértil" se ve apagado y deshabilitado, con la ayuda "Para usarlo, activa la opción Mostrar ovulación y ventana fértil
+  en Tu ciclo."
 - **Datos:** schema **v5**, con la columna `show_fertile_window` en `app_settings` (activada por defecto). La migración v4→v5
   (`_from4To5`) solo agrega la columna, dentro de la transacción de la migración, y comprueba que no cambie la cantidad de filas
   de ninguna tabla. No se hace copia previa: la de M-2 es solo para bases anteriores a la v4.
@@ -745,7 +744,7 @@ pierdo o daño el teléfono.
 6. **Ajustes → "Tus datos":** "Crear respaldo" suma una segunda línea, "Último respaldo: {fecha}" o "Todavía no has creado un
    respaldo en este teléfono", y hay un interruptor "Recordarme crear un respaldo" ("Un aviso en Inicio si pasan 30 días sin
    respaldo"), activado por defecto.
-7. **Onboarding:** una 4.ª página, "Tus datos son tuyos 🔒", con el ícono de candado y el texto "Aura funciona sin
+7. **Onboarding:** una 4.ª página, "Tus datos son tuyos", con el ícono de candado y el texto "Aura funciona sin
    internet y guarda todo solo en este teléfono. Para no perder tus registros si cambias o pierdes el teléfono, crea un respaldo
    de vez en cuando desde Ajustes.". La ven solo las instalaciones nuevas; las páginas se pueden desplazar con letra grande.
 8. **Accesibilidad:** la tarjeta es un contenedor semántico con el título como encabezado y el orden de lectura título, texto y
@@ -967,7 +966,7 @@ Reemplazan las recomendaciones de la sección 7 donde difieran.
 | **T2-1** | "Registrar día" pregunta "¿Descartar los cambios?" ("No guardaste los cambios de este día. Si sales ahora, se pierden.", con "Seguir editando" y "Descartar") al salir con la flecha o con el botón atrás, y al cambiar de fecha, si el formulario difiere de lo cargado en lo que se guardaría. Sin cambios reales no pregunta; "Descartar" en el cambio de fecha abre la otra fecha. La foto de lo cargado se fija en el mismo `setState` que carga el día, y guardar o descartar salen con `Navigator.pop`, que `PopScope` no bloquea. | Hallazgo #3: salir sin guardar perdía los cambios sin aviso. |
 | **T2-2** | Sin desbordes a 360 dp con texto de 1,0 a 2,0: los botones de la tarjeta "¿Sigue tu período hoy?" van en un `Wrap` centrado (espacio 12, entre líneas 8); los menús de flujo y ánimo usan `isExpanded`; la fecha y el nombre de cada síntoma van en `Flexible`. A texto 1,0 no cambia nada. | Hallazgo #9: con letra grande la tarjeta, los menús, la fecha y los chips se salían de la pantalla. Se prueba con tests de widget, sin cambiar ajustes del teléfono. |
 | **T2-3** | "Guardar registro" queda fijo al pie de "Registrar día", fuera del scroll, con `SafeArea` y encima del teclado; el formulario termina sobre el botón. | Hallazgo #10: en un formulario largo había que bajar hasta el final para guardar. |
-| **T2-4** | Registro vacío = sangrado apagado + ánimo sin registrar + notas vacías tras quitar espacios + ningún síntoma, en un día que **no** tenía fila al abrirlo. En ese caso no se llama a `upsertDay`: se cierra con "No había nada para guardar." (sin ✅). El flujo con el sangrado apagado no cuenta ni se guarda. Un día que ya tenía fila se guarda siempre. `upsertDay` no cambia. | Hallazgo #11: guardar sin datos creaba una fila vacía que contaba como día con registro (Estadísticas, respaldo). |
+| **T2-4** | Registro vacío = sangrado apagado + ánimo sin registrar + notas vacías tras quitar espacios + ningún síntoma, en un día que **no** tenía fila al abrirlo. En ese caso no se llama a `upsertDay`: se cierra con "No había nada para guardar." El flujo con el sangrado apagado no cuenta ni se guarda. Un día que ya tenía fila se guarda siempre. `upsertDay` no cambia. | Hallazgo #11: guardar sin datos creaba una fila vacía que contaba como día con registro (Estadísticas, respaldo). |
 | **T2-5** | En Inicio, "Me llegó hoy" y "Registrar día" quedan fijos al pie, fuera del scroll, como "Guardar registro". Condición: el área desplazable no baja de ~200 dp a 360 × 640 con texto 1,0 y 1,3. Medido con la barra inferior: 372 dp sin la tarjeta "¿Sigue tu período hoy?" y 434 dp con ella, igual a 1,0 y 1,3 (300 y 362 dp con barras del sistema de 24 y 48 dp). | Hallazgo #17: "Registrar día" quedaba casi fuera de la pantalla. |
 | **T2-6** | El punto de la ovulación del Calendario va justo sobre la barra de la ventana, debajo del número, como en la leyenda. No se acota la escala del número ni cambia `rowHeight`. | Hallazgo #23: dibujado arriba del número parecía del día de la fila anterior. Con texto 1,3 o más el número puede tocar el punto (ver "Limitaciones conocidas"). |
 | **T2-7** | En modo rango del Calendario el botón dice "Cancelar", pero su nombre accesible sigue siendo "Cancelar selección", en un solo nodo. Los dos botones ("Me llegó hoy" y el de rango) miden lo mismo (`IntrinsicHeight` y `stretch`). | "Cancelar selección" se partía en dos líneas y el botón quedaba más alto que "Me llegó hoy". |
