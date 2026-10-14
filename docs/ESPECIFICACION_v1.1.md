@@ -438,9 +438,12 @@ cualquier error al abrir la base termina en `StartupFailed` (`lib/app_startup.da
 - **HU-06b (contraseña / cifrado del respaldo): implementada** en la rama `feature/hu06b-cifrado` (CP1 a CP5b), con
   las decisiones HU6b-1 a HU6b-12 de la sección 10 tomadas el 2026-10-08. Completa el criterio 7 (ver también HU6-2 y HU6-3).
   Probada en el teléfono con un build debug, automatizada por adb (ver "Prueba en el teléfono" más abajo). Build release
-  construido y verificado sin `INTERNET`, sin instalar. La prueba manual de "Compartir" con contraseña quedó hecha (mensaje y nombre
-  de archivo correctos). **Pendiente antes de publicar la v1.1:** restaurar en la app un respaldo protegido recibido por un
-  canal real (Drive, correo, WhatsApp) y probar en un build de release firmado instalado (sección 8).
+  construido y verificado sin `INTERNET`. La prueba manual de "Compartir" con contraseña quedó hecha (mensaje y nombre
+  de archivo correctos). **Hecho el 2026-10-14:** se creó un respaldo protegido con datos reales, se envió por Drive y se
+  restauró en la app debug; los recuentos de días con registro y de período coincidieron. No se probaron correo ni WhatsApp.
+  El build de release firmado (1.1.0+5, commit `6d59a7a`) se instaló como actualización sobre la 1.1.0+3, con la misma
+  firma; su manifest no incluye `INTERNET`, tiene `allowBackup="false"` y la actividad principal en orientación vertical.
+  **Pendiente:** el recorrido manual completo del release (sección 8).
 
 **Criterios de aceptación**
 1. **Exportar:** genera un archivo versionado (formato propio, con `schemaVersion`, fecha y app) con todos los datos: registros diarios, síntomas y ajustes.
