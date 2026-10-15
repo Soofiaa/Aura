@@ -308,7 +308,7 @@ Desenchufado, en reposo, ahorro de batería desactivado y temperatura normal; ba
 - Arrancar el isolate agrega 1–3 ms. El automático cuesta ~5,2 a 5,8 veces la producción.
 - ~1 s se paga solo al activar el automático y al restaurar con la contraseña, nunca en cada respaldo.
 - **Gama baja: sin medir.** No hubo un teléfono de gama baja disponible. Es el caso que importa para el criterio 18 y para
-  restaurar en un teléfono modesto.
+  restaurar en un teléfono modesto (criterio 21).
 
 ## 9. Lista de verificación de Google Cloud
 
