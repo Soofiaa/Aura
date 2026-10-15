@@ -289,7 +289,7 @@ repositorio ni el proyecto real se tocaron, y el proyecto de prueba ya se cerró
    de prueba autorizó sin la pantalla de "app no verificada". Apareció un recuadro informativo sobre vínculos a la Política de
    Privacidad o a las Condiciones del Servicio (causa no confirmada).
 9. **Información de marca.** Hay que agregar a los dominios autorizados el dominio de cada enlace (`soofiaa.github.io` y
-   `github.com`).
+   `github.com`). *Nota: evidencia histórica de la prueba de humo; la decisión 6 la superó y basta `soofiaa.github.io`.*
 10. **Errores pasajeros y cancelación.** Un error 500 de Google al elegir la cuenta se resolvió al reintentar. La cancelación
     del diálogo llega como `resultCode=0`.
 
