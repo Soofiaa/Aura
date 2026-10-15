@@ -323,8 +323,9 @@ por la evidencia de la sección 8.
    principal y la política de privacidad son `https://soofiaa.github.io/Aura/privacy.html`, así que basta con
    `soofiaa.github.io`. `github.com` ya no hace falta, salvo que algún enlace de la marca lo use.
 5. **Clientes Android, todos en el mismo proyecto (prueba de humo, hallazgo 3):** `com.soofiaa.aura.debug` con la SHA-1 de la
-   clave de debug; `com.soofiaa.aura` con la SHA-1 de la clave de release local; y, cuando exista la primera subida a Play,
-   `com.soofiaa.aura` con la SHA-1 de la clave de firma de Play App Signing si es distinta. **Sin cliente web** (hallazgo 1).
+   clave de debug; `com.soofiaa.aura` con la SHA-1 de la clave de release local; y `com.soofiaa.aura` con la SHA-1 de la
+   clave de firma de Play App Signing: la primera subida a Play ya existe y su clave de firma es distinta de la de subida.
+   **Sin cliente web** (hallazgo 1).
    Huellas (públicas, del certificado de cada clave):
    - `com.soofiaa.aura.debug`, clave de debug: SHA-1
      `E4:5D:8E:A4:49:0D:C6:CB:0B:89:79:D3:9B:C4:AE:9F:5D:26:2D:FF` (calculada con `keytool` el 2026-10-15).
