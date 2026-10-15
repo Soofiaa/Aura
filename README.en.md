@@ -4,11 +4,12 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 
 [Versión en español](README.md)
 
-> **Status:** v1.0 · Android only · personal portfolio project, in real daily use.
+> **Status:** v1.1.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
 
 ## What it does
 
 - Logs bleeding days, flow intensity, mood, symptoms and notes.
+- "Me llegó hoy" ("it started today") on Home and in the Calendar: logs only the first day of the period (today, yesterday or another day).
 - Derives cycles from those logs (cycles are never created by hand).
 - Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late (on Home, not during the menstrual phase either), and can be hidden in Settings.
 - Shows the current phase: menstrual, follicular, ovulatory and luteal (none while the period is late).
@@ -25,7 +26,7 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Data lives in a SQLite database inside the app's private storage.
 - `allowBackup="false"`: Android does not copy it to the cloud.
 - Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with. The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). Aura does not store the password and cannot recover it. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy, and the app still has no `INTERNET` permission.
-- Before migrating the database to schema v4, the app saves a safety copy in its private storage; "Delete all data" also removes it.
+- When updating from 1.0 (schema v3), before converting the database the app saves a safety copy in its private storage; it is deleted after saving a backup to the phone, on app start once it is more than 30 days old, or with "Delete all data".
 - When an import is confirmed, the app first saves an unencrypted copy of the current data in its private storage, only for "Undo"; the next import replaces it and "Delete all data" removes it.
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
 - Privacy policy: [`docs/privacy.html`](docs/privacy.html).
@@ -85,7 +86,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-120+ tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+1,203 tests as of v1.1.0 (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 

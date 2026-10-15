@@ -4,11 +4,12 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 
 [English version](README.en.md)
 
-> **Estado:** v1.0 · solo Android · proyecto personal de portafolio, en uso real.
+> **Estado:** v1.1.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
 
 ## Qué hace
 
 - Registra días de sangrado, intensidad del flujo, ánimo, síntomas y notas.
+- "Me llegó hoy" en Inicio y en el Calendario: registra solo el primer día del período (hoy, ayer u otro día).
 - Deriva los ciclos a partir de esos registros (no se "crean" ciclos a mano).
 - Predice el próximo período con un **rango** y un nivel de confianza (baja / media / alta). La ovulación y la ventana fértil estimadas solo se muestran con confianza media o alta y sin período atrasado (en Inicio, tampoco durante la fase menstrual), y se pueden ocultar desde Ajustes.
 - Muestra la fase actual: menstrual, folicular, ovulatoria y lútea (ninguna con el período atrasado).
@@ -25,7 +26,7 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100
 - Los datos viven en una base SQLite dentro del almacenamiento privado de la app.
 - `allowBackup="false"`: Android no los copia a la nube.
 - Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo. El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). Aura no guarda la contraseña ni puede recuperarla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia, y la app sigue sin el permiso `INTERNET`.
-- Antes de migrar la base al esquema v4, la app guarda una copia de seguridad en su almacenamiento privado; "Borrar todos los datos" también la elimina.
+- Al actualizar desde la 1.0 (esquema v3), antes de convertir la base la app guarda una copia de seguridad en su almacenamiento privado; se borra al guardar un respaldo en el teléfono, al abrir la app si tiene más de 30 días, o con "Borrar todos los datos".
 - Al confirmar una importación, la app guarda antes una copia sin cifrar de los datos actuales en su almacenamiento privado, solo para "Deshacer"; la siguiente importación la reemplaza y "Borrar todos los datos" la elimina.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
@@ -85,7 +86,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-Más de 120 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
+1203 tests en la v1.1.0 (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 
