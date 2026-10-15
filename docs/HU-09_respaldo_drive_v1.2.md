@@ -87,7 +87,9 @@ está en la sección 8.
     **desactivado** (sin reintentos ni subidas) y Aura muestra la tarjeta **"Vuelve a activar el respaldo automático"**, que
     lleva a la activación (nueva contraseña o la misma). Los respaldos ya subidos **siguen abriéndose con su contraseña**: el
     archivo trae la sal y los parámetros en el encabezado.
-18. **Memoria insuficiente al activar.** Si derivar Argon2id con 64 MiB falla al activar (error de memoria del isolate), Aura
+18. **Memoria insuficiente al activar.** Si derivar Argon2id con 64 MiB falla al activar por memoria (en la práctica no es un
+    `OutOfMemoryError` sino un `ArgumentError("Could not allocate N bytes.")` de `malloc` en `package:ffi`, o un
+    `OutOfMemoryError` con parámetros muy pequeños; se reutiliza la misma función `isOutOfMemoryError` ya probada en la 1.1.0), Aura
     muestra un mensaje claro ("Este teléfono no tiene memoria suficiente para activar el respaldo automático ahora. Cierra otras
     apps y vuelve a intentarlo.") y **no queda nada activado a medias**. La derivación es el **paso 2**, así que cuando falla
     todavía no se guardó `K`, no se creó el estado y **no se pidió autorización a Google: no hay nada que revocar**. El respaldo
@@ -132,6 +134,12 @@ está en la sección 8.
       7. **regla de la opción A:** con un respaldo iniciado por la **apertura automática** (app en primer plano) y un canal
          falso que responde "requiere diálogo", **no se llama** a la apertura del diálogo de Google y se muestra la tarjeta. Con
          el mismo canal falso y **"Respaldar ahora"**, **sí se llama** a la apertura del diálogo.
+21. **Memoria insuficiente al restaurar.** Si derivar la clave al restaurar un respaldo cifrado (con los parámetros del
+    encabezado, hasta 64 MiB) falla por memoria, Aura muestra "Este teléfono no tiene memoria suficiente para abrir este
+    respaldo ahora. Cierra otras apps y vuelve a intentarlo. No se cambió nada.", permite reintentar sin volver a elegir el
+    archivo y no toca ningún dato. **Ya implementado en la 1.1.0** (commit `c44b803`) mediante `isOutOfMemoryError`.
+    **Límite conocido:** si el sistema mata el proceso, no se puede atrapar; los datos quedan intactos porque la derivación
+    ocurre antes de escribir.
 
 **Datos:** sin migración ni cambio de schema (la base sigue en v5 y `currentBackupSchemaVersion` en 5); el formato del archivo
 es el v2 actual. El estado del automático va en `respaldo_automatico.json`, junto a `recordatorio_respaldo.json` en el
