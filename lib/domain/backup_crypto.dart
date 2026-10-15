@@ -137,6 +137,24 @@ Future<Uint8List> deriveBackupKey(
   return copy;
 }
 
+/// Mensaje de `ArgumentError` de `malloc` (package:ffi 2.1.4) cuando no
+/// consigue la memoria pedida.
+const String _ffiAllocationFailure = 'Could not allocate ';
+
+/// true si [error], lanzado por [deriveBackupKey], es por falta de memoria.
+/// DartArgon2id reserva sus bloques fuera de la memoria de Dart, con
+/// `malloc` de package:ffi, cuando usa un isolate auxiliar (siempre con
+/// los parametros que acepta [Argon2idParams.isWithinLimits]); si
+/// `malloc` falla, lanza `ArgumentError('Could not allocate N bytes.')`.
+/// Con menos memoria usa un Uint32List, que lanza [OutOfMemoryError]. Un
+/// test comprueba el mensaje con la derivacion real.
+bool isOutOfMemoryError(Object error) => switch (error) {
+      OutOfMemoryError() => true,
+      ArgumentError(:final message) =>
+        message is String && message.startsWith(_ffiAllocationFailure),
+      _ => false,
+    };
+
 /// Por que no se pudo cifrar o descifrar.
 enum BackupCryptoError {
   /// Contrasena incorrecta o archivo alterado (HU6b-8: no se distinguen).

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,6 +90,7 @@ void main() {
     BackupTaskRunner runTask = runInSameIsolate,
     Argon2idParams params = _small,
     BackupEncryptFunction encrypt = encryptBackupDocument,
+    BackupKeyDeriver deriveKey = deriveBackupKey,
     int maxFileBytes = maxBackupSizeBytes,
   }) => BackupService(
     repo,
@@ -98,6 +100,7 @@ void main() {
     runTask: runTask,
     encryptionParams: params,
     encrypt: encrypt,
+    deriveKey: deriveKey,
     maxFileBytes: maxFileBytes,
   );
 
@@ -483,6 +486,185 @@ void main() {
     expect(result.toString(), isNot(contains(_password)));
     expect(result.toString(), isNot(contains('ñandú')));
     expect(preImportFile().existsSync(), isFalse);
+  });
+
+  group('sin memoria al derivar la clave', () {
+    /// Respaldo cifrado de seedData guardado aparte, y datos distintos en
+    /// la base. Devuelve el respaldo pendiente y los datos actuales.
+    Future<(BackupNeedsPassword, String)> prepare() async {
+      await seedData();
+      final file = await service().writeExportFile(password: _password);
+      final keep = File(p.join(root.path, 'respaldo.json'))
+        ..writeAsBytesSync(file.readAsBytesSync());
+      await repo.deleteAllData();
+      await repo.upsertDay(
+        date: '2026-07-07',
+        isPeriodDaySwitch: true,
+        notes: 'otro dato',
+      );
+      return (await readPending(service(), keep), await currentDataJson());
+    }
+
+    Future<void> nothingChanged(String before) async {
+      expect(await currentDataJson(), before);
+      expect(preImportFile().existsSync(), isFalse);
+      expect(
+        Directory(
+          p.join(support.path, BackupService.backupsDirName),
+        ).existsSync(),
+        isFalse,
+      );
+    }
+
+    Future<Uint8List> outOfMemory(
+      List<int> passwordUtf8,
+      List<int> salt,
+      Argon2idParams params,
+    ) => throw OutOfMemoryError();
+
+    Future<Uint8List> mallocFailed(
+      List<int> passwordUtf8,
+      List<int> salt,
+      Argon2idParams params,
+    ) => throw ArgumentError('Could not allocate 1048576 bytes.');
+
+    test('OutOfMemoryError al derivar: insufficientMemory, nada cambia; '
+        'despues, con memoria, el mismo pendiente se abre', () async {
+      final (pending, before) = await prepare();
+
+      final result = await service(
+        deriveKey: outOfMemory,
+      ).unlockBackup(pending, _password);
+      expect(result, isA<BackupUnlockInvalid>());
+      result as BackupUnlockInvalid;
+      expect(result.error, BackupError.insufficientMemory);
+      expect(
+        result.detail,
+        'sin memoria al derivar la clave: OutOfMemoryError',
+      );
+      expect(result.toString(), isNot(contains('ñandú')));
+      await nothingChanged(before);
+
+      final again = await service().unlockBackup(pending, _password);
+      expect(again, isA<BackupUnlocked>());
+      expect((again as BackupUnlocked).data.days, hasLength(4));
+    });
+
+    test('malloc sin memoria (ArgumentError de package:ffi): tambien es '
+        'insufficientMemory', () async {
+      final (pending, before) = await prepare();
+      final result = await service(
+        deriveKey: mallocFailed,
+      ).unlockBackup(pending, _password);
+      expect((result as BackupUnlockInvalid).error,
+          BackupError.insufficientMemory);
+      expect(result.detail, 'sin memoria al derivar la clave: ArgumentError');
+      await nothingChanged(before);
+    });
+
+    test('la derivacion REAL sin memoria lanza un error que '
+        'isOutOfMemoryError reconoce (fija el mensaje de package:ffi)',
+        () async {
+      // 2^40 KiB = 1 PiB: mas que el espacio de direcciones de un proceso,
+      // malloc falla al instante sin reservar nada.
+      const huge = Argon2idParams(
+        memoryKiB: 1 << 40,
+        iterations: 1,
+        parallelism: 1,
+      );
+      Object? thrown;
+      try {
+        await deriveBackupKey(utf8.encode(_password), List.filled(16, 7), huge);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown, isNotNull);
+      expect(isOutOfMemoryError(thrown!), isTrue, reason: '$thrown');
+    });
+
+    test('isOutOfMemoryError: solo memoria', () {
+      expect(isOutOfMemoryError(OutOfMemoryError()), isTrue);
+      expect(isOutOfMemoryError(ArgumentError('Could not allocate 8 bytes.')),
+          isTrue);
+      expect(isOutOfMemoryError(ArgumentError('otra cosa')), isFalse);
+      expect(isOutOfMemoryError(ArgumentError()), isFalse);
+      expect(isOutOfMemoryError(StateError('Could not allocate')), isFalse);
+      expect(
+        isOutOfMemoryError(
+          BackupCryptoException(BackupCryptoError.wrongPasswordOrDamaged, 'x'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('otros errores de la derivacion siguen como error inesperado',
+        () async {
+      final (pending, before) = await prepare();
+      for (final error in [StateError('x'), ArgumentError('otra cosa')]) {
+        final result = await service(
+          deriveKey: (_, _, _) => throw error,
+        ).unlockBackup(pending, _password);
+        expect((result as BackupUnlockInvalid).error, BackupError.damaged);
+        expect(result.detail, 'error inesperado: ${error.runtimeType}');
+      }
+      await nothingChanged(before);
+    });
+
+    test('sin memoria FUERA de la derivacion (el runner) sigue como antes',
+        () async {
+      final (pending, before) = await prepare();
+      Future<R> failing<R>(FutureOr<R> Function() task) =>
+          throw OutOfMemoryError();
+      final result = await service(
+        runTask: failing,
+      ).unlockBackup(pending, _password);
+      expect((result as BackupUnlockInvalid).error, BackupError.damaged);
+      expect(result.detail, 'error inesperado: OutOfMemoryError');
+      await nothingChanged(before);
+    });
+
+    test('contrasena incorrecta y archivo danado siguen igual que antes',
+        () async {
+      final (pending, before) = await prepare();
+      final s = service();
+
+      final wrong = await s.unlockBackup(pending, 'no es la clave');
+      expect(wrong, isA<BackupUnlockWrongPasswordOrDamaged>());
+      expect(
+        (wrong as BackupUnlockWrongPasswordOrDamaged).message,
+        wrongPasswordOrDamagedMessage,
+      );
+
+      // Un bit cambiado en el texto cifrado, con la contrasena correcta.
+      final altered = Uint8List.fromList(pending.ciphertext);
+      altered[0] ^= 0x01;
+      final damaged = await s.unlockBackup(
+        BackupNeedsPassword(
+          EncryptedBackupEnvelope(pending.header, altered),
+        ),
+        _password,
+      );
+      expect(damaged, isA<BackupUnlockWrongPasswordOrDamaged>());
+
+      // Un cifrado dentro de otro: se descifra, pero no es importable.
+      final inner = await encryptBackup(
+        await s.buildExportJson(),
+        _password,
+        params: _small,
+      );
+      final nested = File(p.join(root.path, 'anidado.json'))
+        ..writeAsStringSync(
+          await encryptBackup(inner, _password, params: _small),
+        );
+      final invalid = await s.unlockBackup(
+        await readPending(s, nested),
+        _password,
+      );
+      expect((invalid as BackupUnlockInvalid).error, BackupError.damaged);
+      expect(invalid.detail, 'cifrado dentro de un cifrado');
+
+      await nothingChanged(before);
+    });
   });
 
   group('la contrasena no se filtra', () {

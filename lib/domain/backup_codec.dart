@@ -217,6 +217,10 @@ enum BackupError {
 
   /// El archivo elegido no se pudo leer del disco.
   unreadable,
+
+  /// Al abrir un respaldo cifrado, el telefono no tuvo memoria para
+  /// derivar la clave. No dice nada del archivo: se puede reintentar.
+  insufficientMemory,
 }
 
 sealed class BackupParseResult {

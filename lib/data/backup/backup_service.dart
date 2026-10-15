@@ -189,7 +189,11 @@ class BackupUnlockWrongPasswordOrDamaged extends BackupUnlockResult {
 
 /// Se descifro, pero el documento no es un respaldo importable (por
 /// ejemplo, de un schema posterior). [error] es el mismo que daria un
-/// respaldo sin cifrar con ese contenido.
+/// respaldo sin cifrar con ese contenido. Excepciones: con
+/// [BackupError.insufficientMemory] no se llego a descifrar (falto
+/// memoria para derivar la clave; se puede reintentar con el mismo
+/// [BackupNeedsPassword]), y un error inesperado vuelve como
+/// [BackupError.damaged].
 class BackupUnlockInvalid extends BackupUnlockResult {
   const BackupUnlockInvalid(this.error, this.detail);
   final BackupError error;
@@ -218,14 +222,39 @@ Future<Uint8List?> Function() _decryptJob(Uint8List fileBytes, String password) 
       }
     };
 
-Future<BackupUnlockResult> Function() _unlockJob(
-        BackupNeedsPassword pending, String password) =>
+/// La derivacion de la clave no consiguio memoria ([isOutOfMemoryError]).
+/// Solo vive dentro de [_unlockJob]: no sale del trabajo.
+class _DerivationOutOfMemory implements Exception {
+  _DerivationOutOfMemory(this.errorType);
+  final String errorType;
+}
+
+Future<BackupUnlockResult> Function() _unlockJob(BackupNeedsPassword pending,
+        String password, BackupKeyDeriver deriveKey) =>
     () async {
+      // Solo la falta de memoria AL DERIVAR cambia de resultado; cualquier
+      // otro error de la derivacion sigue su camino de siempre.
+      Future<Uint8List> derive(
+          List<int> passwordUtf8, List<int> salt, Argon2idParams params) async {
+        try {
+          return await deriveKey(passwordUtf8, salt, params);
+        } catch (e) {
+          if (isOutOfMemoryError(e)) {
+            throw _DerivationOutOfMemory('${e.runtimeType}');
+          }
+          rethrow;
+        }
+      }
+
       final BackupParseResult result;
       try {
-        result = await decodeEncryptedBackup(pending, password);
+        result =
+            await decodeEncryptedBackup(pending, password, deriveKey: derive);
       } on BackupCryptoException {
         return const BackupUnlockWrongPasswordOrDamaged();
+      } on _DerivationOutOfMemory catch (e) {
+        return BackupUnlockInvalid(BackupError.insufficientMemory,
+            'sin memoria al derivar la clave: ${e.errorType}');
       }
       return switch (result) {
         BackupParseSuccess(:final data) => BackupUnlocked(data),
@@ -257,6 +286,7 @@ class BackupService {
     BackupTaskRunner runTask = runInIsolate,
     Argon2idParams encryptionParams = Argon2idParams.production,
     BackupEncryptFunction encrypt = encryptBackupDocument,
+    BackupKeyDeriver deriveKey = deriveBackupKey,
     int maxFileBytes = maxBackupSizeBytes,
     BackupReminderStore? reminderStore,
   })  : _supportDirectory = supportDirectory,
@@ -268,6 +298,7 @@ class BackupService {
         _runTask = runTask,
         _encryptionParams = encryptionParams,
         _encrypt = encrypt,
+        _deriveKey = deriveKey,
         _maxFileBytes = maxFileBytes;
 
   final CycleRepository _repository;
@@ -283,6 +314,11 @@ class BackupService {
   final BackupTaskRunner _runTask;
   final Argon2idParams _encryptionParams;
   final BackupEncryptFunction _encrypt;
+
+  /// Deriva la clave al abrir un respaldo cifrado ([unlockBackup]). Viaja
+  /// al isolate: tiene que ser de nivel superior. Inyectable solo para
+  /// tests (por ejemplo, una derivacion que se queda sin memoria).
+  final BackupKeyDeriver _deriveKey;
 
   /// Tope de tamano de un archivo de respaldo, cifrado o no, al leerlo y
   /// al verificar uno cifrado recien escrito. Inyectable solo para tests.
@@ -503,13 +539,15 @@ class BackupService {
   /// base. Con [BackupUnlocked], los datos siguen el mismo camino que un
   /// respaldo sin cifrar ([previewImport] e [importBackup]). Con
   /// [BackupUnlockWrongPasswordOrDamaged] se puede reintentar con el mismo
-  /// [pending]. No lanza: un error inesperado (por ejemplo, del isolate)
-  /// vuelve como [BackupUnlockInvalid] con solo el tipo del error, nunca
-  /// su mensaje (podria contener datos).
+  /// [pending]; tambien con [BackupUnlockInvalid] de
+  /// [BackupError.insufficientMemory] (falto memoria para derivar la
+  /// clave). No lanza: un error inesperado (por ejemplo, del isolate)
+  /// vuelve como [BackupUnlockInvalid] de [BackupError.damaged] con solo
+  /// el tipo del error, nunca su mensaje (podria contener datos).
   Future<BackupUnlockResult> unlockBackup(
       BackupNeedsPassword pending, String password) async {
     try {
-      return await _runTask(_unlockJob(pending, password));
+      return await _runTask(_unlockJob(pending, password, _deriveKey));
     } on BackupCryptoException {
       // Ya se trata dentro del trabajo; por si acaso.
       return const BackupUnlockWrongPasswordOrDamaged();

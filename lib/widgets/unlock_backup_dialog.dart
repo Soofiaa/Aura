@@ -99,7 +99,11 @@ class _UnlockBackupDialogState extends State<UnlockBackupDialog> {
               labelText: 'Contraseña',
               border: const OutlineInputBorder(),
               errorText: widget.errorText,
-              errorMaxLines: 4,
+              // El de memoria es largo: con letra al 200 % en 360 dp ocupa
+              // unas 10 lineas con Roboto y 18 con la fuente de los tests
+              // (glifos cuadrados). Con 4 se cortaba con "…". El dialogo se
+              // desplaza.
+              errorMaxLines: 20,
               suffixIcon: IconButton(
                 tooltip: _visible ? 'Ocultar contraseña' : 'Mostrar contraseña',
                 icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),

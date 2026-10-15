@@ -74,6 +74,7 @@
 - El selector de fecha y otros textos del sistema ("Back", "Tab 1 of 4") aparecían en inglés: ahora están en español.
 - El lector de pantalla no decía si un síntoma estaba marcado, no leía el gráfico de ánimo y en el Calendario no distinguía el período registrado ni el día de hoy. Ahora anuncia el estado de cada síntoma, cada ánimo con su porcentaje, "período registrado" y "hoy", y las flechas "Mes anterior" y "Mes siguiente"; el título del mes ya no se anuncia como un botón.
 - "Registrar día" no mostraba marcados los síntomas ya guardados al abrir un día registrado: ahora se ven marcados. Además, si en ese día tocabas otro síntoma, al guardar se borraban los que ya estaban guardados; eso ya no pasa.
+- Si al restaurar un respaldo protegido el teléfono no tenía memoria suficiente para abrirlo, Aura decía que el respaldo estaba dañado aunque el archivo estuviera bien. Ahora lo dice ("Este teléfono no tiene memoria suficiente para abrir este respaldo ahora…"), no cambia nada y permite volver a intentarlo sin elegir el archivo otra vez.
 
 ## 1.0.1
 

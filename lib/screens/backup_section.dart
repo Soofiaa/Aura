@@ -166,8 +166,8 @@ class _BackupSectionState extends State<BackupSection> {
   /// Pide la contrasena y abre el respaldo cifrado (HU-06b CP4). Devuelve
   /// la vista previa para el mismo camino que un respaldo sin cifrar, o
   /// null si se cancela o el contenido no es importable (con su mensaje).
-  /// Con la contrasena incorrecta vuelve a pedirla, con el error y lo
-  /// escrito, sin volver a elegir el archivo. No escribe nada: ni la copia
+  /// Con la contrasena incorrecta, o si falto memoria para abrirlo, vuelve
+  /// a pedirla, con el error y lo escrito, sin volver a elegir el archivo. No escribe nada: ni la copia
   /// previa ni la base. [pending] y la contrasena viven solo en esta
   /// llamada.
   Future<ImportPreview?> _abrirProtegido(BackupNeedsPassword pending) async {
@@ -211,6 +211,11 @@ class _BackupSectionState extends State<BackupSection> {
         case BackupUnlockWrongPasswordOrDamaged(:final message):
           escrita = password;
           error = message;
+        case BackupUnlockInvalid(error: BackupError.insufficientMemory):
+          // El archivo puede estar bien: se reintenta igual que con la
+          // contrasena incorrecta.
+          escrita = password;
+          error = _mensajeArchivoInvalido(BackupError.insufficientMemory);
         case BackupUnlockInvalid(:final error):
           _aviso(_mensajeArchivoInvalido(error));
           return null;
@@ -233,6 +238,10 @@ class _BackupSectionState extends State<BackupSection> {
             'No se cambió nada.';
       case BackupError.unreadable:
         return 'No se pudo leer el archivo. No se cambió nada.';
+      case BackupError.insufficientMemory:
+        return 'Este teléfono no tiene memoria suficiente para abrir este '
+            'respaldo ahora. Cierra otras apps y vuelve a intentarlo. No se '
+            'cambió nada.';
     }
   }
 

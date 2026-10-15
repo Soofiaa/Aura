@@ -14,6 +14,7 @@ import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/domain/backup_crypto.dart';
 import 'package:aura/screens/settings_screen.dart';
+import 'package:aura/widgets/unlock_backup_dialog.dart';
 
 import '../support/fake_backup.dart';
 import '../support/fake_notification_scheduler.dart';
@@ -43,6 +44,7 @@ void main() {
   // dentro del reloj falso. El FakeBackupService los devuelve.
   late BackupUnlockResult desbloqueado;
   late BackupUnlockResult schemaNuevo;
+  late BackupUnlockResult sinMemoria;
 
   setUpAll(() async {
     await initializeDateFormatting();
@@ -86,6 +88,19 @@ void main() {
       fixturePassword,
     );
     expect(schemaNuevo, isA<BackupUnlockInvalid>());
+    // La derivacion se queda sin memoria (el resto, real).
+    sinMemoria =
+        await BackupService(
+          CycleRepository(tmpDb),
+          supportDirectory: () => throw UnimplementedError(),
+          temporaryDirectory: () => throw UnimplementedError(),
+          runTask: runInSameIsolate,
+          deriveKey: (_, _, _) => throw OutOfMemoryError(),
+        ).unlockBackup(pendiente(cifrado), fixturePassword);
+    expect(
+      (sinMemoria as BackupUnlockInvalid).error,
+      BackupError.insufficientMemory,
+    );
     await tmpDb.close();
   });
 
@@ -249,6 +264,72 @@ void main() {
     expect(find.textContaining('schemaVersion'), findsNothing);
     expect(backup.unlockCount, 1);
     await nadaCambio();
+    await db.close();
+  });
+
+  testWidgets('sin memoria: mensaje exacto, el dialogo vuelve con lo escrito, '
+      'sin volver a elegir el archivo; despues, con memoria, funciona', (
+    tester,
+  ) async {
+    const errorMemoria =
+        'Este teléfono no tiene memoria suficiente para abrir este respaldo '
+        'ahora. Cierra otras apps y vuelve a intentarlo. No se cambió nada.';
+    backup.unlockResults[fixturePassword] = sinMemoria;
+    await pumpSettings(tester);
+    await elegir(tester, cifrado);
+    await escribirYAbrir(tester, fixturePassword);
+
+    expect(find.text(titulo), findsOneWidget);
+    expect(find.text(errorMemoria), findsOneWidget);
+    expect(find.text(errorClave), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
+    final c = tester.widget<TextField>(campo()).controller!;
+    expect(c.text, fixturePassword);
+    expect(gateway.pickCount, 1);
+    expect(backup.readCount, 1);
+    expect(backup.unlockCount, 1);
+    await nadaCambio();
+
+    // Reintento con lo mismo escrito: ahora hay memoria.
+    backup.unlockResults[fixturePassword] = desbloqueado;
+    await tester.tap(find.widgetWithText(FilledButton, 'Abrir respaldo'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Reemplazar tus datos?'), findsOneWidget);
+    expect(gateway.pickCount, 1);
+    expect(backup.readCount, 1);
+    expect(backup.unlockCount, 2);
+    await nadaCambio();
+    await db.close();
+  });
+
+  testWidgets('el mensaje de memoria no se corta: 360 dp y letra al 200 %', (
+    tester,
+  ) async {
+    const errorMemoria =
+        'Este teléfono no tiene memoria suficiente para abrir este respaldo '
+        'ahora. Cierra otras apps y vuelve a intentarlo. No se cambió nada.';
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const Scaffold(
+          body: UnlockBackupDialog(
+            initialPassword: 'x',
+            errorText: errorMemoria,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final texto = tester.renderObject<RenderParagraph>(find.text(errorMemoria));
+    expect(texto.didExceedMaxLines, isFalse);
     await db.close();
   });
 
