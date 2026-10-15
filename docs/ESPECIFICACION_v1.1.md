@@ -679,10 +679,10 @@ copia previa a importar (`antes_de_importar.json`) ni la copia previa a migrar (
 - **Permisos del release** (`aapt`): `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` y
   `com.soofiaa.aura.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Sin `INTERNET`.** Verificado otra vez el 2026-10-09 con
   `url_launcher`, en un release firmado de la rama `feat/limpieza-release` (sin instalar): los mismos cuatro permisos, las
-  mismas consultas y el mismo certificado (SHA-256 `a932d218…a82c`). Verificado de nuevo el 2026-10-09 con
+  mismas consultas y el mismo certificado (SHA-256 `A9:32:D2:18:76:C4:99:98:7A:CB:29:96:5D:68:A6:78:C5:6B:D5:02:4F:4C:CE:27:4A:AD:2D:63:2A:D0:A8:2C`). Verificado de nuevo el 2026-10-09 con
   `flutter_localizations`, `intl` 0.20.2 y `table_calendar` 3.2.1, en un release firmado de la rama
   `fix/accesibilidad-contraste` (sin instalar): los mismos cuatro permisos, **sin `INTERNET`**, las mismas consultas
-  (`PROCESS_TEXT` y `GET_CONTENT`) y el mismo certificado (SHA-256 `a932d218…a82c`).
+  (`PROCESS_TEXT` y `GET_CONTENT`) y el mismo certificado (SHA-256 `A9:32:D2:18:76:C4:99:98:7A:CB:29:96:5D:68:A6:78:C5:6B:D5:02:4F:4C:CE:27:4A:AD:2D:63:2A:D0:A8:2C`).
 
 **Bibliotecas nativas del release** (✅, `app-release.apk` de la 1.1.0+3, SHA-256 `4d666f2c…737e2b`; tamaños en bytes):
 

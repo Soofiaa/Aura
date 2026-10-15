@@ -322,5 +322,15 @@ por la evidencia de la sección 8.
 5. **Clientes Android, todos en el mismo proyecto (prueba de humo, hallazgo 3):** `com.soofiaa.aura.debug` con la SHA-1 de la
    clave de debug; `com.soofiaa.aura` con la SHA-1 de la clave de release local; y, cuando exista la primera subida a Play,
    `com.soofiaa.aura` con la SHA-1 de la clave de firma de Play App Signing si es distinta. **Sin cliente web** (hallazgo 1).
+   Huellas (públicas, del certificado de cada clave):
+   - `com.soofiaa.aura.debug`, clave de debug: SHA-1
+     `E4:5D:8E:A4:49:0D:C6:CB:0B:89:79:D3:9B:C4:AE:9F:5D:26:2D:FF` (calculada con `keytool` el 2026-10-15).
+   - `com.soofiaa.aura`, clave de subida (release local): SHA-1
+     `30:67:63:A6:7F:87:3C:C1:19:62:63:F0:CB:AA:4E:6F:F7:1E:5F:7C`; SHA-256
+     `A9:32:D2:18:76:C4:99:98:7A:CB:29:96:5D:68:A6:78:C5:6B:D5:02:4F:4C:CE:27:4A:AD:2D:63:2A:D0:A8:2C` (calculadas con
+     `keytool` el 2026-10-15, sobre el bundle de `v1.1.0`).
+   - `com.soofiaa.aura`, clave de firma de Play App Signing (distinta de la de subida; confirmadas en Play Console el
+     2026-10-15): SHA-1 `A5:30:AA:E9:97:9A:93:B1:A5:AE:29:E8:79:0B:E9:7F:54:F0:EA:8E`; SHA-256
+     `E6:E7:06:96:CB:16:00:5A:39:B5:EA:13:73:18:55:00:F0:3E:58:B9:D6:45:D1:62:E9:BB:16:F7:22:B1:7D:F3`.
 6. Mientras el estado sea **Testing**, la autorización caduca a los 7 días. Para uso real, **publicar en producción** (Audience
    → Publish app), con la decisión 6 resuelta.

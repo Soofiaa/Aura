@@ -92,7 +92,7 @@ flutter build apk --release
    keytool -list -v -keystore <ruta al .jks> -alias <alias>
    ```
    El "SHA256" del certificado debe ser
-   `A9:32:D2:18:…:D0:A8:2C` (`a932d218…a82c`), el mismo con que se
+   `A9:32:D2:18:76:C4:99:98:7A:CB:29:96:5D:68:A6:78:C5:6B:D5:02:4F:4C:CE:27:4A:AD:2D:63:2A:D0:A8:2C`, el mismo con que se
    firmaron las versiones anteriores de Aura.
 4. Después de `flutter build apk --release`, confirmar la firma del APK:
    ```
