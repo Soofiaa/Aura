@@ -1,7 +1,7 @@
 # Aura v1.2 — HU-09 · Respaldo automático en Google Drive
 
 > **PROPUESTA para v1.2. No vigente en la v1.1. No reemplaza al RNF-1 de ESPECIFICACION_v1.1.md hasta la publicación de la 1.2.**
-> Estado: propuesta para aprobación · Base: v1.1 en preparación (`main` a5c8f15, schema drift v5) · Fecha: 2026-10-14.
+> Estado: propuesta para aprobación · Base: 1.1.0 etiquetada `v1.1.0` y subida a la prueba cerrada de Play (versionCode 6) (`main` 5e70431 (v1.1.0), schema drift v5) · Fecha: 2026-10-14.
 > Mientras la 1.2 no se publique, rigen `ESPECIFICACION_v1.1.md` y su RNF-1 (el APK de release no declara `INTERNET`).
 
 ## 1. Contexto y objetivo
