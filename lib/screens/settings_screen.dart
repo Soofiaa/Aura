@@ -5,10 +5,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
 import '../data/backup/backup_reminder_store.dart' show BackupReminderStore;
 import '../data/backup/backup_service.dart';
+import '../data/device_settings_store.dart';
 import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/notification_planner.dart';
+import '../utils/android_system.dart';
 import '../utils/app_version.dart';
 import '../utils/colors.dart';
 import '../utils/notifications.dart';
@@ -28,6 +30,8 @@ class SettingsScreen extends StatefulWidget {
   final BackupService? backupService;
   final BackupFileGateway? fileGateway;
   final BackupReminderStore? reminderStore;
+  final DeviceSettingsStore? deviceSettings;
+  final AndroidSystem? androidSystem;
 
   const SettingsScreen({
     super.key,
@@ -36,6 +40,8 @@ class SettingsScreen extends StatefulWidget {
     this.backupService,
     this.fileGateway,
     this.reminderStore,
+    this.deviceSettings,
+    this.androidSystem,
   });
 
   @override
@@ -49,6 +55,14 @@ class _SettingsScreenState extends State<SettingsScreen>
       widget.scheduler ?? notificationScheduler;
   late final BackupService _backupService =
       widget.backupService ?? backupService;
+  late final DeviceSettingsStore _deviceSettings =
+      widget.deviceSettings ?? deviceSettingsStore;
+  late final AndroidSystem _system = widget.androidSystem ?? androidSystem;
+
+  // Ajustes de este telefono (aviso de atraso y Recientes), en vivo como
+  // los demas. Null si todavia no se leyeron.
+  StreamSubscription<DeviceSettings>? _deviceSub;
+  DeviceSettings? _ajustesTelefono;
 
   // Los interruptores siguen a app_settings en vivo: importar un
   // respaldo (o deshacerlo) cambia los ajustes por fuera de esta
@@ -79,12 +93,21 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!mounted) return;
       setState(() => _duracionHabitual = inputs.typicalPeriodLengthDays);
     });
+    _deviceSub = _deviceSettings.watch().listen((ajustes) {
+      if (!mounted) return;
+      setState(() => _ajustesTelefono = ajustes);
+    }, onError: (Object _) {
+      // Sin leer el archivo se muestran los valores por defecto.
+      if (!mounted) return;
+      setState(() => _ajustesTelefono ??= const DeviceSettings());
+    });
   }
 
   @override
   void dispose() {
     _settingsSub?.cancel();
     _duracionSub?.cancel();
+    _deviceSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -106,13 +129,37 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (tienePermiso || !mounted) return;
 
     setState(() => _notificaciones = false);
-    await _repository.setNotificationsEnabled(false);
+    await _guardar(() => _repository.setNotificationsEnabled(false));
     if (!mounted) return;
     showAppSnackBar(
       context,
       'El permiso de notificaciones fue revocado desde Ajustes del '
       'sistema; se desactivaron los recordatorios.',
+      action: _accionAbrirAjustes(),
     );
+  }
+
+  /// "Abrir ajustes": los ajustes de notificaciones de Aura en Android.
+  /// Si se nego el permiso dos veces, Android ya no vuelve a preguntar y
+  /// es el unico camino para activarlo.
+  SnackBarAction _accionAbrirAjustes() => SnackBarAction(
+        label: 'Abrir ajustes',
+        onPressed: () => _system.openNotificationSettings(),
+      );
+
+  /// Guarda un ajuste. Si falla, avisa y devuelve false; quien llama no
+  /// cambia lo que muestra, y el stream de ajustes deja el valor guardado.
+  Future<bool> _guardar(Future<void> Function() escritura) async {
+    try {
+      await escritura();
+      return true;
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(
+            context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+      }
+      return false;
+    }
   }
 
   void _aplicarPreferencias(NotificationSettings settings) {
@@ -132,31 +179,56 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (value) {
       final concedido = await _scheduler.requestPermission();
       if (!concedido) {
-        await _repository.setNotificationsEnabled(false);
+        await _guardar(() => _repository.setNotificationsEnabled(false));
         if (!mounted) return;
         setState(() => _notificaciones = false);
         showAppSnackBar(
           context,
           'No se activaron las notificaciones: permiso denegado.',
+          action: _accionAbrirAjustes(),
         );
         return;
       }
     }
-    await _repository.setNotificationsEnabled(value);
+    if (!await _guardar(() => _repository.setNotificationsEnabled(value))) {
+      return;
+    }
     if (!mounted) return;
     setState(() => _notificaciones = value);
   }
 
   Future<void> _cambiarRecordatorioPeriodo(bool value) async {
-    await _repository.setPeriodReminderEnabled(value);
+    if (!await _guardar(() => _repository.setPeriodReminderEnabled(value))) {
+      return;
+    }
     if (!mounted) return;
     setState(() => _recordatorioPeriodo = value);
   }
 
   Future<void> _cambiarRecordatorioFertil(bool value) async {
-    await _repository.setFertileWindowRemindersEnabled(value);
+    if (!await _guardar(
+        () => _repository.setFertileWindowRemindersEnabled(value))) {
+      return;
+    }
     if (!mounted) return;
     setState(() => _recordatorioFertil = value);
+  }
+
+  Future<void> _cambiarAvisoAtraso(bool value) async {
+    if (!await _guardar(() => _deviceSettings.setAvisoAtraso(value))) return;
+    if (!mounted) return;
+    setState(() => _ajustesTelefono =
+        (_ajustesTelefono ?? const DeviceSettings()).copyWith(avisoAtraso: value));
+  }
+
+  /// main.dart escucha el mismo almacen y aplica FLAG_SECURE.
+  Future<void> _cambiarOcultarEnRecientes(bool value) async {
+    if (!await _guardar(() => _deviceSettings.setOcultarEnRecientes(value))) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _ajustesTelefono = (_ajustesTelefono ?? const DeviceSettings())
+        .copyWith(ocultarEnRecientes: value));
   }
 
   /// Solo guarda el ajuste: el NotificationReconciler (que escucha
@@ -164,13 +236,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   /// cancela. No toca "Ventana fertil": al volver a encenderlo, ese
   /// recordatorio vuelve a su valor guardado.
   Future<void> _cambiarMostrarFertil(bool value) async {
-    await _repository.setShowFertileWindow(value);
+    if (!await _guardar(() => _repository.setShowFertileWindow(value))) return;
     if (!mounted) return;
     setState(() => _mostrarFertil = value);
   }
 
   Future<void> _cambiarMostrarDetalles(bool value) async {
-    await _repository.setShowDetailsEnabled(value);
+    if (!await _guardar(() => _repository.setShowDetailsEnabled(value))) return;
     if (!mounted) return;
     setState(() => _mostrarDetalles = value);
   }
@@ -185,7 +257,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
     setState(() => _duracionHabitual = nueva);
-    await _repository.setTypicalPeriodLength(nueva);
+    if (!await _guardar(() => _repository.setTypicalPeriodLength(nueva)) &&
+        mounted) {
+      setState(() => _duracionHabitual = actual);
+    }
   }
 
   Widget _seccionTuCiclo() {
@@ -283,7 +358,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       initialTime: TimeOfDay(hour: _horaRecordatorio, minute: _minutoRecordatorio),
     );
     if (elegido == null) return;
-    await _repository.setReminderTime(hour: elegido.hour, minute: elegido.minute);
+    if (!await _guardar(() => _repository.setReminderTime(
+        hour: elegido.hour, minute: elegido.minute))) {
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _horaRecordatorio = elegido.hour;
@@ -433,6 +511,18 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
 
           SwitchListTile(
+            title: const Text("Aviso si tu período se atrasa"),
+            subtitle: const Text(
+              "Un aviso el primer día de atraso, por si te llegó y no lo "
+              "registraste.",
+            ),
+            value: _ajustesTelefono?.avisoAtraso ?? false,
+            onChanged: _notificaciones && _ajustesTelefono != null
+                ? _cambiarAvisoAtraso
+                : null,
+          ),
+
+          SwitchListTile(
             title: const Text("Mostrar detalles en la notificación"),
             subtitle: const Text(
               "Sin esto, la notificación solo dice que es un recordatorio "
@@ -455,7 +545,27 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: _notificaciones ? _elegirHora : null,
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          const Text(
+            "Privacidad",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          SwitchListTile(
+            title: const Text("Ocultar Aura en Recientes"),
+            subtitle: const Text(
+              "La vista previa de Aura en Recientes sale en blanco y no se "
+              "pueden hacer capturas de pantalla de la app.",
+            ),
+            value: _ajustesTelefono?.ocultarEnRecientes ?? true,
+            onChanged:
+                _ajustesTelefono != null ? _cambiarOcultarEnRecientes : null,
+          ),
+
+          const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
 

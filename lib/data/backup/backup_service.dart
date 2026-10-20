@@ -11,6 +11,7 @@ import '../../domain/backup_codec.dart';
 import '../../domain/backup_crypto.dart';
 import '../../utils/app_version.dart';
 import '../../utils/day_key.dart';
+import '../device_settings_store.dart';
 import '../repositories/cycle_repository.dart';
 import 'backup_reminder_store.dart';
 import 'pre_migration_copy.dart' as copy;
@@ -73,7 +74,13 @@ class BackupWriteException implements Exception {
 }
 
 /// Pasos de "Borrar todos los datos" (ver [BackupService.deleteAllData]).
-enum BackupDeleteStep { database, backups, temporaryFiles, backupReminder }
+enum BackupDeleteStep {
+  database,
+  backups,
+  temporaryFiles,
+  backupReminder,
+  deviceSettings,
+}
 
 /// Fallo uno o mas pasos de "Borrar todos los datos"; los demas se
 /// intentaron igual.
@@ -289,12 +296,15 @@ class BackupService {
     BackupKeyDeriver deriveKey = deriveBackupKey,
     int maxFileBytes = maxBackupSizeBytes,
     BackupReminderStore? reminderStore,
+    DeviceSettingsStore? deviceSettings,
   })  : _supportDirectory = supportDirectory,
         _temporaryDirectory = temporaryDirectory,
         _clock = clock ?? DateTime.now,
         _reminderStore = reminderStore ??
             BackupReminderStore(
                 supportDirectory: supportDirectory, clock: clock),
+        _deviceSettings = deviceSettings ??
+            DeviceSettingsStore(supportDirectory: supportDirectory),
         _runTask = runTask,
         _encryptionParams = encryptionParams,
         _encrypt = encrypt,
@@ -308,6 +318,10 @@ class BackupService {
 
   /// Recordatorio de respaldo: "Borrar todos los datos" tambien lo borra.
   final BackupReminderStore _reminderStore;
+
+  /// Ajustes de este telefono: "Borrar todos los datos" los devuelve a
+  /// los valores por defecto.
+  final DeviceSettingsStore _deviceSettings;
 
   // Cifrado (HU-06b). La contrasena nunca se guarda en un campo: vive
   // solo durante la llamada que la recibe.
@@ -636,8 +650,8 @@ class BackupService {
 
   /// "Borrar todos los datos": la base, la carpeta respaldos/ completa
   /// (copia previa a importar, copia previa a la migracion v4 y cualquier
-  /// .tmp huerfano), los temporales del respaldo y el estado del
-  /// recordatorio de respaldo. Intenta siempre todos los pasos aunque
+  /// .tmp huerfano), los temporales del respaldo, el estado del
+  /// recordatorio de respaldo y los ajustes de este telefono. Intenta siempre todos los pasos aunque
   /// alguno falle, para no dejar datos de salud por un error en otro
   /// paso, y al final lanza un unico [BackupDeleteException] si alguno
   /// fallo.
@@ -661,6 +675,7 @@ class BackupService {
     });
     await attempt(BackupDeleteStep.temporaryFiles, cleanTemporaryFiles);
     await attempt(BackupDeleteStep.backupReminder, _reminderStore.delete);
+    await attempt(BackupDeleteStep.deviceSettings, _deviceSettings.delete);
 
     if (failedSteps.isNotEmpty) {
       throw BackupDeleteException(failedSteps, errors);
@@ -706,6 +721,7 @@ BackupService get backupService => _backupServiceInstance ??= BackupService(
       supportDirectory: getApplicationSupportDirectory,
       temporaryDirectory: getTemporaryDirectory,
       reminderStore: backupReminderStore,
+      deviceSettings: deviceSettingsStore,
     );
 
 /// Solo para tests: reemplaza el servicio global.

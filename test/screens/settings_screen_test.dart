@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,7 @@ import 'package:aura/utils/app_version.dart';
 
 import '../support/contrast.dart';
 import '../support/fake_backup.dart';
+import '../support/fake_device_settings.dart';
 import '../support/fake_notification_scheduler.dart';
 import '../support/fake_url_launcher.dart';
 
@@ -35,6 +38,14 @@ void main() {
 
   tearDown(() => UrlLauncherPlatform.instance = realLauncher);
 
+  late FakeDeviceSettingsStore ajustesTelefono;
+  late FakeAndroidSystem system;
+
+  setUp(() {
+    ajustesTelefono = FakeDeviceSettingsStore();
+    system = FakeAndroidSystem();
+  });
+
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
       home: SettingsScreen(
@@ -42,6 +53,8 @@ void main() {
         scheduler: scheduler,
         backupService: backup,
         fileGateway: FakeBackupFileGateway(),
+        deviceSettings: ajustesTelefono,
+        androidSystem: system,
       ),
     ));
     await tester.pumpAndSettle();
@@ -293,6 +306,7 @@ void main() {
                 find.widgetWithText(SwitchListTile, 'Notificaciones'))
             .value,
         isFalse);
+    await tester.scrollUntilVisible(find.text('09:00'), 100);
     expect(find.text('09:00'), findsOneWidget);
 
     await db.close();
@@ -611,6 +625,8 @@ void main() {
           scheduler: scheduler,
           backupService: backup,
           fileGateway: FakeBackupFileGateway(),
+          deviceSettings: ajustesTelefono,
+          androidSystem: system,
         ),
       ));
       await tester.pumpAndSettle();
@@ -667,5 +683,74 @@ void main() {
       await tester.pumpAndSettle();
       await db.close();
     });
+  });
+
+  group('ajustes de este telefono', () {
+    final aviso =
+        find.widgetWithText(SwitchListTile, 'Aviso si tu período se atrasa');
+    final recientes =
+        find.widgetWithText(SwitchListTile, 'Ocultar Aura en Recientes');
+
+    testWidgets('aviso de atraso: apagado y deshabilitado sin el general; '
+        'con el general, se guarda', (tester) async {
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(aviso, 200);
+      expect(tester.widget<SwitchListTile>(aviso).value, isFalse);
+      expect(tester.widget<SwitchListTile>(aviso).onChanged, isNull);
+
+      await tester.scrollUntilVisible(
+          find.widgetWithText(SwitchListTile, 'Notificaciones'), -200);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notificaciones'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(aviso, 200);
+      await tester.tap(aviso);
+      await tester.pumpAndSettle();
+
+      expect(ajustesTelefono.current.avisoAtraso, isTrue);
+      expect(tester.widget<SwitchListTile>(aviso).value, isTrue);
+      await db.close();
+    });
+
+    testWidgets('ocultar en Recientes: activado por defecto; apagarlo se '
+        'guarda', (tester) async {
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(recientes, 200);
+      expect(tester.widget<SwitchListTile>(recientes).value, isTrue);
+
+      await tester.tap(recientes);
+      await tester.pumpAndSettle();
+
+      expect(ajustesTelefono.current.ocultarEnRecientes, isFalse);
+      expect(tester.widget<SwitchListTile>(recientes).value, isFalse);
+      await db.close();
+    });
+
+    testWidgets('si no se puede guardar, avisa y el interruptor no cambia',
+        (tester) async {
+      ajustesTelefono.writeError = const FileSystemException('sin espacio');
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(recientes, 200);
+      await tester.tap(recientes);
+      await tester.pumpAndSettle();
+
+      expect(find.text('No se pudo guardar el cambio. Inténtalo de nuevo.'),
+          findsOneWidget);
+      expect(tester.widget<SwitchListTile>(recientes).value, isTrue);
+      await db.close();
+    });
+  });
+
+  testWidgets('permiso denegado: "Abrir ajustes" abre los de notificaciones '
+      'del sistema', (tester) async {
+    scheduler.permissionGranted = false;
+    await pumpScreen(tester);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Notificaciones'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abrir ajustes'));
+    await tester.pumpAndSettle();
+
+    expect(system.openNotificationSettingsCount, 1);
+    await db.close();
   });
 }

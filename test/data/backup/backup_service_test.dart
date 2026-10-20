@@ -10,6 +10,7 @@ import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/backup/pre_migration_copy.dart';
 import 'package:aura/data/database/app_database.dart';
+import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
@@ -431,6 +432,7 @@ void main() {
       // El recordatorio tiene su propia carpeta: aqui solo falla respaldos/.
       reminderStore: BackupReminderStore(
           supportDirectory: () async => support, clock: () => now),
+      deviceSettings: DeviceSettingsStore(supportDirectory: () async => support),
     );
 
     await expectLater(
@@ -460,6 +462,19 @@ void main() {
     expect(Directory(p.join(temp.path, BackupService.exportDirName))
         .existsSync(), isFalse);
     expect(Directory(p.join(temp.path, 'share_plus')).existsSync(), isFalse);
+  });
+
+  test('borrar todos los datos devuelve los ajustes de este telefono a los '
+      'valores por defecto', () async {
+    final ajustes = DeviceSettingsStore(supportDirectory: () async => support);
+    await ajustes.setOcultarEnRecientes(false);
+    await ajustes.setAvisoAtraso(true);
+
+    await service.deleteAllData();
+
+    expect(File(p.join(support.path, DeviceSettingsStore.fileName))
+        .existsSync(), isFalse);
+    expect(await ajustes.read(), const DeviceSettings());
   });
   // Recordatorio de respaldo (CP2): vive en files/, fuera de la base y del
   // respaldo exportado.
