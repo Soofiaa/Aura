@@ -22,7 +22,12 @@ Future<void> main() async {
   // LocaleDataException la primera vez que se usan.
   await initializeDateFormatting();
 
-  await notificationScheduler.init();
+  // Un fallo de las notificaciones (zona horaria, plugin) no debe dejar la
+  // app en el splash: sin init, los avisos no se programan, pero la app
+  // abre.
+  try {
+    await notificationScheduler.init();
+  } catch (_) {}
 
   backupFileGateway = const PluginBackupFileGateway();
 

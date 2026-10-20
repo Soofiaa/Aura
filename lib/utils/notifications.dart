@@ -1,7 +1,10 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tzdata;
+// latest_all, no latest: latest deja fuera los alias y nombres antiguos
+// (America/Buenos_Aires, Asia/Calcutta, Etc/UTC...) que algunos telefonos
+// todavia informan.
+import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import '../domain/notification_planner.dart';
 
@@ -42,6 +45,30 @@ const _fertileChannelName = 'Ventana fértil';
 const _fertileChannelDescription =
     'Aviso al comenzar tu ventana de mayor fertilidad estimada.';
 
+/// Zona de tz para el nombre que informa el telefono. Un nombre que la
+/// base de timezone no conoce (zona nueva, o "GMT+03:00" de algunas ROMs)
+/// no debe impedir abrir la app: se usa Etc/GMT con el desfase actual en
+/// horas enteras, o UTC. Requiere tzdata.initializeTimeZones().
+tz.Location resolveTimeZoneLocation(String? name, Duration offset) {
+  if (name != null) {
+    try {
+      return tz.getLocation(name);
+    } on tz.LocationNotFoundException {
+      // Sigue con el desfase.
+    }
+  }
+  if (offset.inMinutes % 60 == 0 && offset.inHours != 0) {
+    // Etc/GMT invierte el signo: Etc/GMT+3 es UTC-3.
+    final hours = -offset.inHours;
+    try {
+      return tz.getLocation('Etc/GMT${hours > 0 ? '+' : ''}$hours');
+    } on tz.LocationNotFoundException {
+      // Desfase fuera de -14..+12: UTC.
+    }
+  }
+  return tz.UTC;
+}
+
 class FlutterLocalNotificationsScheduler implements NotificationScheduler {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -63,8 +90,14 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
   }
 
   Future<void> _syncTimeZoneLocation() async {
-    final name = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(name));
+    String? name;
+    try {
+      name = await FlutterTimezone.getLocalTimezone();
+    } catch (_) {
+      // Sin nombre se usa el desfase actual (ver resolveTimeZoneLocation).
+    }
+    tz.setLocalLocation(
+        resolveTimeZoneLocation(name, DateTime.now().timeZoneOffset));
   }
 
   @override
