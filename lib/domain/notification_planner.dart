@@ -2,7 +2,13 @@ import '../utils/day_key.dart';
 import 'cycle_predictor.dart';
 import 'fertile_marks.dart';
 
-enum NotificationKind { periodReminder, fertileWindowReminder }
+enum NotificationKind {
+  periodReminder,
+  fertileWindowReminder,
+
+  /// "Te llego?": el primer dia de atraso del periodo.
+  latePeriodReminder,
+}
 
 extension NotificationKindId on NotificationKind {
   /// Id estable por tipo: reprogramar reemplaza la notificacion anterior
@@ -10,6 +16,7 @@ extension NotificationKindId on NotificationKind {
   int get notificationId => switch (this) {
         NotificationKind.periodReminder => 100,
         NotificationKind.fertileWindowReminder => 101,
+        NotificationKind.latePeriodReminder => 102,
       };
 }
 
@@ -29,6 +36,11 @@ class NotificationSettings {
   /// siga activado (se conserva su valor).
   final bool showFertileWindow;
 
+  /// Aviso "Te llego?" (ajuste de este telefono, ver DeviceSettings): un
+  /// aviso el dia siguiente al extremo tardio del rango del proximo
+  /// periodo, si para entonces no se registro.
+  final bool latePeriodReminderEnabled;
+
   const NotificationSettings({
     required this.notificationsEnabled,
     required this.periodReminderEnabled,
@@ -37,7 +49,21 @@ class NotificationSettings {
     required this.reminderHour,
     required this.reminderMinute,
     this.showFertileWindow = true,
+    this.latePeriodReminderEnabled = false,
   });
+
+  NotificationSettings copyWith({bool? latePeriodReminderEnabled}) =>
+      NotificationSettings(
+        notificationsEnabled: notificationsEnabled,
+        periodReminderEnabled: periodReminderEnabled,
+        fertileWindowRemindersEnabled: fertileWindowRemindersEnabled,
+        showDetailsEnabled: showDetailsEnabled,
+        reminderHour: reminderHour,
+        reminderMinute: reminderMinute,
+        showFertileWindow: showFertileWindow,
+        latePeriodReminderEnabled:
+            latePeriodReminderEnabled ?? this.latePeriodReminderEnabled,
+      );
 }
 
 class PlannedNotification {
@@ -49,6 +75,13 @@ class PlannedNotification {
   final String title;
   final String body;
 
+  /// Su instante ya paso hoy (solo con `keepDueToday`): no se vuelve a
+  /// programar (el plugin rechaza un instante pasado), pero tampoco se
+  /// cancela si sigue pendiente. Con avisos inexactos Android puede
+  /// entregarlo unos minutos despues de la hora; abrir la app en ese rato
+  /// no debe perderlo.
+  final bool due;
+
   const PlannedNotification({
     required this.kind,
     required this.id,
@@ -57,6 +90,7 @@ class PlannedNotification {
     required this.minute,
     required this.title,
     required this.body,
+    this.due = false,
   });
 
   @override
@@ -68,14 +102,17 @@ class PlannedNotification {
       other.hour == hour &&
       other.minute == minute &&
       other.title == title &&
-      other.body == body;
+      other.body == body &&
+      other.due == due;
 
   @override
-  int get hashCode => Object.hash(kind, id, date, hour, minute, title, body);
+  int get hashCode =>
+      Object.hash(kind, id, date, hour, minute, title, body, due);
 
   @override
   String toString() =>
-      'PlannedNotification(kind: $kind, date: $date, hour: $hour, minute: $minute, title: $title)';
+      'PlannedNotification(kind: $kind, date: $date, hour: $hour, '
+      'minute: $minute, title: $title${due ? ', due' : ''})';
 }
 
 /// Funcion pura: sin reloj propio, sin plataforma. [today] y
@@ -83,22 +120,36 @@ class PlannedNotification {
 /// predictCycle con `today`), para poder testear con fechas y horas
 /// fijas y para poder omitir avisos cuyo instante ya paso hoy -
 /// programar un instante pasado tira una excepcion en el plugin.
+///
+/// [keepDueToday]: un aviso de hoy cuya hora ya paso vuelve con
+/// [PlannedNotification.due] en vez de omitirse (ver ese campo). Lo usa el
+/// reconciliador; sin el, el plan es solo lo que falta programar.
 List<PlannedNotification> planNotifications({
   required CyclePrediction? prediction,
   required NotificationSettings settings,
   required String today,
   required int nowMinutesOfDay,
+  bool keepDueToday = false,
 }) {
   if (!settings.notificationsEnabled) return const [];
   if (prediction is! ActivePrediction) return const [];
 
   final planned = <PlannedNotification>[];
+  void add(String date,
+      PlannedNotification Function(String date, bool due) build) {
+    final cmp = DayKey.compare(date, today);
+    if (cmp < 0) return; // fecha pasada
+    // Mismo dia: solo si el instante exacto todavia no paso.
+    final due = cmp == 0 &&
+        settings.reminderHour * 60 + settings.reminderMinute <=
+            nowMinutesOfDay;
+    if (due && !keepDueToday) return;
+    planned.add(build(date, due));
+  }
 
   if (settings.periodReminderEnabled) {
-    final date = DayKey.addDays(prediction.nextPeriodEarliestDate, -1);
-    if (_isStillPending(date, settings, today, nowMinutesOfDay)) {
-      planned.add(_periodReminder(date, settings));
-    }
+    add(DayKey.addDays(prediction.nextPeriodEarliestDate, -1),
+        (date, due) => _periodReminder(date, settings, due));
   }
 
   // Confianza baja => no se manda: la estimacion de ovulacion ya depende
@@ -112,31 +163,24 @@ List<PlannedNotification> planNotifications({
   final marks = visibleFertileMarks(prediction,
       showFertileWindow: settings.showFertileWindow);
   if (settings.fertileWindowRemindersEnabled && marks != null) {
-    final date = marks.windowStartDate;
-    if (_isStillPending(date, settings, today, nowMinutesOfDay)) {
-      planned.add(_fertileWindowReminder(date, settings));
-    }
+    add(marks.windowStartDate,
+        (date, due) => _fertileWindowReminder(date, settings, due));
+  }
+
+  // "Te llego?": el primer dia de atraso (isPeriodLate empieza el dia
+  // siguiente al extremo tardio). Registrar el periodo cambia la
+  // prediccion y lo deja fuera del plan; si ya paso ese dia, no se repite.
+  if (settings.latePeriodReminderEnabled) {
+    add(DayKey.addDays(prediction.nextPeriodLatestDate, 1),
+        (date, due) => _latePeriodReminder(date, settings, due));
   }
 
   planned.sort((a, b) => DayKey.compare(a.date, b.date));
   return planned;
 }
 
-bool _isStillPending(
-  String date,
-  NotificationSettings settings,
-  String today,
-  int nowMinutesOfDay,
-) {
-  final cmp = DayKey.compare(date, today);
-  if (cmp < 0) return false; // fecha pasada
-  if (cmp > 0) return true; // fecha futura: siempre vale
-  // mismo dia: solo si el instante exacto todavia no paso.
-  final reminderMinutesOfDay = settings.reminderHour * 60 + settings.reminderMinute;
-  return reminderMinutesOfDay > nowMinutesOfDay;
-}
-
-PlannedNotification _periodReminder(String date, NotificationSettings s) {
+PlannedNotification _periodReminder(
+    String date, NotificationSettings s, bool due) {
   final detailed = s.showDetailsEnabled;
   return PlannedNotification(
     kind: NotificationKind.periodReminder,
@@ -148,10 +192,12 @@ PlannedNotification _periodReminder(String date, NotificationSettings s) {
     body: detailed
         ? 'Según la estimación de tu ciclo, tu período podría empezar pronto.'
         : 'Abre la app para ver el detalle.',
+    due: due,
   );
 }
 
-PlannedNotification _fertileWindowReminder(String date, NotificationSettings s) {
+PlannedNotification _fertileWindowReminder(
+    String date, NotificationSettings s, bool due) {
   final detailed = s.showDetailsEnabled;
   return PlannedNotification(
     kind: NotificationKind.fertileWindowReminder,
@@ -164,5 +210,24 @@ PlannedNotification _fertileWindowReminder(String date, NotificationSettings s) 
         ? 'Según la estimación de tu ciclo, hoy comienza tu ventana de mayor '
             'probabilidad de fertilidad. No es un método anticonceptivo.'
         : 'Abre la app para ver el detalle.',
+    due: due,
+  );
+}
+
+PlannedNotification _latePeriodReminder(
+    String date, NotificationSettings s, bool due) {
+  final detailed = s.showDetailsEnabled;
+  return PlannedNotification(
+    kind: NotificationKind.latePeriodReminder,
+    id: NotificationKind.latePeriodReminder.notificationId,
+    date: date,
+    hour: s.reminderHour,
+    minute: s.reminderMinute,
+    title: detailed ? '¿Te llegó el período?' : 'Aura: recordatorio',
+    body: detailed
+        ? 'Según la estimación de tu ciclo, tu período podría estar '
+            'atrasado. Si ya empezó, puedes registrarlo en Aura.'
+        : 'Abre la app para ver el detalle.',
+    due: due,
   );
 }

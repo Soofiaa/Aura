@@ -45,6 +45,28 @@ const _fertileChannelName = 'Ventana fértil';
 const _fertileChannelDescription =
     'Aviso al comenzar tu ventana de mayor fertilidad estimada.';
 
+const _lateChannelId = 'aura_late_period_reminder';
+const _lateChannelName = 'Período atrasado';
+const _lateChannelDescription =
+    'Aviso el primer día de atraso de tu período estimado.';
+
+/// Avisos propios pendientes que ya no corresponden: todo id de
+/// [ownedIds] que no este en [plan]. Uno [PlannedNotification.due] del plan
+/// no se cancela (ni se vuelve a programar): Android puede no haberlo
+/// entregado todavia.
+Set<int> idsToCancel({
+  required Iterable<int> pendingIds,
+  required Iterable<int> ownedIds,
+  required List<PlannedNotification> plan,
+}) {
+  final owned = ownedIds.toSet();
+  final planned = {for (final p in plan) p.id};
+  return {
+    for (final id in pendingIds)
+      if (owned.contains(id) && !planned.contains(id)) id,
+  };
+}
+
 /// Zona de tz para el nombre que informa el telefono. Un nombre que la
 /// base de timezone no conoce (zona nueva, o "GMT+03:00" de algunas ROMs)
 /// no debe impedir abrir la app: se usa Etc/GMT con el desfase actual en
@@ -121,16 +143,30 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
 
   @override
   Future<void> reconcile(List<PlannedNotification> plan) async {
-    final plannedIds = plan.map((p) => p.id).toSet();
     final pending = await _plugin.pendingNotificationRequests();
-    for (final request in pending) {
-      if (_ownedIds.contains(request.id) && !plannedIds.contains(request.id)) {
-        await _plugin.cancel(request.id);
+    final toCancel = idsToCancel(
+      pendingIds: pending.map((r) => r.id),
+      ownedIds: _ownedIds,
+      plan: plan,
+    );
+    // Un fallo en un aviso no impide cancelar ni programar los demas; el
+    // primero se relanza al final (el reconciliador lo absorbe).
+    Object? firstError;
+    for (final id in toCancel) {
+      try {
+        await _plugin.cancel(id);
+      } catch (e) {
+        firstError ??= e;
       }
     }
-    for (final item in plan) {
-      await _scheduleOne(item);
+    for (final item in plan.where((p) => !p.due)) {
+      try {
+        await _scheduleOne(item);
+      } catch (e) {
+        firstError ??= e;
+      }
     }
+    if (firstError != null) throw firstError;
   }
 
   Future<void> _scheduleOne(PlannedNotification item) async {
@@ -167,6 +203,11 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
           _fertileChannelId,
           _fertileChannelName,
           _fertileChannelDescription,
+        ),
+      NotificationKind.latePeriodReminder => (
+          _lateChannelId,
+          _lateChannelName,
+          _lateChannelDescription,
         ),
     };
 

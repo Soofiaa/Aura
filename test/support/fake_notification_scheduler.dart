@@ -30,18 +30,35 @@ class FakeNotificationScheduler implements NotificationScheduler {
   }
 
   /// Ids agendados ahora y los cancelados, con la misma regla que
-  /// FlutterLocalNotificationsScheduler.reconcile: se cancela todo id
-  /// pendiente que no este en el plan nuevo.
+  /// FlutterLocalNotificationsScheduler.reconcile (idsToCancel): se cancela
+  /// todo id pendiente que no este en el plan nuevo; uno `due` no se
+  /// programa, pero si seguia pendiente se queda.
   Set<int> pendingIds = {};
   final List<int> cancelledIds = [];
+
+  /// Si no es null, reconcile espera este Future antes de aplicar el plan
+  /// (para simular un scheduler lento).
+  Future<void>? delay;
+
+  /// Si es true, reconcile lanza (despues de contar la llamada).
+  bool throwOnReconcile = false;
 
   @override
   Future<void> reconcile(List<PlannedNotification> plan) async {
     reconcileCallCount++;
+    if (delay != null) await delay;
+    if (throwOnReconcile) throw StateError('falla simulada');
     lastReconciledPlan = plan;
-    final planned = {for (final p in plan) p.id};
-    cancelledIds.addAll(pendingIds.difference(planned));
-    pendingIds = planned;
+    final toCancel = idsToCancel(
+      pendingIds: pendingIds,
+      ownedIds: NotificationKind.values.map((k) => k.notificationId),
+      plan: plan,
+    );
+    cancelledIds.addAll(toCancel);
+    pendingIds = {
+      for (final p in plan)
+        if (!p.due || pendingIds.contains(p.id)) p.id,
+    };
   }
 
   @override
