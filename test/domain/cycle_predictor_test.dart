@@ -372,6 +372,42 @@ void main() {
       );
       expect(result, isA<StaleDataPrediction>());
     });
+
+    // Ciclos largos y variables (42/58): promedio ~52, sigma ~7,8, rango
+    // +-12: el extremo tardio cae en el dia 64. Antes, desde el dia 61 se
+    // mostraba "datos desactualizados" dentro del propio rango.
+    group('ciclos largos: el extremo tardio pasa el dia 60', () {
+      final cycles = [
+        _cycle('2026-01-01', 5, 42),
+        _cycle('2026-02-12', 5, 58),
+        _cycle('2026-04-11', 5, 42),
+        _cycle('2026-05-23', 5, 58),
+        _cycle('2026-07-20', 5, null),
+      ];
+      const start = '2026-07-20';
+
+      test('dentro del rango despues del dia 60: prediccion activa', () {
+        final p = predictCycle(
+                cycles: cycles, today: DayKey.addDays(start, 62))
+            as ActivePrediction;
+        expect(p.nextPeriodLatestDate, DayKey.addDays(start, 64));
+        expect(p.isPeriodLate, isFalse);
+      });
+
+      test('despues del extremo tardio: atrasado, no desactualizado', () {
+        final p = predictCycle(
+                cycles: cycles, today: DayKey.addDays(start, 71))
+            as ActivePrediction;
+        expect(p.isPeriodLate, isTrue);
+        expect(p.daysLate, 7);
+      });
+
+      test('mas de 7 dias de atraso: datos desactualizados', () {
+        expect(
+            predictCycle(cycles: cycles, today: DayKey.addDays(start, 72)),
+            isA<StaleDataPrediction>());
+      });
+    });
   });
 
   group('predictCycle - casos defensivos', () {

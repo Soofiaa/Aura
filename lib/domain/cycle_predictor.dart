@@ -13,10 +13,16 @@ class PredictionConfig {
   final int minValidCycleLengthDays;
 
   /// Ciclos completos de mas de esta duracion se excluyen del promedio.
-  /// Tambien se reusa como umbral de "datos desactualizados": si hoy esta
-  /// a mas de esta cantidad de dias del ultimo periodo registrado, ya no
-  /// se arriesga una prediccion numerica.
+  /// Tambien se reusa como umbral minimo de "datos desactualizados": si
+  /// hoy esta a mas de esta cantidad de dias del inicio del ultimo periodo
+  /// (y a mas de [lateDaysBeforeStale] del extremo tardio del rango), ya
+  /// no se arriesga una prediccion numerica.
   final int maxValidCycleLengthDays;
+
+  /// Dias de atraso que se muestran como tales, despues del extremo
+  /// tardio del rango, antes de pasar a "datos desactualizados" cuando ese
+  /// extremo ya queda cerca de [maxValidCycleLengthDays] o lo supera.
+  final int lateDaysBeforeStale;
 
   /// Dias entre la ovulacion y el inicio del siguiente periodo. La fase
   /// lutea es mucho mas estable entre personas y ciclos que la folicular,
@@ -72,6 +78,7 @@ class PredictionConfig {
     this.maxCyclesConsidered = 6,
     this.minValidCycleLengthDays = 15,
     this.maxValidCycleLengthDays = 60,
+    this.lateDaysBeforeStale = 7,
     this.lutealPhaseDays = 14,
     this.fertileWindowDaysBeforeOvulation = 5,
     this.ovulationPhaseHalfWidthDays = 1,
@@ -125,7 +132,9 @@ sealed class CyclePrediction {
 }
 
 /// Hoy esta a mas de [PredictionConfig.maxValidCycleLengthDays] dias del
-/// ultimo periodo registrado: no se arriesga una prediccion numerica.
+/// inicio del ultimo periodo y a mas de
+/// [PredictionConfig.lateDaysBeforeStale] del extremo tardio del rango: no
+/// se arriesga una prediccion numerica.
 final class StaleDataPrediction extends CyclePrediction {
   const StaleDataPrediction({
     required super.lastPeriodStartDate,
@@ -476,13 +485,6 @@ CyclePrediction? predictCycle({
 
   final daysSinceStart = DayKey.diffInDays(mostRecent.startDate, today);
 
-  if (daysSinceStart > config.maxValidCycleLengthDays) {
-    return StaleDataPrediction(
-      lastPeriodStartDate: mostRecent.startDate,
-      daysSinceLastPeriodStart: daysSinceStart,
-    );
-  }
-
   final cycleEstimate = estimateCycleLength(cycles: sorted, config: config);
   final excludedCyclesCount = cycleEstimate.excludedCount;
   if (excludedCyclesCount > 0) {
@@ -525,6 +527,22 @@ CyclePrediction? predictCycle({
       DayKey.addDays(mostRecent.startDate, averageCycleLengthDays.round());
   final nextPeriodEarliestDate = DayKey.addDays(nextPeriodExpectedDate, -halfWidthDays);
   final nextPeriodLatestDate = DayKey.addDays(nextPeriodExpectedDate, halfWidthDays);
+
+  // Con ciclos largos y variables el extremo tardio del rango puede pasar
+  // el dia maxValidCycleLengthDays: "datos desactualizados" no reemplaza
+  // al rango ni a los primeros dias de atraso.
+  final staleAfterDays = math.max(
+    config.maxValidCycleLengthDays,
+    DayKey.diffInDays(mostRecent.startDate, nextPeriodLatestDate) +
+        config.lateDaysBeforeStale,
+  );
+  if (daysSinceStart > staleAfterDays) {
+    return StaleDataPrediction(
+      lastPeriodStartDate: mostRecent.startDate,
+      daysSinceLastPeriodStart: daysSinceStart,
+    );
+  }
+
   final estimatedOvulationDate =
       DayKey.addDays(nextPeriodExpectedDate, -config.lutealPhaseDays);
   final fertileWindowStartDate =
