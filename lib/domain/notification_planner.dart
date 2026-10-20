@@ -1,5 +1,6 @@
 import '../utils/day_key.dart';
 import 'cycle_predictor.dart';
+import 'fertile_marks.dart';
 
 enum NotificationKind { periodReminder, fertileWindowReminder }
 
@@ -106,10 +107,12 @@ List<PlannedNotification> planNotifications({
   // seria falsa precision: Inicio tampoco muestra la ovulacion ni la
   // ventana con confianza baja (HU-05, H5-1 A). Tampoco si la usuaria
   // eligio no ver la ovulacion ni la ventana (H5-3).
-  if (settings.fertileWindowRemindersEnabled &&
-      settings.showFertileWindow &&
-      prediction.confidence != PredictionConfidence.low) {
-    final date = prediction.fertileWindowStartDate;
+  // La regla es la de Inicio y el Calendario (visibleFertileMarks): con el
+  // periodo atrasado o una ovulacion que caeria en el periodo tampoco.
+  final marks = visibleFertileMarks(prediction,
+      showFertileWindow: settings.showFertileWindow);
+  if (settings.fertileWindowRemindersEnabled && marks != null) {
+    final date = marks.windowStartDate;
     if (_isStillPending(date, settings, today, nowMinutesOfDay)) {
       planned.add(_fertileWindowReminder(date, settings));
     }

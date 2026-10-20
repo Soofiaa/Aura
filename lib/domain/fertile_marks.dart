@@ -1,3 +1,4 @@
+import '../utils/day_key.dart';
 import 'cycle_predictor.dart';
 
 /// Fechas de ovulacion y ventana fertil que la app muestra (claves
@@ -37,7 +38,12 @@ class FertileMarks {
 /// - la confianza no es baja (H5-1 A: la ovulacion se resta del proximo
 ///   periodo, asi que es menos confiable todavia);
 /// - el periodo no esta atrasado: el ciclo real ya supero lo estimado y
-///   la ovulacion estimada de este ciclo ya no dice nada.
+///   la ovulacion estimada de este ciclo ya no dice nada;
+/// - la ovulacion estimada cae despues de la duracion estimada del
+///   periodo: con ciclos muy cortos (15 a 19 dias) caeria dentro del
+///   sangrado, y el metodo del calendario ya no dice nada util.
+/// La ventana empieza, como pronto, el dia siguiente a la duracion
+/// estimada del periodo: no se pintan dias fertiles sobre el sangrado.
 /// El predictor no cambia: esto es solo lo que se muestra.
 FertileMarks? visibleFertileMarks(
   CyclePrediction? prediction, {
@@ -47,9 +53,18 @@ FertileMarks? visibleFertileMarks(
   if (!showFertileWindow) return null;
   if (prediction.confidence == PredictionConfidence.low) return null;
   if (prediction.isPeriodLate) return null;
+  final firstDayAfterPeriod = DayKey.addDays(prediction.lastPeriodStartDate,
+      prediction.averagePeriodLengthDays.round());
+  if (DayKey.isBefore(prediction.estimatedOvulationDate, firstDayAfterPeriod)) {
+    return null;
+  }
+  final windowStart =
+      DayKey.isBefore(prediction.fertileWindowStartDate, firstDayAfterPeriod)
+          ? firstDayAfterPeriod
+          : prediction.fertileWindowStartDate;
   return FertileMarks(
     ovulationDate: prediction.estimatedOvulationDate,
-    windowStartDate: prediction.fertileWindowStartDate,
+    windowStartDate: windowStart,
     windowEndDate: prediction.fertileWindowEndDate,
   );
 }

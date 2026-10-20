@@ -600,8 +600,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final valorPorDefecto = p.completeCyclesConsidered <
         const PredictionConfig().minCompleteCyclesForMedium;
     final fase = enCurso ? CyclePhase.menstrual : p.currentPhase;
-    final mostrarFertil = fase != CyclePhase.menstrual &&
-        visibleFertileMarks(p, showFertileWindow: mostrarFertilidad) != null;
+    final marcas = fase == CyclePhase.menstrual
+        ? null
+        : visibleFertileMarks(p, showFertileWindow: mostrarFertilidad);
+    final mostrarFertil = marcas != null;
     final mostrarFase = !p.isPeriodLate &&
         !(!mostrarFertil && fase == CyclePhase.ovulatoria);
     return _buildCardShell(children: [
@@ -638,13 +640,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: Colors.grey[700]),
         )
-      else if (mostrarFertil) ...[
+      else if (marcas != null) ...[
         Text(
-          "Ovulación estimada: ${_formatDate(p.estimatedOvulationDate)}",
+          "Ovulación estimada: ${_formatDate(marcas.ovulationDate)}",
           style: const TextStyle(fontSize: 15),
         ),
         const SizedBox(height: 10),
-        _buildFertileWindow(p),
+        _buildFertileWindow(marcas),
         const SizedBox(height: 4),
         Text(
           "Estimación; no es un método anticonceptivo.",
@@ -680,10 +682,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Solo si visibleFertileMarks la deja ver (ver _buildActiveCard).
-  Widget _buildFertileWindow(ActivePrediction p) {
+  Widget _buildFertileWindow(FertileMarks marcas) {
     return Text(
       "Días de mayor probabilidad de fertilidad (estimación):\n"
-      "${_formatDate(p.fertileWindowStartDate)} - ${_formatDate(p.fertileWindowEndDate)}",
+      "${_formatDate(marcas.windowStartDate)} - ${_formatDate(marcas.windowEndDate)}",
       textAlign: TextAlign.center,
       style: const TextStyle(fontSize: 14),
     );
