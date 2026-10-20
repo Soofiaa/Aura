@@ -94,6 +94,12 @@ android {
     ndkVersion = "27.0.12077973"
 }
 
+// MainActivity.kt: el mismo destino de JVM que Java (compileOptions).
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
+}
 
 
 flutter {
