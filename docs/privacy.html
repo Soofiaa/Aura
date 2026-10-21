@@ -3,67 +3,257 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Política de privacidad de Aura, la app para Android que te permite registrar tu ciclo. Todo se guarda en tu teléfono.">
 <title>Aura — Política de privacidad / Privacy Policy</title>
 <!--
   ANTES DE PUBLICAR: revisa la fecha de "Última actualización" (español e inglés).
   Para GitHub Pages: guarda este archivo como docs/privacy.html (o index.html) y
   activa Pages en Settings > Pages (rama main, carpeta /docs).
+  Tipografías: solo las del sistema, sin recursos externos: esta política
+  promete cero rastreo, y una página que carga fuentes de terceros reuniría IPs.
 -->
 <style>
   :root {
-    --bg: #f8fafb; --fg: #333333; --muted: #5f6368; --card: #ffffff;
-    --accent: #c2587a; --line: #e3e8ec; --mark: #fff3c4;
+    color-scheme: light dark;
+    /* Paleta de Aura (lib/utils/colors.dart) */
+    --bg: #f8fafb; --card: #ffffff; --fg: #333333; --muted: #717171;
+    --primary: #a8d8ea; --secondary: #fad4d8;
+    --accent: #ee8ca7; --accent-strong: #e76085;
+    --accent-ink: #a63b5b;        /* rosa profundo derivado: legible sobre claro */
+    --line: #e6ecf1; --mark: #fff3c4;
+    --tab-on-a: #a8d8ea; --tab-on-b: #fad4d8; --tab-on-fg: #33283a;
+    --shadow: 0 1px 2px rgba(51,51,51,.05), 0 10px 30px rgba(51,51,51,.07);
+    --radius: 20px;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #15181b; --fg: #e8eaed; --muted: #aab0b6; --card: #1d2125;
-            --accent: #f2a3bb; --line: #2c3237; --mark: #4a3f12; }
+    :root {
+      --bg: #14171a; --card: #1c2126; --fg: #e8eaed; --muted: #a7aeb5;
+      --primary: #7fb9d1; --secondary: #e5a9b2;
+      --accent: #f2a3bb; --accent-strong: #f4a9be;
+      --accent-ink: #f2a3bb;
+      --line: #2a3036; --mark: #4a3f12;
+      --tab-on-a: #27414e; --tab-on-b: #4a2e3a; --tab-on-fg: #f6edf1;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
-  nav { display: flex; gap: 12px; margin-bottom: 8px; }
-  nav a { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px;
-          color: var(--fg); text-decoration: none; background: var(--card); }
-  nav a:hover { border-color: var(--accent); }
-  section { background: var(--card); border: 1px solid var(--line);
-            border-radius: 14px; padding: 8px 24px 24px; margin: 20px 0; }
-  h1 { font-size: 1.7rem; margin: 24px 0 4px; }
-  h2 { font-size: 1.15rem; margin: 28px 0 6px; color: var(--accent); }
-  p, li { color: var(--fg); }
-  ul { padding-left: 1.2em; }
-  .meta { color: var(--muted); font-size: .92rem; }
-  .todo { background: var(--mark); padding: 0 4px; border-radius: 4px; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.7 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; text-align: center;
+    padding: 56px 20px 34px;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--primary) 20%, var(--bg)) 0%,
+      var(--bg) 100%);
+  }
+  .orb {
+    position: absolute; border-radius: 50%; filter: blur(46px); opacity: .55;
+    pointer-events: none;
+  }
+  .orb-a { width: 340px; height: 340px; top: -170px; left: calc(50% - 260px);
+           background: var(--primary); }
+  .orb-b { width: 300px; height: 300px; top: -130px; left: calc(50% - 20px);
+           background: var(--secondary); }
+  .brand {
+    position: relative; margin: 0;
+    font: 600 clamp(2.1rem, 6vw, 2.8rem)/1.1 var(--serif);
+    letter-spacing: .01em;
+  }
+  .brand::after {           /* punto de marca, como el logo de la app */
+    content: ""; display: inline-block; width: .38em; height: .38em;
+    margin-left: .18em; border-radius: 50%;
+    background: var(--accent); vertical-align: .12em;
+  }
+  .tagline {
+    position: relative; margin: 10px 0 26px; color: var(--muted);
+    font-size: 1.02rem;
+  }
+
+  /* ---------- Pestañas de idioma ---------- */
+  .lang-tabs { position: relative; display: inline-flex; gap: 8px; }
+  .lang-tabs button {
+    font: inherit; font-size: .95rem; cursor: pointer;
+    padding: .5rem 1.25rem; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); color: var(--muted);
+    transition: border-color .18s ease, color .18s ease,
+                background .18s ease, box-shadow .18s ease;
+  }
+  .lang-tabs button:hover { border-color: var(--accent); color: var(--fg); }
+  .lang-tabs button[aria-selected="true"] {
+    background: linear-gradient(135deg, var(--tab-on-a), var(--tab-on-b));
+    border-color: transparent; color: var(--tab-on-fg); font-weight: 600;
+    box-shadow: var(--shadow);
+  }
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent-strong); outline-offset: 2px;
+  }
+
+  /* ---------- Documento ---------- */
+  main { max-width: 780px; margin: 0 auto; padding: 8px 20px 56px; }
+  section { scroll-margin-top: 16px; }
+  section[hidden] { display: none; }
+
+  h1 {
+    font: 600 clamp(1.65rem, 4.5vw, 2.05rem)/1.2 var(--serif);
+    margin: 20px 0 6px;
+  }
+  .meta {
+    display: inline-block; margin: 0 0 18px; padding: .28rem .85rem;
+    border-radius: 999px; font-size: .88rem; color: var(--muted);
+    background: color-mix(in srgb, var(--secondary) 32%, transparent);
+    border: 1px solid color-mix(in srgb, var(--secondary) 55%, transparent);
+  }
+
+  /* Índice (dentro de la tarjeta: usa el fondo de la página para distinguirse) */
+  .toc {
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 22px; margin: 4px 0 26px;
+  }
+  .toc p {
+    margin: 0 0 8px; font-size: .8rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .toc ul {
+    list-style: none; margin: 0; padding: 0;
+    columns: 2; column-gap: 28px;
+  }
+  .toc li { break-inside: avoid; margin: 0; }
+  .toc a {
+    display: inline-block; padding: 3px 0; color: var(--fg);
+    text-decoration: none; font-size: .95rem;
+    border-bottom: 1px solid transparent; transition: color .15s ease;
+  }
+  .toc a:hover { color: var(--accent-ink); border-bottom-color: var(--accent); }
+  @media (max-width: 520px) { .toc ul { columns: 1; } }
+
+  /* Secciones */
+  section > p { margin: 0 0 16px; }
+  section > p:last-child { margin-bottom: 0; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 10px 30px 28px; margin: 0 0 22px;
+  }
+  h2 {
+    font: 600 1.28rem/1.3 var(--serif);
+    margin: 26px 0 12px; scroll-margin-top: 16px;
+  }
+  h2::after {               /* subrayado pastel de marca */
+    content: ""; display: block; width: 44px; height: 3px; margin-top: 7px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+  }
+  .card h2:first-child { margin-top: 16px; }
+
+  ul { padding-left: 1.25em; margin: 0 0 16px; }
+  li { margin-bottom: .45em; }
+  li::marker { color: var(--accent); }
+
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:hover { color: var(--accent-strong); }
+  em { font-style: italic; }
+
+  /* "En resumen" / "In short": destacado pastel con checks */
+  .summary {
+    list-style: none; padding: 20px 26px;
+    margin: 0 0 22px; border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 26%, var(--card)),
+      color-mix(in srgb, var(--secondary) 30%, var(--card)));
+  }
+  .summary li {
+    position: relative; padding-left: 1.85em; margin-bottom: .7em;
+  }
+  .summary li:last-child { margin-bottom: 0; }
+  .summary li::before {
+    content: "✓"; position: absolute; left: 0; top: 0;
+    color: var(--accent-strong); font-weight: 700;
+  }
+  .summary h2 { margin-top: 4px; }
+
+  footer {
+    border-top: 1px solid var(--line); text-align: center;
+    padding: 26px 20px 40px; color: var(--muted); font-size: .9rem;
+  }
+  footer p { margin: 4px 0; }
+
+  /* ---------- Impresión ---------- */
+  @media print {
+    .hero, .toc, footer { display: none; }
+    body { background: #fff; color: #000; }
+    .card, .summary { border: 1px solid #ccc; box-shadow: none; background: #fff; }
+    a { color: #000; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <nav aria-label="Idioma / Language">
-    <a href="#es">Español</a>
-    <a href="#en">English</a>
-  </nav>
+<header class="hero">
+  <span class="orb orb-a" aria-hidden="true"></span>
+  <span class="orb orb-b" aria-hidden="true"></span>
+  <p class="brand">Aura</p>
+  <p class="tagline">Política de privacidad · Privacy policy</p>
+  <div class="lang-tabs" role="tablist" aria-label="Idioma / Language">
+    <button type="button" role="tab" id="tab-es" aria-controls="es"
+            aria-selected="true" data-lang="es">Español</button>
+    <button type="button" role="tab" id="tab-en" aria-controls="en"
+            aria-selected="false" data-lang="en">English</button>
+  </div>
+</header>
 
+<main>
   <!-- ===================== ESPAÑOL ===================== -->
-  <section id="es" lang="es">
+  <section id="es" lang="es" role="tabpanel" aria-labelledby="tab-es">
     <h1>Aura — Política de privacidad</h1>
     <p class="meta">Última actualización: 20 de octubre de 2026</p>
 
+    <div class="card">
     <p>Aura es una aplicación para Android que te permite registrar tu ciclo menstrual y ver estimaciones de tus fases. La app fue creada por Sofia Menzel, desarrolladora independiente. Esta política explica qué datos maneja Aura y qué no.</p>
 
-    <h2>En resumen</h2>
-    <ul>
+    <nav class="toc" aria-label="Contenido">
+      <p>Contenido</p>
+      <ul>
+        <li><a href="#es-resumen">En resumen</a></li>
+        <li><a href="#es-datos">Qué datos maneja la app</a></li>
+        <li><a href="#es-ubicacion">Dónde se guardan</a></li>
+        <li><a href="#es-norecopila">Qué datos NO recopilamos</a></li>
+        <li><a href="#es-permisos">Permisos</a></li>
+        <li><a href="#es-eliminar">Cómo eliminar tus datos</a></li>
+        <li><a href="#es-salud">Aviso sobre la salud</a></li>
+        <li><a href="#es-menores">Menores de edad</a></li>
+        <li><a href="#es-cambios">Cambios en esta política</a></li>
+        <li><a href="#es-contacto">Contacto</a></li>
+      </ul>
+    </nav>
+
+    <h2 id="es-resumen">En resumen</h2>
+    <ul class="summary">
       <li><strong>Todo se guarda en tu teléfono.</strong> No hay cuenta ni servidor de Aura. Tus datos solo salen del teléfono si tú creas un respaldo, o si activas el respaldo automático en tu propio Google Drive (opcional).</li>
       <li><strong>No recopilamos, enviamos ni compartimos tus datos</strong> con nadie.</li>
       <li>Aura no incluye publicidad ni herramientas de analítica o seguimiento.</li>
       <li>Puedes borrar todos tus datos cuando quieras.</li>
     </ul>
 
-    <h2>Qué datos maneja la app</h2>
+    <h2 id="es-datos">Qué datos maneja la app</h2>
     <p>Los datos que tú ingresas voluntariamente: los días en que registras sangrado, la intensidad del flujo, tu estado de ánimo, síntomas y notas, tus preferencias de la app (por ejemplo, si activaste los recordatorios y a qué hora) y la duración habitual de tu período. La app también guarda si un período terminó, algo que puede deducir de tus registros. Las fechas y estimaciones que ves, como tu próximo período o tu fase actual, se calculan en tu propio teléfono a partir de esos registros.</p>
     <p>Para mostrarte el recordatorio de respaldo en Inicio, Aura también guarda en tu teléfono la fecha de tu último respaldo, el día desde el que cuenta el recordatorio y si lo tienes activado. Esa información no se incluye en tus respaldos ni sale del teléfono.</p>
     <p>También se quedan en tu teléfono, y no viajan en tus respaldos, los ajustes propios de cada dispositivo: si quieres ocultar Aura en la lista de aplicaciones recientes y si quieres el aviso opcional de período atrasado. Al usar <em>"Borrar todos los datos"</em> vuelven a sus valores por defecto.</p>
 
-    <h2>Dónde se guardan</h2>
+    <h2 id="es-ubicacion">Dónde se guardan</h2>
     <p>En una base de datos local dentro del almacenamiento privado de la app en tu dispositivo. Aura tiene desactivado el respaldo automático de Android en la nube: sus datos no se incluyen en él.</p>
     <p>Además, Aura bloquea la transferencia directa entre teléfonos de Android (por cable o Wi-Fi al pasar tus apps a un teléfono nuevo): esos datos no se copian. Si cambias de teléfono, la única forma de llevarte tus datos es crear un respaldo y elegir dónde guardarlo o con quién compartirlo.</p>
     <p>Por defecto, Aura protege su pantalla en el sistema: mientras la app está abierta, su vista previa en la lista de aplicaciones recientes sale en blanco y no se pueden hacer capturas ni grabaciones de la pantalla. Puedes desactivarlo en Ajustes → Privacidad → <em>"Ocultar Aura en Recientes"</em>, por si necesitas tomar una captura.</p>
@@ -72,54 +262,72 @@
     <p>Tus datos solo salen del teléfono si tú creas un respaldo y eliges dónde guardarlo o con quién compartirlo. Ese archivo contiene tus datos de salud. Al crearlo puedes protegerlo con una contraseña, que es opcional: el archivo se cifra en tu teléfono, antes de salir de él, y sin la contraseña no se puede leer. Aura no guarda tu contraseña ni puede recuperarla: si la olvidas, no podrás abrir ese respaldo. Si eliges no usar contraseña, el archivo contiene tus datos sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo del respaldo, no los datos guardados dentro de la app. Aura no recibe una copia del archivo. Para compartirlo, la app deja copias temporales en su almacenamiento privado, con el mismo contenido que el archivo (cifradas si le pusiste contraseña, legibles si no). Esas copias se eliminan la próxima vez que abres la app o creas otro respaldo, o con <em>"Borrar todos los datos"</em>. Al guardar el respaldo en el teléfono con contraseña, la copia temporal se elimina al terminar; sin contraseña, no se crea ninguna.</p>
     <p>Como opción, puedes activar en Ajustes → Tus datos el <em>respaldo automático en Google Drive</em>: apagado por defecto, una vez al día —al abrir la app, al reanudarla o al guardar un registro— Aura sube a una carpeta <strong>Aura</strong> de tu propia cuenta de Google ese mismo respaldo cifrado. La contraseña la eliges una sola vez: la clave se guarda sellada con el sistema de llaves de Android y no se envía a ningún lado, y sin esa contraseña el archivo no se puede leer. Aura se conecta a tu Google Drive con el permiso <em>drive.file</em>, con el que solo puede ver los archivos que ella misma crea, y puedes desconectarlo cuando quieras desde Ajustes. Para activarlo, la compilación de Aura debe incluir su client ID de Google.</p>
 
-    <h2>Qué datos NO recopilamos</h2>
+    <h2 id="es-norecopila">Qué datos NO recopilamos</h2>
     <p>No recopilamos tu nombre, correo, ubicación, identificadores del dispositivo, contactos ni ningún dato personal. No usamos servicios de analítica, informes de fallos con envío de datos, ni publicidad. Aura no necesita conexión a Internet para funcionar.</p>
 
-    <h2>Permisos</h2>
+    <h2 id="es-permisos">Permisos</h2>
     <ul>
       <li><strong>Notificaciones:</strong> opcional. Se usa únicamente para mostrarte los recordatorios que tú actives, incluido un aviso opcional el primer día de atraso de tu período (apagado por defecto). Por defecto, el texto de las notificaciones es genérico y no menciona información de salud; puedes activar la opción de mostrar detalles en Ajustes.</li>
       <li><strong>Inicio del dispositivo:</strong> permite reprogramar tus recordatorios cuando reinicias el teléfono.</li>
     </ul>
     <p>Android puede mostrar permisos técnicos adicionales asociados al sistema de notificaciones; Aura no los usa para ninguna otra finalidad.</p>
 
-    <h2>Cómo eliminar tus datos</h2>
+    <h2 id="es-eliminar">Cómo eliminar tus datos</h2>
     <p>Desde Ajustes, con el botón <em>"Borrar todos los datos"</em>, o desinstalando la aplicación. En ambos casos los datos se eliminan de tu dispositivo: además de borrarlos, Aura compacta su base de datos para que esos contenidos no queden escritos en el archivo. Como nosotros no tenemos copia, no podemos recuperarlos. Si tenías activo el respaldo automático en Google Drive, se desconecta y se olvida la cuenta; los archivos que ya se subieron a tu Google Drive no se borran: elimínalos tú desde ahí. Los respaldos que hayas guardado o compartido fuera de la app no se borran: elimínalos tú donde los guardaste.</p>
     <p>La copia de seguridad que Aura guarda antes de convertir tus datos se elimina cuando guardas un respaldo en el teléfono, se elimina automáticamente al abrir la app cuando tiene más de 30 días y siempre se elimina con <em>"Borrar todos los datos"</em>.</p>
 
-    <h2>Aviso sobre la salud</h2>
+    <h2 id="es-salud">Aviso sobre la salud</h2>
     <p>Aura no es un dispositivo médico, no ofrece diagnósticos y <strong>no es un método anticonceptivo</strong>. Las fechas de período, ovulación y ventana fértil son estimaciones calculadas con tus registros pasados y pueden no ser exactas, especialmente con ciclos irregulares. Consulta a un profesional de la salud ante cualquier duda.</p>
 
-    <h2>Menores de edad</h2>
+    <h2 id="es-menores">Menores de edad</h2>
     <p>Como Aura no recopila datos de ninguna persona, tampoco recopila datos de menores.</p>
 
-    <h2>Cambios en esta política</h2>
+    <h2 id="es-cambios">Cambios en esta política</h2>
     <p>Si la política cambia, publicaremos la nueva versión en esta misma página con su fecha de actualización.</p>
 
-    <h2>Contacto</h2>
+    <h2 id="es-contacto">Contacto</h2>
     <p>Preguntas sobre esta política: <a href="mailto:sofia.menzel.dev@gmail.com">sofia.menzel.dev@gmail.com</a></p>
+    </div>
   </section>
 
   <!-- ===================== ENGLISH ===================== -->
-  <section id="en" lang="en">
+  <section id="en" lang="en" role="tabpanel" aria-labelledby="tab-en">
     <h1>Aura — Privacy Policy</h1>
     <p class="meta">Last updated: October 20, 2026</p>
 
+    <div class="card">
     <p>Aura is an Android app that lets you log your menstrual cycle and see estimates of your cycle phases. It was created by Sofia Menzel, an independent developer. This policy explains what data Aura handles and what it does not.</p>
 
-    <h2>In short</h2>
-    <ul>
+    <nav class="toc" aria-label="Contents">
+      <p>Contents</p>
+      <ul>
+        <li><a href="#en-short">In short</a></li>
+        <li><a href="#en-data">What data the app handles</a></li>
+        <li><a href="#en-storage">Where it is stored</a></li>
+        <li><a href="#en-notcollect">What data we do NOT collect</a></li>
+        <li><a href="#en-permissions">Permissions</a></li>
+        <li><a href="#en-delete">How to delete your data</a></li>
+        <li><a href="#en-health">Health notice</a></li>
+        <li><a href="#en-children">Children</a></li>
+        <li><a href="#en-changes">Changes to this policy</a></li>
+        <li><a href="#en-contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <h2 id="en-short">In short</h2>
+    <ul class="summary">
       <li><strong>Everything is stored on your phone.</strong> There is no Aura account and no server. Your data only leaves your phone if you create a backup, or if you turn on the automatic backup to your own Google Drive (optional).</li>
       <li><strong>We do not collect, send or share your data</strong> with anyone.</li>
       <li>Aura contains no advertising and no analytics or tracking tools.</li>
       <li>You can delete all your data at any time.</li>
     </ul>
 
-    <h2>What data the app handles</h2>
+    <h2 id="en-data">What data the app handles</h2>
     <p>The data you choose to enter: the days you log bleeding, flow intensity, mood, symptoms and notes, your app preferences (for example, whether you enabled reminders and at what time), and your usual period length. The app also stores whether a period has ended, which it can deduce from your entries. The dates and estimates you see, such as your next period or current phase, are calculated on your own phone from those entries.</p>
     <p>To show you the backup reminder on Home, Aura also stores on your phone the date of your last backup, the day the reminder started counting from, and whether it is turned on. That information is not included in your backups and does not leave your phone.</p>
     <p>Device-specific settings also stay on your phone and are not carried in your backups: whether you want Aura hidden from the recent-apps list, and whether you want the optional late-period notice. "Delete all data" resets them to their defaults.</p>
 
-    <h2>Where it is stored</h2>
+    <h2 id="en-storage">Where it is stored</h2>
     <p>In a local database inside the app's private storage on your device. Aura has Android's automatic cloud backup turned off: its data is not included in it.</p>
     <p>Aura also blocks Android's direct phone-to-phone transfer (over cable or Wi-Fi when you move your apps to a new phone): that data is not copied. If you change phones, the only way to take your data with you is to create a backup and choose where to save it or who to share it with.</p>
     <p>By default, Aura protects its screen with the system: while the app is open, its preview in the recent-apps list is blank and screenshots or screen recordings are blocked. You can turn this off in Settings → Privacy → <em>"Hide Aura from Recents"</em>, in case you need to take a screenshot.</p>
@@ -128,32 +336,69 @@
     <p>Your data only leaves your phone if you create a backup and choose where to save it or who to share it with. That file contains your health data. When you create it, you can protect it with a password, which is optional: the file is encrypted on your phone, before it leaves it, and cannot be read without the password. Aura does not store your password and cannot recover it: if you forget it, you will not be able to open that backup. If you choose not to use a password, the file contains your data unencrypted and anyone who opens it can read it. The password protects only the backup file, not the data stored inside the app. Aura does not receive a copy of the file. To share it, the app leaves temporary copies in its private storage, with the same content as the file (encrypted if you set a password, readable if not). Those copies are deleted the next time you open the app or create another backup, or with <em>"Delete all data"</em>. When you save the backup to the phone with a password, the temporary copy is deleted when it finishes; without a password, none is created.</p>
     <p>As an option, you can turn on the <em>automatic backup to Google Drive</em> in Settings → Your data: off by default, once a day — when the app is opened, resumed, or a log is saved — Aura uploads that same encrypted backup to an <strong>Aura</strong> folder in your own Google Drive account. You choose the password once: the key is stored sealed with Android's key system and is never sent anywhere, and without that password the file cannot be read. Aura connects to your Google Drive with the <em>drive.file</em> permission, which only lets it see the files it creates itself, and you can disconnect it at any time from Settings. To turn it on, the Aura build must include its Google client ID.</p>
 
-    <h2>What data we do NOT collect</h2>
+    <h2 id="en-notcollect">What data we do NOT collect</h2>
     <p>We do not collect your name, email, location, device identifiers, contacts or any personal data. We do not use analytics services, crash reporting that sends data, or advertising. Aura does not need an Internet connection to work.</p>
 
-    <h2>Permissions</h2>
+    <h2 id="en-permissions">Permissions</h2>
     <ul>
       <li><strong>Notifications:</strong> optional. Used only to show the reminders you enable, including an optional notice on the first day your period is late (off by default). By default, notification text is generic and contains no health information; you can turn on the "show details" option in Settings.</li>
       <li><strong>Boot completed:</strong> lets the app reschedule your reminders after you restart your phone.</li>
     </ul>
     <p>Android may list additional technical permissions associated with the notification system; Aura does not use them for any other purpose.</p>
 
-    <h2>How to delete your data</h2>
-    <p>From Settings, using the <em>"Delete all data"</em> button, or by uninstalling the app. In both cases the data is removed from your device: besides deleting it, Aura compacts its database so those contents are not left written in the file. Because we hold no copy, it cannot be recovered. If you had the automatic backup to Google Drive turned on, the connection is disconnected and the account forgotten; files already uploaded to your Google Drive are not deleted: remove them yourself from there. Backups you saved or shared outside the app are not deleted: remove them yourself wherever you stored them.</p>
-    <p>The safety copy Aura saves before converting your data is deleted when you save a backup to your phone, is deleted automatically when you open the app if it is more than 30 days old, and is always deleted with <em>"Delete all data"</em>.</p>
+    <h2 id="en-delete">How to delete your data</h2>
+    <p>From Settings, using the <em>"Delete all data"</em> button, or by uninstalling the application. In both cases the data is removed from your device: besides deleting it, Aura compacts its database so those contents are not left written in the file. Because we hold no copy, it cannot be recovered. If you had the automatic backup to Google Drive turned on, the connection is disconnected and the account forgotten; files already uploaded to your Google Drive are not deleted: remove them yourself from there. Backups you saved or shared outside the app are not deleted: remove them yourself wherever you stored them.</p>
+    <p>The safety copy Aura saves before converting your data is deleted when you save a backup to the phone, is deleted automatically when you open the app if it is more than 30 days old, and is always deleted with <em>"Delete all data"</em>.</p>
 
-    <h2>Health notice</h2>
+    <h2 id="en-health">Health notice</h2>
     <p>Aura is not a medical device, provides no diagnosis and <strong>is not a method of contraception</strong>. Period, ovulation and fertile-window dates are estimates calculated from your past entries and may be inaccurate, especially with irregular cycles. Consult a healthcare professional if you have any concerns.</p>
 
-    <h2>Children</h2>
+    <h2 id="en-children">Children</h2>
     <p>Because Aura does not collect data from anyone, it does not collect data from children either.</p>
 
-    <h2>Changes to this policy</h2>
-    <p>If this policy changes, we will publish the new version on this page with its update date.</p>
+    <h2 id="en-changes">Changes to this policy</h2>
+    <p>If the policy changes, we will publish the new version on this page with its update date.</p>
 
-    <h2>Contact</h2>
+    <h2 id="en-contact">Contact</h2>
     <p>Questions about this policy: <a href="mailto:sofia.menzel.dev@gmail.com">sofia.menzel.dev@gmail.com</a></p>
+    </div>
   </section>
 </main>
+
+<footer>
+  <p><strong>Aura</strong> · Creada por Sofia Menzel</p>
+  <p>Esta página es estática: no usa cookies, analítica ni recursos de terceros.<br>
+     This page is static: no cookies, no analytics, no third-party resources.</p>
+</footer>
+
+<script>
+  // Pestañas de idioma. Sin JS, los dos idiomas se ven seguidos (fallback).
+  (function () {
+    var tabs = Array.prototype.slice.call(
+        document.querySelectorAll('.lang-tabs button'));
+    function show(lang) {
+      tabs.forEach(function (tab) {
+        var on = tab.getAttribute('data-lang') === lang;
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        document.getElementById(tab.getAttribute('data-lang')).hidden = !on;
+      });
+      document.documentElement.lang = lang;
+    }
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        show(tab.getAttribute('data-lang'));
+      });
+    });
+    // Al abrir: el ancla de la URL (#es / #en) manda; si no, el idioma del
+    // navegador; si no es inglés, español.
+    var ancla = (location.hash || '').slice(1);
+    if (ancla === 'es' || ancla === 'en') {
+      show(ancla);
+    } else {
+      show((navigator.language || '').toLowerCase().indexOf('en') === 0
+          ? 'en' : 'es');
+    }
+  })();
+</script>
 </body>
 </html>
