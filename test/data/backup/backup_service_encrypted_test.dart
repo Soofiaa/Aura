@@ -382,15 +382,14 @@ void main() {
     );
 
     test(
-      'tope de 5 MB con el valor real: un "cifrado" de mas de 5 MB',
+      'tope con el valor real: un "cifrado" mas grande que el tope cifrado',
       () async {
-        // Este test cubre la defensa del codec: decodeBackup aplica su
-        // propio tope (maxBackupSizeBytes) aunque el servicio no lo haga.
-        // El tope del servicio lo cubre el test anterior (tope inyectado).
+        // El tope del servicio lo cubre el test anterior (tope inyectado);
+        // este, el valor real (5 MB en base64 mas el encabezado).
         final big = File(p.join(root.path, 'grande.json'))
           ..writeAsStringSync(
             '{"format":"aura-backup","formatVersion":2,'
-            '"ciphertext":"${'A' * (maxBackupSizeBytes + 10)}"}',
+            '"ciphertext":"${'A' * (maxEncryptedBackupSizeBytes + 10)}"}',
           );
         final result = await service().readBackupFile(big.path);
         expect((result as BackupParseFailure).error, BackupError.tooLarge);
@@ -462,8 +461,8 @@ void main() {
       final file = await service().writeExportFile(password: _password);
       final keep = File(p.join(root.path, 'respaldo.json'))
         ..writeAsBytesSync(file.readAsBytesSync());
+      final pending = await readPending(service(), keep);
       final s = service(runTask: counting);
-      final pending = await readPending(s, keep);
       expect(await s.unlockBackup(pending, _password), isA<BackupUnlocked>());
       expect(calls, 1);
     });
@@ -477,8 +476,8 @@ void main() {
       ..writeAsBytesSync(file.readAsBytesSync());
     Future<R> failing<R>(FutureOr<R> Function() task) =>
         throw StateError('x $_password');
+    final pending = await readPending(service(), keep);
     final s = service(runTask: failing);
-    final pending = await readPending(s, keep);
     final result = await s.unlockBackup(pending, _password);
     expect(result, isA<BackupUnlockInvalid>());
     expect((result as BackupUnlockInvalid).error, BackupError.damaged);

@@ -363,10 +363,32 @@ void main() {
     });
   });
 
-  test('archivo de mas de 5 MB se rechaza sin parsear', () {
+  test('archivo de mas de 5 MB se rechaza por tamano', () {
     _expectFailure(
         decodeBackup(List.filled(maxBackupSizeBytes + 1, 0x20)),
         BackupError.tooLarge);
+    _expectFailure(
+        decodeBackup(List.filled(maxEncryptedBackupSizeBytes + 1, 0x20)),
+        BackupError.tooLarge);
+  });
+
+  test('un respaldo sin cifrar de mas de 5 MB se rechaza aunque sea valido',
+      () {
+    final map = _fixtureMap();
+    _firstDay(map)['notes'] = 'x' * (maxBackupSizeBytes + 1);
+    _expectFailure(decodeBackup(_bytes(map)), BackupError.tooLarge);
+  });
+
+  test('un cifrado entre 5 MB y su tope no se rechaza por tamano', () {
+    // El documento de 5 MB en base64 pesa ~6,7 MB.
+    expect(maxEncryptedBackupSizeBytes,
+        greaterThan(maxBackupSizeBytes * 4 ~/ 3));
+    final result = decodeBackup(utf8.encode(
+        '{"format":"aura-backup","formatVersion":2,'
+        '"ciphertext":"${'A' * (maxBackupSizeBytes + 10)}"}'));
+    expect(
+        result is BackupParseFailure && result.error == BackupError.tooLarge,
+        isFalse);
   });
 
   group('rechazos: version mas nueva', () {
@@ -502,6 +524,27 @@ void main() {
       _expectSuccess(withDate('2099-03-12', exportedAt: exportedAt));
       _expectFailure(
           withDate('2099-03-13', exportedAt: exportedAt), BackupError.damaged);
+    });
+
+    test('con "hoy" del telefono que importa: un exportedAt futuro no amplia '
+        'el tope mas alla de hoy + 2 dias', () {
+      final map = _fixtureMap();
+      _firstDay(map)['date'] = '2099-03-12';
+      map['exportedAt'] = '2099-03-10T08:00:00+01:00';
+      final result =
+          decodeBackup(_bytes(map), today: '2026-10-20') as BackupParseFailure;
+      expect(result.outOfRangeDate, '2099-03-12');
+
+      // El mismo telefono con el reloj adelantado si puede restaurarlo.
+      _expectSuccess(decodeBackup(_bytes(map), today: '2099-03-10'));
+    });
+
+    test('checkMaxDate false (copia previa a importar) acepta lo que haya',
+        () {
+      final map = _fixtureMap();
+      _firstDay(map)['date'] = '2099-03-12';
+      _expectSuccess(decodeBackup(_bytes(map),
+          today: '2026-10-20', checkMaxDate: false));
     });
 
     test('el rechazo por rango informa la fecha como dato estructurado', () {
