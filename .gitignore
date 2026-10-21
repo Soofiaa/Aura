@@ -44,3 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /graphify-out
+
+# Configuracion local del respaldo en Google Drive (HU-09): el client ID de
+# OAuth vive en lib/app_secrets.dart, que NUNCA se commitea. La plantilla
+# versionada es lib/app_secrets.example.dart.
+/lib/app_secrets.dart
