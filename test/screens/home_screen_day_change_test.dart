@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/notifications/notification_reconciler.dart';
@@ -40,6 +41,10 @@ Future<CycleRepository> _seedRegularCycles(AppDatabase db) async {
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting();
+  });
+
   testWidgets(
       'al volver a primer plano (resumed) con otro dia, la fase y el '
       'atraso se recalculan sin tocar la base', (tester) async {

@@ -17,7 +17,9 @@ class UpdateErrorScreen extends StatelessWidget {
   final bool retrying;
   final VoidCallback onRetry;
 
-  static const String title = 'No se pudo actualizar Aura';
+  /// Neutro: tambien se ve si la base no abre en un arranque sin
+  /// actualizacion.
+  static const String title = 'No se pudieron abrir tus datos';
   static const String safeMessage =
       'Aura no pudo abrir tus datos, pero no borró nada. Cierra la app y '
       'vuelve a abrirla. Si el problema sigue, no desinstales la app, '

@@ -92,8 +92,8 @@ void main() {
   }
 
   void conFertilidad() {
-    expect(find.text('Ovulación estimada: 15/10/2026'), findsOneWidget);
-    expect(find.textContaining('10/10/2026 - 15/10/2026'), findsOneWidget);
+    expect(find.text('Ovulación estimada: 15 de octubre'), findsOneWidget);
+    expect(find.textContaining('10 de octubre - 15 de octubre'), findsOneWidget);
   }
 
   group('periodo en curso', () {
@@ -115,7 +115,7 @@ void main() {
           findsOneWidget);
       expect(find.textContaining('duración estimada: 5'), findsNothing);
       // El proximo periodo se sigue mostrando como siempre.
-      expect(find.text('Próximo período: 27/10/2026 - 31/10/2026'),
+      expect(find.text('Próximo período: 27 de octubre - 31 de octubre'),
           findsOneWidget);
     });
 
@@ -180,7 +180,7 @@ void main() {
       soloFase('Fase menstrual');
       sinFertilidad();
       expect(find.text(tarjeta), findsNothing);
-      expect(find.text('Próximo período: 27/10/2026 - 31/10/2026'),
+      expect(find.text('Próximo período: 27 de octubre - 31 de octubre'),
           findsOneWidget);
     });
   });

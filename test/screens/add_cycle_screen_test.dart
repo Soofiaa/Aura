@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
@@ -8,6 +9,7 @@ import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/screens/add_cycle_screen.dart';
 import 'package:aura/screens/stats_screen.dart';
 import 'package:aura/utils/app_snackbar.dart';
+import 'package:aura/utils/date_labels.dart';
 import 'package:aura/utils/day_key.dart';
 
 /// AddCycleScreen hace Navigator.pop al guardar, asi que se abre desde
@@ -57,6 +59,10 @@ List<String> _resumen(List<dynamic> ciclos) =>
     ciclos.map((c) => '${c.startDate}/${c.periodLengthDays}').toList();
 
 void main() {
+  setUpAll(() async {
+    await initializeDateFormatting();
+  });
+
   late AppDatabase db;
   late CycleRepository repo;
   final hoy = DayKey.today();
@@ -69,6 +75,37 @@ void main() {
 
   tearDown(() async {
     await db.close();
+  });
+
+  testWidgets('dos toques seguidos en "Guardar registro" guardan una vez y '
+      'vuelven a Inicio (sin dejar la pantalla vacia)', (tester) async {
+    await _abrirFormulario(tester);
+    await _tocar(tester, find.text('Dolor de cabeza'));
+    final boton = find.text('Guardar registro');
+    await tester.ensureVisible(boton);
+    await tester.tap(boton);
+    await tester.tap(boton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('abrir'), findsOneWidget);
+    expect(await repo.getSymptomsForDay(hoy), {Symptom.dolorDeCabeza});
+  });
+
+  testWidgets('las notas tienen un largo maximo', (tester) async {
+    await _abrirFormulario(tester);
+    await tester.enterText(
+        find.byType(TextFormField), 'x' * (maxNoteLength + 50));
+    await tester.pumpAndSettle();
+    final texto = tester
+        .widget<TextFormField>(find.byType(TextFormField))
+        .controller!
+        .text;
+    expect(texto.length, maxNoteLength);
+  });
+
+  testWidgets('la fecha se muestra con el mes en palabras', (tester) async {
+    await _abrirFormulario(tester);
+    expect(find.text(fullDateLabel(hoy)), findsOneWidget);
   });
 
   testWidgets(
@@ -630,8 +667,7 @@ void main() {
     }
 
     String fechaVisible(String key) {
-      final d = DayKey.toUtcAnchor(key);
-      return '${d.day}/${d.month}/${d.year}';
+      return fullDateLabel(key);
     }
 
     testWidgets('abrir y salir sin tocar nada no pregunta', (tester) async {

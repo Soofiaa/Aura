@@ -30,7 +30,8 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    with WidgetsBindingObserver {
   late final CycleRepository _repository =
       widget.repository ?? cycleRepository;
   DateTime Function() get _clock => widget.clock ?? DateTime.now;
@@ -69,13 +70,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() => _inputs = inputs);
     });
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _midnightTimer?.cancel();
     _periodDaysSub?.cancel();
     _inputsSub?.cancel();
     super.dispose();
+  }
+
+  // Cambio de dia con la app abierta (como Inicio): sin esto, hoy, los
+  // dias futuros deshabilitados, los estimados y la ventana quedaban un
+  // dia atrasados hasta el proximo toque.
+  Timer? _midnightTimer;
+  late String _builtDay = _today;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshToday();
+  }
+
+  void _refreshToday() {
+    if (!mounted) return;
+    if (_today != _builtDay) setState(() => _builtDay = _today);
+    _scheduleMidnightRefresh();
+  }
+
+  void _scheduleMidnightRefresh() {
+    _midnightTimer?.cancel();
+    final now = _clock();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextMidnight.difference(now), _refreshToday);
   }
 
   List<CycleSummary> get _cycles => _inputs?.cycles ?? const [];
@@ -135,7 +164,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       message,
       action: SnackBarAction(
         label: 'Deshacer',
-        onPressed: () => _repository.restoreDaysSnapshot(snapshot),
+        onPressed: () async {
+          try {
+            await _repository.restoreDaysSnapshot(snapshot);
+          } catch (_) {
+            if (!mounted) return;
+            showAppSnackBar(
+                context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+          }
+        },
       ),
     );
   }
@@ -535,12 +572,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final estimated = _estimatedDays.toSet();
     final registrados = _periodDayKeys.toSet();
     final fertiles = _fertileDays();
+    final hoy = _clock();
     return Scaffold(
       appBar: AppBar(
         title: const Text("Calendario menstrual",
             style: TextStyle(fontWeight: FontWeight.w600)),
         centerTitle: true,
         backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.today),
+            tooltip: 'Ir a hoy',
+            onPressed: () => setState(() => _focusedDay = _clock()),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -598,8 +643,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
             TableCalendar<dynamic>(
               locale: 'es_ES',
               firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
+              // Un ano hacia adelante desde hoy (los estimados y la
+              // ventana fertil caen en los meses siguientes). Antes era
+              // fijo, 2030-12-31: desde 2031 focusedDay pasaba lastDay.
+              lastDay: DateTime.utc(hoy.year + 1, hoy.month, hoy.day),
               focusedDay: _focusedDay,
+              // Los nombres de los dias crecen con el tamano de letra (fijo
+              // en 16 se cortaban con letra grande).
+              daysOfWeekHeight: MediaQuery.textScalerOf(context).scale(16) + 4,
               currentDay: _clock(),
               enabledDayPredicate: (day) => !_esDiaFuturo(day),
               selectedDayPredicate: (day) =>
