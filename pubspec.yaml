@@ -39,28 +39,23 @@ dependencies:
   intl: ^0.20.2
   path_provider: ^2.1.1
   fl_chart: ^0.68.0
-  flutter_local_notifications: ^17.1.2
-  timezone: ^0.9.4
-  flutter_timezone: ^3.0.1
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
+  flutter_timezone: ^4.1.1
   drift: ^2.20.0
   sqlite3_flutter_libs: ^0.5.24
   sqlite3: ^2.4.0
   path: ^1.9.0
-  # Respaldo (HU-06). Versiones exactas: share_plus 13 y file_picker 12/13
-  # no compilan con AGP 8.7.3 (androidx.core 1.18 exige AGP >= 8.9.1) o
-  # chocan en win32. Revisar al actualizar AGP/Gradle/Kotlin.
-  share_plus: 12.0.2
-  file_picker: 11.0.3
+  # Respaldo (HU-06). Los pines a share_plus 12.0.2 y file_picker 11.0.3 eran
+  # por AGP 8.7.3 (HU6-R2/R3); con AGP 8.13 se usan las versiones actuales.
+  share_plus: ^13.3.1
+  file_picker: ^13.1.0
   # Cifrado del respaldo (HU-06b, HU6b-5): Argon2id y AES-256-GCM en Dart
   # puro. Version exacta; sin cryptography_flutter.
   cryptography: 2.9.0
   # Enlace a la politica de privacidad en Ajustes: abre el navegador del
-  # telefono con una intencion del sistema; la app no hace red. Versiones
-  # exactas: url_launcher_android 6.3.29 o mas nueva trae
-  # androidx.browser 1.9.0, que exige AGP >= 8.9.1 (el proyecto usa 8.7.3).
-  # Revisar al actualizar AGP/Gradle/Kotlin.
-  url_launcher: 6.3.2
-  url_launcher_android: 6.3.23
+  # telefono con una intencion del sistema; la app no hace red.
+  url_launcher: ^6.3.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

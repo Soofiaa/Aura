@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "10.2.0"
+  android_file_picker:
+    dependency: transitive
+    description:
+      name: android_file_picker
+      sha256: e94229cc41c4bb5fb6a2254146340a8b650664c99b5c93b9001f66c3375d0060
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   ansicolor:
     dependency: transitive
     description:
@@ -213,10 +221,10 @@ packages:
     dependency: transitive
     description:
       name: dbus
-      sha256: "79e0c23480ff85dc68de79e2cd6334add97e48f7f4865d17686dd6ea81a47e8c"
+      sha256: a48d5da28e89bd02196e80d81ed8d7954923d00a0f4a68cc20b575038f023383
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.11"
+    version: "0.7.15"
   drift:
     dependency: "direct main"
     description:
@@ -253,10 +261,18 @@ packages:
     dependency: transitive
     description:
       name: ffi
-      sha256: "289279317b4b16eb2bb7e271abccd4bf84ec9bdcbe999e278a94b804f5630418"
+      sha256: "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.4"
+    version: "2.2.0"
+  ffi_leak_tracker:
+    dependency: transitive
+    description:
+      name: ffi_leak_tracker
+      sha256: "4093d4ef9ca06ffe2786e73bfb25e22aa92112b9bb4ec941f11e3e6b61489a97"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   file:
     dependency: transitive
     description:
@@ -269,10 +285,42 @@ packages:
     dependency: "direct main"
     description:
       name: file_picker
-      sha256: "29cc1fdb20613876cc7afc529738c1c0f11a9ca159b010edad0c566ac330847e"
+      sha256: "98c0b156b6380ba55bc767a14e2e6b3feb246e713ad40092424596fa79005bea"
       url: "https://pub.dev"
     source: hosted
-    version: "11.0.3"
+    version: "13.1.0"
+  file_picker_darwin:
+    dependency: transitive
+    description:
+      name: file_picker_darwin
+      sha256: a5a48960703e7faa880544ef188491f442a93959b6afb5cae57575e5dc836589
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.2"
+  file_picker_linux:
+    dependency: transitive
+    description:
+      name: file_picker_linux
+      sha256: e7db600f50672ce5ebbe422ac0906e0f3d2a476188cc93e7126afee12bf08063
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  file_picker_platform_interface:
+    dependency: transitive
+    description:
+      name: file_picker_platform_interface
+      sha256: "336e7168306834a2b68e6168ed768e00d3fabeac23154d5793e277ca9f97cf20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.0"
+  file_picker_web:
+    dependency: transitive
+    description:
+      name: file_picker_web
+      sha256: a2288008280aabe371aff029466b3405e60838e0a1d714767488c59b926c8b8c
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.0"
   fixnum:
     dependency: transitive
     description:
@@ -314,26 +362,34 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_local_notifications
-      sha256: "674173fd3c9eda9d4c8528da2ce0ea69f161577495a9cc835a2a4ecd7eadeb35"
+      sha256: "19ffb0a8bb7407875555e5e98d7343a633bb73707bae6c6a5f37c90014077875"
       url: "https://pub.dev"
     source: hosted
-    version: "17.2.4"
+    version: "19.5.0"
   flutter_local_notifications_linux:
     dependency: transitive
     description:
       name: flutter_local_notifications_linux
-      sha256: c49bd06165cad9beeb79090b18cd1eb0296f4bf4b23b84426e37dd7c027fc3af
+      sha256: e3c277b2daab8e36ac5a6820536668d07e83851aeeb79c446e525a70710770a5
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.1"
+    version: "6.0.0"
   flutter_local_notifications_platform_interface:
     dependency: transitive
     description:
       name: flutter_local_notifications_platform_interface
-      sha256: "85f8d07fe708c1bdcf45037f2c0109753b26ae077e9d9e899d55971711a4ea66"
+      sha256: "277d25d960c15674ce78ca97f57d0bae2ee401c844b6ac80fcd972a9c99d09fe"
       url: "https://pub.dev"
     source: hosted
-    version: "7.2.0"
+    version: "9.1.0"
+  flutter_local_notifications_windows:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_windows
+      sha256: "8d658f0d367c48bd420e7cf2d26655e2d1130147bca1eea917e576ca76668aaf"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   flutter_localizations:
     dependency: "direct main"
     description: flutter
@@ -347,14 +403,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.8"
-  flutter_plugin_android_lifecycle:
-    dependency: transitive
-    description:
-      name: flutter_plugin_android_lifecycle
-      sha256: "3854fe5e3bff0b113c658f260b90c95dea17c92db0f2addeac2e343dd9969785"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.35"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -364,10 +412,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_timezone
-      sha256: ea53c61c9152f271a5e30624a624184804947b6a733ff2b64186bb2579446892
+      sha256: "13b2109ad75651faced4831bf262e32559e44aa549426eab8a597610d385d934"
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.1"
+    version: "4.1.1"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -397,6 +445,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.15.7"
+  http:
+    dependency: transitive
+    description:
+      name: http
+      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.0"
   http_multi_server:
     dependency: transitive
     description:
@@ -649,18 +705,18 @@ packages:
     dependency: "direct main"
     description:
       name: share_plus
-      sha256: "223873d106614442ea6f20db5a038685cc5b32a2fba81cdecaefbbae0523f7fa"
+      sha256: db40767f130189d53f3ae8a6393c217ff4a492da1baff718a9873679c0c00224
       url: "https://pub.dev"
     source: hosted
-    version: "12.0.2"
+    version: "13.3.1"
   share_plus_platform_interface:
     dependency: transitive
     description:
       name: share_plus_platform_interface
-      sha256: "88023e53a13429bd65d8e85e11a9b484f49d4c190abbd96c7932b74d6927cc9a"
+      sha256: "365ef7379fc22507256adda3385152942ffce08935452bc972c2e52a0bebae41"
       url: "https://pub.dev"
     source: hosted
-    version: "6.1.0"
+    version: "7.2.0"
   shelf:
     dependency: transitive
     description:
@@ -790,10 +846,10 @@ packages:
     dependency: "direct main"
     description:
       name: timezone
-      sha256: "2236ec079a174ce07434e89fcd3fcda430025eb7692244139a9cf54fdcf1fc7d"
+      sha256: dd14a3b83cfd7cb19e7888f1cbc20f258b8d71b54c06f79ac585f14093a287d1
       url: "https://pub.dev"
     source: hosted
-    version: "0.9.4"
+    version: "0.10.1"
   typed_data:
     dependency: transitive
     description:
@@ -814,12 +870,12 @@ packages:
     dependency: "direct main"
     description:
       name: url_launcher
-      sha256: f6a7e5c4835bb4e3026a04793a4199ca2d14c739ec378fdfe23fc8075d0439f8
+      sha256: e8cc955c97e06df9879140a1fe301f3d493f01b7c62dec7f46834be31d7e9fda
       url: "https://pub.dev"
     source: hosted
-    version: "6.3.2"
+    version: "6.3.3"
   url_launcher_android:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher_android
       sha256: c0fb544b9ac7efa10254efaf00a951615c362d1ea1877472f8f6c0fa00fcf15b
@@ -934,10 +990,18 @@ packages:
     dependency: transitive
     description:
       name: win32
-      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
+      sha256: a0b93865d5644f11cf6a8c3f6db909f1ec168958b5805f6cc684adea957cd63d
       url: "https://pub.dev"
     source: hosted
-    version: "5.15.0"
+    version: "6.4.0"
+  windows_file_picker:
+    dependency: transitive
+    description:
+      name: windows_file_picker
+      sha256: "18452aa293de3b6961c6d05b0e71b4be7bb90c67635abdd3aa5c4e75dd875072"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   xdg_directories:
     dependency: transitive
     description:
@@ -964,4 +1028,4 @@ packages:
     version: "3.1.4"
 sdks:
   dart: ">=3.11.0 <4.0.0"
-  flutter: ">=3.38.0"
+  flutter: ">=3.41.0"

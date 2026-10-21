@@ -187,8 +187,6 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
       scheduled,
       _detailsFor(item.kind),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -211,9 +209,9 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
         ),
     };
 
-    // NOTA: flutter_local_notifications 17.1.2 no expone `publicVersion`
-    // en AndroidNotificationDetails (a diferencia de la API nativa de
-    // Android, que si lo tiene). Sin esto, en pantalla de bloqueo
+    // NOTA: flutter_local_notifications 19.5.0 tampoco expone
+    // `publicVersion` en AndroidNotificationDetails (la API nativa de
+    // Android si lo tiene). Sin esto, en pantalla de bloqueo
     // segura Android muestra su propio placeholder generico del
     // sistema (icono + nombre de la app) en vez de un publicVersion
     // redactado por la app - igual de discreto en la practica, pero no
