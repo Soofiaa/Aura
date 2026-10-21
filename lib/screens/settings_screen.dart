@@ -430,8 +430,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
 
     if (!mounted) return;
+    // BackupSection vuelve a leer si hay copia previa (ya no la hay).
+    setState(() => _datosBorrados++);
     showAppSnackBar(context, "Datos borrados correctamente.");
   }
+
+  int _datosBorrados = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -575,6 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const SizedBox(height: 10),
           BackupSection(
+            key: ValueKey(_datosBorrados),
             service: _backupService,
             gateway: widget.fileGateway,
             reminderStore: widget.reminderStore,

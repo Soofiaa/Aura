@@ -396,18 +396,21 @@ void main() {
       expect(await currentDataJson(), antes);
     });
 
-    test('no sobrescribe antes_de_importar.json y se puede repetir', () async {
+    test('despues de deshacer borra la copia (ya es igual a los datos); un '
+        'segundo Deshacer no cambia nada', () async {
       await seedCurrentData();
       await service.importBackup(_fixture());
-      final copia = preImportFile().readAsBytesSync();
-      final modificada = preImportFile().lastModifiedSync();
+      expect(await service.preImportCopyDate(), isNotNull);
 
-      now = DateTime(2026, 10, 4, 18);
       await service.undoLastImport();
-      await service.undoLastImport();
+      expect(preImportFile().existsSync(), isFalse);
+      expect(await service.hasPreImportCopy(), isFalse);
+      expect(await service.preImportCopyDate(), isNull);
 
-      expect(preImportFile().readAsBytesSync(), copia);
-      expect(preImportFile().lastModifiedSync(), modificada);
+      final antes = await currentDataJson();
+      await expectLater(service.undoLastImport(),
+          throwsA(isA<BackupUndoUnavailableException>()));
+      expect(await currentDataJson(), antes);
       expect(await repo.countDays(), 3);
     });
 

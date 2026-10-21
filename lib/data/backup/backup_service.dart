@@ -618,8 +618,21 @@ class BackupService {
 
   Future<bool> hasPreImportCopy() async => (await _preImportFile()).exists();
 
-  /// Vuelve a los datos de antes de la ultima importacion. No reescribe
-  /// la copia previa: deshacer dos veces deja los mismos datos.
+  /// Cuando se guardo la copia previa a la ultima importacion (es decir,
+  /// cuando se importo), o null si no hay. Para "Deshacer la ultima
+  /// importacion" en Ajustes.
+  Future<DateTime?> preImportCopyDate() async {
+    final file = await _preImportFile();
+    try {
+      return await file.exists() ? await file.lastModified() : null;
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  /// Vuelve a los datos de antes de la ultima importacion y borra la copia
+  /// (ya es igual a los datos actuales): un segundo "Deshacer" lanza
+  /// [BackupUndoUnavailableException] sin cambiar nada.
   Future<void> undoLastImport() async {
     final file = await _preImportFile();
     if (!await file.exists()) {
@@ -632,6 +645,12 @@ class BackupService {
         // La copia la escribe esta version (schema actual); una copia v3
         // de antes de actualizar se convierte igual que un respaldo.
         await _repository.replaceAllWithBackup(_upgrade(data));
+        try {
+          await file.delete();
+        } on FileSystemException {
+          // Queda hasta la proxima importacion o "Borrar todos los datos";
+          // deshacer otra vez deja los mismos datos.
+        }
       case BackupParseFailure():
         throw BackupUndoUnavailableException('copia previa invalida: $result');
       case BackupNeedsPassword():
