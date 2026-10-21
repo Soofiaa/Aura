@@ -1,10 +1,10 @@
 # Aura
 
-Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **100 % local**: sin cuenta, sin servidor, sin nube, sin analítica.
+Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Local primero**: sin cuenta, sin servidor propio y sin analítica. Los datos viven en el teléfono y solo salen en un respaldo que decide la usuaria: un archivo o, si lo activa, su propio Google Drive.
 
 [English version](README.en.md)
 
-> **Estado:** v1.1.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
+> **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
 
 ## Qué hace
 
@@ -63,7 +63,7 @@ lib/
 │   ├── password_strength.dart
 │   └── range_selection.dart
 ├── data/
-│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
+│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + respaldo en Drive
 │   ├── database/        # drift (esquema v5)
 │   ├── repositories/    # CycleRepository
 │   ├── notifications/   # reconciler + scheduler
@@ -90,7 +90,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-1258 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
+1296 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 

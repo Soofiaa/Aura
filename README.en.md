@@ -1,10 +1,10 @@
 # Aura
 
-An Android app to log your menstrual cycle and estimate its phases. **100% local**: no account, no server, no cloud, no analytics.
+An Android app to log your menstrual cycle and estimate its phases. **Local-first**: no account, no server of its own and no analytics. Data lives on the phone and only leaves in a backup the user chooses: a file or, if they turn it on, their own Google Drive.
 
 [Versión en español](README.md)
 
-> **Status:** v1.1.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
+> **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
 
 ## What it does
 
@@ -63,7 +63,7 @@ lib/
 │   ├── password_strength.dart
 │   └── range_selection.dart
 ├── data/
-│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
+│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + Drive backup
 │   ├── database/        # drift (schema v5)
 │   ├── repositories/    # CycleRepository
 │   ├── notifications/   # reconciler + scheduler
@@ -90,7 +90,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-1,258 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+1,296 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 
