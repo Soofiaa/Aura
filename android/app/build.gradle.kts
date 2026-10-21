@@ -91,7 +91,21 @@ android {
             }
         }
     }
-    ndkVersion = "27.0.12077973"
+    // Sin ndkVersion propio: la app no tiene codigo nativo y usa el NDK
+    // por defecto de Flutter (el fijo, 27.0, daba avisos con los plugins).
+}
+
+// Un AAB para Play nunca sale firmado con la key de debug: sin
+// key.properties, bundleRelease falla (assembleRelease sigue cayendo a la
+// de debug para probar en el telefono).
+gradle.taskGraph.whenReady {
+    if (!hasKeystoreProperties &&
+        allTasks.any { it.name.startsWith("bundle") && it.name.endsWith("Release") }
+    ) {
+        throw GradleException(
+            "bundleRelease necesita key.properties (ver android/RELEASE.md)."
+        )
+    }
 }
 
 // MainActivity.kt: el mismo destino de JVM que Java (compileOptions).
