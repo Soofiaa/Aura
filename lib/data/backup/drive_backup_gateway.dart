@@ -72,7 +72,7 @@ class PluginDriveBackupGateway implements DriveBackupGateway {
 
   Future<void> _asegurarInicializado() async {
     if (_inicializado) return;
-    await GoogleSignIn.instance.initialize(clientId: _clientId);
+    await GoogleSignIn.instance.initialize(serverClientId: _clientId);
     _inicializado = true;
   }
 

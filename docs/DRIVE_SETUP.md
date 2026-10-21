@@ -53,27 +53,44 @@ keytool -list -v -keystore RUTA_DE_TU_KEYSTORE -alias AURA
 La contraseña de esa keystore no escribe en el repo: usa tu gestor de
 contraseñas o `!` en OpenCode para correr el comando con ella.
 
-## 4. Pasar los client IDs en la compilación
+Los client IDs Android **no se copian en ningún lado**: basta con que existan
+en el proyecto para que Google reconozca la app.
 
-Los client IDs **nunca van en el repo**. Se pasan como definiciones al
-compilar, con un archivo local `secrets.json` (está en `.gitignore`) en la
-raíz del proyecto:
+## 3b. Crear el client ID web (el que usa la app)
+
+En Android, `google_sign_in` 7 no usa los client IDs Android directamente:
+exige el client ID de tipo **Aplicación web** del mismo proyecto (su
+`serverClientId`). Sin él, conectar falla con "no se puede conectar con
+Google".
+
+En **Credenciales → Crear credenciales → ID de cliente de OAuth**, tipo
+**Aplicación web**, nombre `Aura web`; no hace falta llenar orígenes ni URIs
+de redirección. Es uno solo, para depurar y publicar.
+
+## 4. Pasar el client ID web en la compilación
+
+El client ID **nunca va en el repo**. Se pasa como definición al compilar,
+con un archivo local `secrets.json` (está en `.gitignore`) en la raíz del
+proyecto:
 
 ```json
 {
-  "DRIVE_CLIENT_ID_DEBUG": "PEGA_AQUI_EL_CLIENT_ID_DE_DEPURACION.apps.googleusercontent.com",
-  "DRIVE_CLIENT_ID_RELEASE": "PEGA_AQUI_EL_CLIENT_ID_DE_PUBLICACION.apps.googleusercontent.com"
+  "DRIVE_WEB_CLIENT_ID": "PEGA_AQUI_EL_CLIENT_ID_WEB.apps.googleusercontent.com"
 }
 ```
 
 Y se compila con:
 
 ```
-flutter install --debug --dart-define-from-file=secrets.json
+flutter run --debug --dart-define-from-file=secrets.json
 ```
 
-(Si lo prefieres, puedes pasarlos uno a uno con
-`--dart-define=DRIVE_CLIENT_ID_DEBUG=...`.) Si defines `secrets.json` en tu
+(`flutter install` no acepta `--dart-define-from-file`: instala el último APK
+compilado. Para instalar sin `flutter run`, compila antes con
+`flutter build apk --debug --dart-define-from-file=secrets.json`.)
+
+(Si lo prefieres, puedes pasarlo con
+`--dart-define=DRIVE_WEB_CLIENT_ID=...`.) Si defines `secrets.json` en tu
 IDE como opción de compilación, no hace falta repetir la bandera.
 
 Si no se define ninguno, la sección de Drive en Ajustes muestra
@@ -82,7 +99,7 @@ con normalidad.
 
 ## 5. Probar
 
-1. `flutter install --debug --dart-define-from-file=secrets.json` en el teléfono.
+1. `flutter run --debug --dart-define-from-file=secrets.json` en el teléfono.
 2. Ajustes → Tus datos → **Respaldar automáticamente en Google Drive**.
 3. Elige la cuenta (la de prueba añadida en el paso 2), pon la contraseña que
    protegerá los archivos y espera el primer respaldo: aparece la carpeta
