@@ -53,24 +53,40 @@ keytool -list -v -keystore RUTA_DE_TU_KEYSTORE -alias AURA
 La contraseña de esa keystore no escribe en el repo: usa tu gestor de
 contraseñas o `!` en OpenCode para correr el comando con ella.
 
-## 4. Pegar los client IDs en el teléfono de desarrollo
+## 4. Pasar los client IDs en la compilación
 
-Copia la plantilla y pega los dos client IDs **solo en tu máquina**:
+Los client IDs **nunca van en el repo**. Se pasan como definiciones al
+compilar, con un archivo local `secrets.json` (está en `.gitignore`) en la
+raíz del proyecto:
+
+```json
+{
+  "DRIVE_CLIENT_ID_DEBUG": "PEGA_AQUI_EL_CLIENT_ID_DE_DEPURACION.apps.googleusercontent.com",
+  "DRIVE_CLIENT_ID_RELEASE": "PEGA_AQUI_EL_CLIENT_ID_DE_PUBLICACION.apps.googleusercontent.com"
+}
+```
+
+Y se compila con:
 
 ```
-cp lib/app_secrets.example.dart lib/app_secrets.dart
+flutter install --debug --dart-define-from-file=secrets.json
 ```
 
-`lib/app_secrets.dart` está en `.gitignore`: no se commitea. Si el archivo no
-existe, el botón de respaldo en Drive muestra un aviso y no intenta conectar.
+(Si lo prefieres, puedes pasarlos uno a uno con
+`--dart-define=DRIVE_CLIENT_ID_DEBUG=...`.) Si defines `secrets.json` en tu
+IDE como opción de compilación, no hace falta repetir la bandera.
+
+Si no se define ninguno, la sección de Drive en Ajustes muestra
+"Configuración pendiente" y no intenta conectar: la app sigue funcionando
+con normalidad.
 
 ## 5. Probar
 
-1. `flutter install --debug` en el teléfono.
+1. `flutter install --debug --dart-define-from-file=secrets.json` en el teléfono.
 2. Ajustes → Tus datos → **Respaldar automáticamente en Google Drive**.
 3. Elige la cuenta (la de prueba añadida en el paso 2), pon la contraseña que
    protegerá los archivos y espera el primer respaldo: aparece la carpeta
-   **Aura** en tu Google Drive con `respaldos_automaticos.json` (cifrado).
+   **Aura** en tu Google Drive con `aura_respaldo_automatico.json` (cifrado).
 
 ## Notas
 
