@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/domain/fertile_marks.dart';
+import 'package:aura/utils/day_key.dart';
 
 /// Prediccion inventada con fechas distintas en cada campo, para que un
 /// cruce de campos se note.
@@ -149,6 +150,36 @@ void main() {
       expect(prediction.isPeriodLate, isTrue);
       expect(prediction.confidence, PredictionConfidence.high);
       expect(visibleFertileMarks(prediction, showFertileWindow: true), isNull);
+    });
+  });
+
+  group('visibleFertileMarks - ciclos cortos', () {
+    List<CycleSummary> ciclosDe(int largo) => [
+          for (var i = 0; i < 4; i++)
+            _cycle(DayKey.addDays('2026-01-01', i * largo), largo),
+          _cycle(DayKey.addDays('2026-01-01', 4 * largo), null),
+        ];
+
+    test('ciclos de 18 dias: la ovulacion caeria en el periodo, null', () {
+      final cycles = ciclosDe(18);
+      final prediction = predictCycle(
+              cycles: cycles, today: cycles.last.startDate)
+          as ActivePrediction;
+      expect(prediction.confidence, PredictionConfidence.high);
+      expect(visibleFertileMarks(prediction, showFertileWindow: true), isNull);
+    });
+
+    test('ciclos de 20 dias: la ventana empieza despues del periodo', () {
+      // Periodo de 5 dias: dias 1-5. Ovulacion el dia 7; la ventana sin
+      // recortar empezaria el dia 2.
+      final cycles = ciclosDe(20);
+      final start = cycles.last.startDate;
+      final prediction =
+          predictCycle(cycles: cycles, today: start) as ActivePrediction;
+      final marks = visibleFertileMarks(prediction, showFertileWindow: true)!;
+      expect(marks.ovulationDate, DayKey.addDays(start, 6));
+      expect(marks.windowStartDate, DayKey.addDays(start, 5));
+      expect(marks.windowEndDate, DayKey.addDays(start, 6));
     });
   });
 }

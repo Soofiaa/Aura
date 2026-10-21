@@ -129,9 +129,9 @@ void main() {
       await pumpHome(tester, '2026-02-03');
 
       expect(find.text('Fase menstrual'), findsOneWidget);
-      expect(find.text('Próximo período: 26/02/2026 - 04/03/2026'),
+      expect(find.text('Próximo período: 26 de febrero - 4 de marzo'),
           findsOneWidget);
-      expect(find.text('Estimado: 01/03/2026 (valor por defecto)'),
+      expect(find.text('Estimado: 1 de marzo (valor por defecto)'),
           findsOneWidget);
       sinOvulacionNiVentana();
       expect(find.text(masCiclos), findsOneWidget);
@@ -150,7 +150,7 @@ void main() {
       // 02/03 (02/02 + 28).
       await seedPeriods(['2026-01-01', '2026-02-02']);
       await pumpHome(tester, '2026-02-04');
-      expect(find.text('Estimado: 02/03/2026 (valor por defecto)'),
+      expect(find.text('Estimado: 2 de marzo (valor por defecto)'),
           findsOneWidget);
       sinOvulacionNiVentana();
       expect(find.text(masCiclos), findsOneWidget);
@@ -166,7 +166,7 @@ void main() {
           ['2026-01-01', '2026-01-21', '2026-02-21', '2026-03-16', '2026-04-05']);
       await pumpHome(tester, '2026-04-07');
 
-      expect(find.text('Estimado: 28/04/2026'), findsOneWidget);
+      expect(find.text('Estimado: 28 de abril'), findsOneWidget);
       sinOvulacionNiVentana();
       expect(find.text(variabilidad), findsOneWidget);
       expect(find.text(masCiclos), findsNothing);
@@ -275,9 +275,9 @@ void main() {
         expect(find.text(masCiclos), findsNothing);
         expect(find.text(variabilidad), findsNothing);
         expect(find.text('Período atrasado por 1 día'), findsOneWidget);
-        expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+        expect(find.text('Próximo período: 21 de abril - 25 de abril'),
             findsOneWidget);
-        expect(find.text('Estimado: 23/04/2026'), findsOneWidget);
+        expect(find.text('Estimado: 23 de abril'), findsOneWidget);
         expect(find.text(avisoPie), findsOneWidget);
         sinFase();
       });
@@ -290,9 +290,9 @@ void main() {
 
         expect(find.text(confianza), findsOneWidget);
         expect(find.textContaining('Período atrasado'), findsNothing);
-        expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+        expect(find.text('Ovulación estimada: 9 de abril'), findsOneWidget);
         expect(find.text('Días de mayor probabilidad de fertilidad '
-                '(estimación):\n04/04/2026 - 09/04/2026'),
+                '(estimación):\n4 de abril - 9 de abril'),
             findsOneWidget);
         avisoJustoDespuesDeLaVentana(tester);
         expect(find.text('Fase lútea'), findsOneWidget);
@@ -308,7 +308,7 @@ void main() {
 
     expect(find.text('Hace tiempo que no registras...'), findsOneWidget);
     expect(
-        find.text('Tu último período empezó el 01/01/2026 (hace 61 días). '
+        find.text('Tu último período empezó el 1 de enero (hace 61 días). '
             'Registra un nuevo día para volver a ver una predicción.'),
         findsOneWidget);
     sinFase();
@@ -340,9 +340,9 @@ void main() {
       await pumpHome(tester, '2026-03-28');
 
       expect(find.text('Confianza: Alta'), findsOneWidget);
-      expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+      expect(find.text('Próximo período: 21 de abril - 25 de abril'),
           findsOneWidget);
-      expect(find.text('Estimado: 23/04/2026'), findsOneWidget);
+      expect(find.text('Estimado: 23 de abril'), findsOneWidget);
       sinOvulacionNiVentana();
       expect(find.text(masCiclos), findsNothing);
       expect(find.text(variabilidad), findsNothing);
@@ -356,7 +356,7 @@ void main() {
       await repo.setShowFertileWindow(false);
       await pumpHome(tester, '2026-04-09');
       sinFase();
-      expect(find.text('Próximo período: 21/04/2026 - 25/04/2026'),
+      expect(find.text('Próximo período: 21 de abril - 25 de abril'),
           findsOneWidget);
     });
 
@@ -366,7 +366,7 @@ void main() {
       await repo.setShowFertileWindow(false);
       await pumpHome(tester, '2026-02-03');
       expect(find.text('Confianza: Baja'), findsOneWidget);
-      expect(find.text('Próximo período: 26/02/2026 - 04/03/2026'),
+      expect(find.text('Próximo período: 26 de febrero - 4 de marzo'),
           findsOneWidget);
       expect(find.text(masCiclos), findsNothing);
       expect(find.text(variabilidad), findsNothing);
@@ -379,7 +379,7 @@ void main() {
           ['2026-01-01', '2026-01-21', '2026-02-21', '2026-03-16', '2026-04-05']);
       await repo.setShowFertileWindow(false);
       await pumpHome(tester, '2026-04-07');
-      expect(find.text('Estimado: 28/04/2026'), findsOneWidget);
+      expect(find.text('Estimado: 28 de abril'), findsOneWidget);
       expect(find.text(variabilidad), findsNothing);
       expect(find.text(masCiclos), findsNothing);
     });
@@ -408,7 +408,7 @@ void main() {
       await seedPeriods(cuatroCiclos);
       await tester.pumpAndSettle();
       expect(find.text('Confianza: Alta'), findsOneWidget);
-      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+      expect(find.text('Ovulación estimada: 9 de abril'), findsOneWidget);
       avisoJustoDespuesDeLaVentana(tester);
     });
 
@@ -417,7 +417,7 @@ void main() {
       // Fuera del periodo (26-30/03): durante el periodo en curso Inicio
       // no muestra la ovulacion ni la ventana (ver home_screen_coherencia_test).
       await pumpHome(tester, '2026-04-02');
-      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+      expect(find.text('Ovulación estimada: 9 de abril'), findsOneWidget);
 
       await repo.setShowFertileWindow(false);
       await tester.pumpAndSettle();
@@ -425,7 +425,7 @@ void main() {
 
       await repo.setShowFertileWindow(true);
       await tester.pumpAndSettle();
-      expect(find.text('Ovulación estimada: 09/04/2026'), findsOneWidget);
+      expect(find.text('Ovulación estimada: 9 de abril'), findsOneWidget);
     });
 
     testHome('apagado: periodo atrasado y datos viejos no cambian',

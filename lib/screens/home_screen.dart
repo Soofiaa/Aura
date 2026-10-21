@@ -12,7 +12,7 @@ import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
 import '../domain/fertile_marks.dart';
 import '../utils/colors.dart';
-import '../utils/date_utils.dart';
+import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/period_end_messages.dart';
 import '../widgets/backup_reminder_card.dart';
@@ -140,8 +140,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _midnightTimer = Timer(nextMidnight.difference(now), _refreshToday);
   }
 
+  /// "21 de abril" (con el ano si no es el de hoy), como los avisos y el
+  /// Calendario. TalkBack lo lee bien, a diferencia de "21/04/2026".
   String _formatDate(String dayKey) =>
-      DateUtilsAura.formatFechaCorta(DayKey.toUtcAnchor(dayKey));
+      dayMonthLabelWithYear(dayKey, today: _today);
 
   void _showUndo(String message, DaysSnapshot snapshot) {
     showAppSnackBar(
@@ -149,16 +151,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       message,
       action: SnackBarAction(
         label: 'Deshacer',
-        onPressed: () => _repository.restoreDaysSnapshot(snapshot),
+        onPressed: () async {
+          try {
+            await _repository.restoreDaysSnapshot(snapshot);
+          } catch (_) {
+            if (!mounted) return;
+            showAppSnackBar(context, _errorAlGuardar);
+          }
+        },
       ),
     );
   }
 
+  static const _errorAlGuardar =
+      'No se pudo guardar el cambio. Inténtalo de nuevo.';
+
   /// "Sigue": marca hoy como dia de sangrado. La tarjeta vuelve a
   /// preguntar manana.
   Future<void> _sigue() async {
-    final result = await _repository.markPeriodDayWithSnapshot(_today,
-        closeAtEnd: false, today: _today);
+    final MarkDaysResult result;
+    try {
+      result = await _repository.markPeriodDayWithSnapshot(_today,
+          closeAtEnd: false, today: _today);
+    } catch (_) {
+      if (!mounted) return;
+      showAppSnackBar(context, _errorAlGuardar);
+      return;
+    }
     if (!mounted || !result.changedAnything) return;
     _showUndo('Día marcado como sangrado.', result.snapshot);
   }
@@ -184,6 +203,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       showAppSnackBar(
           context, periodEndProblemMessage(e.check, current.startDate));
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      showAppSnackBar(context, _errorAlGuardar);
       return;
     }
     if (!mounted) return;
@@ -442,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       {required bool mostrarFertilidad, required bool enCurso}) {
     if (prediction == null) {
       return _buildCardShell(children: [
-        const Icon(Icons.favorite_border, color: Colors.grey, size: 50),
+        const Icon(Icons.favorite_border, color: AppColors.textSecondary, size: 50),
         const SizedBox(height: 10),
         const Text(
           "Aún no hay datos suficientes",
@@ -453,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const Text(
           "Registra tu primer día para ver una predicción de tu ciclo.",
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey),
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
       ]);
     }
@@ -561,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildStaleCard(StaleDataPrediction p) {
     return _buildCardShell(children: [
-      const Icon(Icons.history, color: Colors.grey, size: 50),
+      const Icon(Icons.history, color: AppColors.textSecondary, size: 50),
       const SizedBox(height: 10),
       const Text(
         "Hace tiempo que no registras...",
@@ -574,7 +597,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         "(hace ${p.daysSinceLastPeriodStart} días). "
         "Registra un nuevo día para volver a ver una predicción.",
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 14, color: Colors.grey),
+        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
       ),
     ]);
   }
@@ -600,8 +623,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final valorPorDefecto = p.completeCyclesConsidered <
         const PredictionConfig().minCompleteCyclesForMedium;
     final fase = enCurso ? CyclePhase.menstrual : p.currentPhase;
-    final mostrarFertil = fase != CyclePhase.menstrual &&
-        visibleFertileMarks(p, showFertileWindow: mostrarFertilidad) != null;
+    final marcas = fase == CyclePhase.menstrual
+        ? null
+        : visibleFertileMarks(p, showFertileWindow: mostrarFertilidad);
+    final mostrarFertil = marcas != null;
     final mostrarFase = !p.isPeriodLate &&
         !(!mostrarFertil && fase == CyclePhase.ovulatoria);
     return _buildCardShell(children: [
@@ -638,13 +663,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: Colors.grey[700]),
         )
-      else if (mostrarFertil) ...[
+      else if (marcas != null) ...[
         Text(
-          "Ovulación estimada: ${_formatDate(p.estimatedOvulationDate)}",
+          "Ovulación estimada: ${_formatDate(marcas.ovulationDate)}",
           style: const TextStyle(fontSize: 15),
         ),
         const SizedBox(height: 10),
-        _buildFertileWindow(p),
+        _buildFertileWindow(marcas),
         const SizedBox(height: 4),
         Text(
           "Estimación; no es un método anticonceptivo.",
@@ -680,10 +705,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Solo si visibleFertileMarks la deja ver (ver _buildActiveCard).
-  Widget _buildFertileWindow(ActivePrediction p) {
+  Widget _buildFertileWindow(FertileMarks marcas) {
     return Text(
       "Días de mayor probabilidad de fertilidad (estimación):\n"
-      "${_formatDate(p.fertileWindowStartDate)} - ${_formatDate(p.fertileWindowEndDate)}",
+      "${_formatDate(marcas.windowStartDate)} - ${_formatDate(marcas.windowEndDate)}",
       textAlign: TextAlign.center,
       style: const TextStyle(fontSize: 14),
     );

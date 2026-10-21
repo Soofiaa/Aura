@@ -245,22 +245,21 @@ void main() {
 
   group('prioridad: seleccion > periodo > ventana', () {
     testCalendar(
-      'a) y b) ciclo corto: el estimado conserva solo su marca y los '
-      'dias registrados no llevan marca de ventana',
+      'a) y b) ciclo corto: la ovulacion caeria en el periodo, asi que no '
+      'hay marcas de fertilidad sobre el sangrado ni antes de el',
       (tester) async {
         // Ciclos de 16 (3 completos, confianza media): inicios 03/06, 19/06,
         // 05/07 y 21/07; del ultimo, marcados el 21 y el 22. Esperado
-        // 06/08 (21/07 + 16); ovulacion 23/07; ventana 18/07 - 23/07.
+        // 06/08 (21/07 + 16); la ovulacion (23/07) cae dentro de la
+        // duracion estimada del periodo (21-25), asi que no se muestra.
         // Estimados: 23, 24 y 25 (duracion 5).
         await seedPeriods(['2026-06-03', '2026-06-19', '2026-07-05']);
         await seedPeriods(['2026-07-21'], length: 2);
         await pumpCalendar(tester, '2026-07-22');
 
         expect(diasCon(tester, 'estimado'), {23, 24, 25});
-        // a) 23 es ovulacion y estimado: solo "estimado".
         expect(diasCon(tester, ovulacion), isEmpty);
-        // b) 21 y 22 estan registrados: sin ventana.
-        expect(diasCon(tester, ventana), {18, 19, 20});
+        expect(diasCon(tester, ventana), isEmpty);
       },
     );
 

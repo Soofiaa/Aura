@@ -282,7 +282,13 @@ Future<String> encryptBackup(
     salt: randomBytes(encryptedBackupSaltLength),
     nonce: randomBytes(encryptedBackupNonceLength),
   );
-  final key = await deriveKey(utf8.encode(password), header.salt, params);
+  final passwordUtf8 = utf8.encode(password);
+  final Uint8List key;
+  try {
+    key = await deriveKey(passwordUtf8, header.salt, params);
+  } finally {
+    _zero(passwordUtf8);
+  }
   try {
     final box = await DartAesGcm.with256bits().encrypt(
       utf8.encode(documentV1Json),
@@ -410,7 +416,13 @@ Future<Uint8List> decryptBackupEnvelope(
       '${h.params}',
     );
   }
-  final key = await deriveKey(utf8.encode(password), h.salt, h.params);
+  final passwordUtf8 = utf8.encode(password);
+  final Uint8List key;
+  try {
+    key = await deriveKey(passwordUtf8, h.salt, h.params);
+  } finally {
+    _zero(passwordUtf8);
+  }
   try {
     final split = envelope.ciphertext.length - encryptedBackupTagLength;
     final clear = await DartAesGcm.with256bits().decrypt(

@@ -9,5 +9,10 @@ String dayMonthLabelWithYear(String dayKey, {required String today}) {
   if (dayKey.substring(0, 4) == today.substring(0, 4)) {
     return dayMonthLabel(dayKey);
   }
-  return DateFormat("d 'de' MMMM 'de' y", 'es').format(DateTime.parse(dayKey));
+  return fullDateLabel(dayKey);
 }
+
+/// "4 de octubre de 2025", siempre con el ano (la fecha del formulario
+/// "Registrar dia"). TalkBack la lee bien, a diferencia de "4/10/2025".
+String fullDateLabel(String dayKey) =>
+    DateFormat("d 'de' MMMM 'de' y", 'es').format(DateTime.parse(dayKey));

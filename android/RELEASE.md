@@ -2,7 +2,7 @@
 
 ## JDK: 17 o 21, nunca 25
 
-Gradle 8.12 (el que usa este proyecto) no soporta JDK 25: falla con un
+Gradle 8.14 (el que usa este proyecto, con AGP 8.13 y Kotlin 2.2) no soporta JDK 25: falla con un
 error críptico (`class file major version 68 not supported` / un
 "What went wrong: 25.0.2" sin más detalle). Si tu Android Studio trae un
 JBR 25 embebido (el error típico en instalaciones nuevas), necesitás
@@ -34,10 +34,11 @@ probar a mano pero no para subir a la tienda).
 ## Firma de release
 
 `android/app/build.gradle.kts` busca `android/key.properties` (nunca se
-commitea; ya está en `android/.gitignore`). Si no existe, el build **no
-falla**: cae a la firma de debug con un aviso en el log, para que
-cualquiera que clone el repo pueda compilar y probar. Para firmar de
-verdad:
+commitea; ya está en `android/.gitignore`). Si no existe, `assembleRelease`
+**no falla**: cae a la firma de debug con un aviso en el log, para que
+cualquiera que clone el repo pueda compilar y probar. `bundleRelease`
+(`flutter build appbundle`) **sí falla**: un `.aab` para Play nunca sale
+firmado con la key de debug. Para firmar de verdad:
 
 1. Generar el keystore (fuera del repo):
    ```

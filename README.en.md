@@ -13,18 +13,20 @@ An Android app to log your menstrual cycle and estimate its phases. **100% local
 - Derives cycles from those logs (cycles are never created by hand).
 - Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late (on Home, not during the menstrual phase either), and can be hidden in Settings.
 - Shows the current phase: menstrual, follicular, ovulatory and luteal (none while the period is late).
-- Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under Home's confidence, lateness and toggle conditions) and multi-day selection.
+- Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under Home's confidence, lateness and toggle conditions) and multi-day selection; it rolls over to the next day at midnight and has a "Go to today" button.
 - Statistics with "Your cycles": typical cycle length, shortest and longest cycle, regularity and typical period length.
-- Optional local reminders, with discreet text by default.
+- Optional local reminders, with discreet text by default, plus an optional "Did your period arrive?" notice on the first day of lateness.
 - Lets you mark the end of a period and remove marks.
-- Backup and restore to a JSON file from Settings → "Your data", with an optional password to encrypt the file and "Undo" after importing.
+- Backup and restore to a JSON file from Settings → "Your data", with an optional password to encrypt the file, "Undo" right after importing, and "Undo last import" in Settings while the pre-import copy exists.
 - Backup reminder: if 30 days pass without one, Home shows a card (no notification); it only keeps the date of the last backup on the phone and sends nothing off it.
-- Full data wipe from Settings.
+- Full data wipe from Settings (followed by database compaction so no leftovers remain).
 
 ## Privacy by design
 
 - Data lives in a SQLite database inside the app's private storage.
-- `allowBackup="false"`: Android does not copy it to the cloud.
+- `allowBackup="false"`: Android does not copy it to the cloud, and `dataExtractionRules` blocks direct phone-to-phone transfer over cable or Wi-Fi as well: the only way data leaves is through Aura's own backup file.
+- **"Hide Aura from Recents"** (on by default, can be turned off in Settings → Privacy): the app preview in the Recents screen is blank, and screenshots or screen recordings are blocked.
+- After deleting all data, the database is compacted (`VACUUM`) and freed pages overwrite what was deleted (`secure_delete`): no remnants of deleted notes or symptoms remain.
 - Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with. The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). Aura does not store the password and cannot recover it. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy, and the app still has no `INTERNET` permission.
 - When updating from 1.0 (schema v3), before converting the database the app saves a safety copy in its private storage; it is deleted after saving a backup to the phone, on app start once it is more than 30 days old, or with "Delete all data".
 - When an import is confirmed, the app first saves an unencrypted copy of the current data in its private storage, only for "Undo"; the next import replaces it and "Delete all data" removes it.
@@ -63,9 +65,10 @@ lib/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker)
 │   ├── database/        # drift (schema v5)
 │   ├── repositories/    # CycleRepository
-│   └── notifications/   # reconciler + scheduler
+│   ├── notifications/   # reconciler + scheduler
+│   └── device_settings_store.dart  # per-phone settings (no migration needed)
 ├── screens/       # home, calendar, add entry, stats, settings, onboarding
-└── utils/         # DayKey, colors, strings
+└── utils/         # DayKey, colors, strings, time zone, Android channels
 ```
 
 ## Design decisions (and why)
@@ -74,9 +77,9 @@ lib/
 
 **Derived cycles, not stored.** Only bleeding days are stored. A new cycle starts when the previous bleeding day is more than 7 days earlier. This gives a single source of truth, and editing one day recomputes everything consistently.
 
-**A pure, testable prediction engine.** Linearly weighted average of the last 6 complete cycles (recent ones weigh more), with a weighted standard deviation. The uncertainty range is `max(1.5·σ, 2 days)` (3 days with fewer than 2 cycles). Ovulation = next period − 14 days; fertile window = ovulation −5 … ovulation. Cycles of 15–60 days are considered valid. Confidence is low with fewer than 2 cycles or when the deviation exceeds 18% of the average; then ovulation and the fertile window are not shown. After more than 60 days without data, the app shows "stale data" instead of a false prediction.
+**A pure, testable prediction engine.** Linearly weighted average of the **last 6 valid complete cycles** (recent ones weigh more; cycles shorter than 15 or longer than 60 days are filtered out first), with a weighted standard deviation. The uncertainty range is `max(1.5·σ, 2 days)` (3 days with fewer than 2 cycles). Ovulation = next period − 14 days; fertile window = ovulation −5 … ovulation. Confidence is low with fewer than 2 cycles or when the deviation exceeds 18% of the average; then ovulation and the fertile window are not shown, nor if estimated ovulation would fall inside the bleeding period (cycles of 15–19 days), nor while the period is late. Once today is more than 60 days after the start of the last period **and** more than 7 days past the late end of the range, the app shows "stale data" instead of a false prediction.
 
-**Pure notification planner + reconciler.** `planNotifications` computes what should be scheduled (a pure function tested with fixed dates). The reconciler diffs that against what's already scheduled and applies the change. A `NotificationScheduler` interface allows a fake in tests.
+**Pure notification planner + reconciler.** `planNotifications` computes what should be scheduled (a pure function tested with fixed dates). The reconciler waits until it has both cycles and settings (a half-populated plan would cancel everything already scheduled), runs reconciliations one at a time (the last one wins) and absorbs a plugin failure until the next data change or when the app comes back to the foreground. A `NotificationScheduler` interface allows a fake in tests.
 
 **`period_day_explicit` (schema v3).** Distinguishes "the user explicitly said there was no bleeding" from a default value. It is a deliberate exception to non-destructive writes, needed so "remove mark" and period-end are reliable.
 
@@ -86,7 +89,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-1,203 tests as of v1.1.0 (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+1,258 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 

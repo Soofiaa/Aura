@@ -796,12 +796,20 @@ class CycleRepository {
   /// show_fertile_window vuelve a activado). Usado por
   /// BackupService.deleteAllData() (que ademas borra los archivos de
   /// respaldo) tras confirmacion explicita del usuario.
+  ///
+  /// Despues compacta el archivo (VACUUM, fuera de la transaccion): las
+  /// paginas libres no guardan restos de lo borrado. Si el VACUUM falla
+  /// (por ejemplo, sin espacio), los datos ya estan borrados y con
+  /// secure_delete esas paginas ya se sobrescribieron con ceros.
   Future<void> deleteAllData() async {
     await _db.transaction(() async {
       await _db.delete(_db.dailyLogSymptoms).go();
       await _db.delete(_db.dailyLogs).go();
       await _db.delete(_db.appSettings).go();
     });
+    try {
+      await _db.customStatement('VACUUM');
+    } catch (_) {}
   }
 }
 

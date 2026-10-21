@@ -11,6 +11,7 @@ import '../../domain/backup_codec.dart';
 import '../../domain/backup_crypto.dart';
 import '../../utils/app_version.dart';
 import '../../utils/day_key.dart';
+import '../device_settings_store.dart';
 import '../repositories/cycle_repository.dart';
 import 'backup_reminder_store.dart';
 import 'pre_migration_copy.dart' as copy;
@@ -73,7 +74,13 @@ class BackupWriteException implements Exception {
 }
 
 /// Pasos de "Borrar todos los datos" (ver [BackupService.deleteAllData]).
-enum BackupDeleteStep { database, backups, temporaryFiles, backupReminder }
+enum BackupDeleteStep {
+  database,
+  backups,
+  temporaryFiles,
+  backupReminder,
+  deviceSettings,
+}
 
 /// Fallo uno o mas pasos de "Borrar todos los datos"; los demas se
 /// intentaron igual.
@@ -229,8 +236,13 @@ class _DerivationOutOfMemory implements Exception {
   final String errorType;
 }
 
+/// Parsear un JSON de varios MB en el hilo de la interfaz la congela (y un
+/// archivo hostil crea millones de objetos): va al isolate.
+Future<BackupParseResult> Function() _decodeJob(Uint8List bytes, String today) =>
+    () async => decodeBackup(bytes, today: today);
+
 Future<BackupUnlockResult> Function() _unlockJob(BackupNeedsPassword pending,
-        String password, BackupKeyDeriver deriveKey) =>
+        String password, BackupKeyDeriver deriveKey, String today) =>
     () async {
       // Solo la falta de memoria AL DERIVAR cambia de resultado; cualquier
       // otro error de la derivacion sigue su camino de siempre.
@@ -248,8 +260,8 @@ Future<BackupUnlockResult> Function() _unlockJob(BackupNeedsPassword pending,
 
       final BackupParseResult result;
       try {
-        result =
-            await decodeEncryptedBackup(pending, password, deriveKey: derive);
+        result = await decodeEncryptedBackup(pending, password,
+            deriveKey: derive, today: today);
       } on BackupCryptoException {
         return const BackupUnlockWrongPasswordOrDamaged();
       } on _DerivationOutOfMemory catch (e) {
@@ -287,14 +299,17 @@ class BackupService {
     Argon2idParams encryptionParams = Argon2idParams.production,
     BackupEncryptFunction encrypt = encryptBackupDocument,
     BackupKeyDeriver deriveKey = deriveBackupKey,
-    int maxFileBytes = maxBackupSizeBytes,
+    int maxFileBytes = maxEncryptedBackupSizeBytes,
     BackupReminderStore? reminderStore,
+    DeviceSettingsStore? deviceSettings,
   })  : _supportDirectory = supportDirectory,
         _temporaryDirectory = temporaryDirectory,
         _clock = clock ?? DateTime.now,
         _reminderStore = reminderStore ??
             BackupReminderStore(
                 supportDirectory: supportDirectory, clock: clock),
+        _deviceSettings = deviceSettings ??
+            DeviceSettingsStore(supportDirectory: supportDirectory),
         _runTask = runTask,
         _encryptionParams = encryptionParams,
         _encrypt = encrypt,
@@ -308,6 +323,10 @@ class BackupService {
 
   /// Recordatorio de respaldo: "Borrar todos los datos" tambien lo borra.
   final BackupReminderStore _reminderStore;
+
+  /// Ajustes de este telefono: "Borrar todos los datos" los devuelve a
+  /// los valores por defecto.
+  final DeviceSettingsStore _deviceSettings;
 
   // Cifrado (HU-06b). La contrasena nunca se guarda en un campo: vive
   // solo durante la llamada que la recibe.
@@ -352,13 +371,21 @@ class BackupService {
   /// Respaldo de los datos actuales como JSON. Se valida a si mismo antes
   /// de devolverse: nunca se entrega un archivo que esta misma version no
   /// podria importar.
-  Future<String> buildExportJson() async {
+  Future<String> buildExportJson() => _buildJson(checkMaxDate: true);
+
+  String _today() => DayKey.fromDate(_clock());
+
+  /// [checkMaxDate] en false solo para la copia previa a importar: tiene
+  /// que guardar lo que haya en la base, aunque traiga fechas que un
+  /// respaldo ya no aceptaria.
+  Future<String> _buildJson({required bool checkMaxDate}) async {
     final data = await _repository.readBackupData(
       appVersion: appVersionName,
       exportedAt: formatExportedAt(_clock()),
     );
     final json = encodeBackup(data);
-    final check = decodeBackup(utf8.encode(json));
+    final check = decodeBackup(utf8.encode(json),
+        today: _today(), checkMaxDate: checkMaxDate);
     if (check is BackupParseFailure) {
       final date = check.outOfRangeDate;
       throw BackupWriteException(
@@ -464,7 +491,10 @@ class BackupService {
           BackupEncryptionFailure.tooLarge, '${bytes.length} bytes');
     }
     final clear = await _runTask(_decryptJob(bytes, password));
-    if (clear == null || !_sameBytes(clear, utf8.encode(json))) {
+    final same = clear != null && _sameBytes(clear, utf8.encode(json));
+    // Mejor esfuerzo: el documento descifrado no queda en memoria.
+    clear?.fillRange(0, clear.length, 0);
+    if (!same) {
       throw BackupEncryptionException(
           BackupEncryptionFailure.verificationFailed,
           'el archivo no descifra al documento original');
@@ -508,7 +538,14 @@ class BackupService {
       if (length > _maxFileBytes) {
         return BackupParseFailure(BackupError.tooLarge, '$length bytes');
       }
-      return decodeBackup(await file.readAsBytes());
+      final bytes = await file.readAsBytes();
+      try {
+        return await _runTask(_decodeJob(bytes, _today()));
+      } catch (e) {
+        // El isolate no pudo con el archivo (memoria): no es un respaldo
+        // que se pueda abrir. Solo el tipo, nunca el mensaje.
+        return BackupParseFailure(BackupError.damaged, '${e.runtimeType}');
+      }
     } on FileSystemException catch (e) {
       return BackupParseFailure(BackupError.unreadable, '$e');
     } finally {
@@ -547,7 +584,7 @@ class BackupService {
   Future<BackupUnlockResult> unlockBackup(
       BackupNeedsPassword pending, String password) async {
     try {
-      return await _runTask(_unlockJob(pending, password, _deriveKey));
+      return await _runTask(_unlockJob(pending, password, _deriveKey, _today()));
     } on BackupCryptoException {
       // Ya se trata dentro del trabajo; por si acaso.
       return const BackupUnlockWrongPasswordOrDamaged();
@@ -581,19 +618,39 @@ class BackupService {
 
   Future<bool> hasPreImportCopy() async => (await _preImportFile()).exists();
 
-  /// Vuelve a los datos de antes de la ultima importacion. No reescribe
-  /// la copia previa: deshacer dos veces deja los mismos datos.
+  /// Cuando se guardo la copia previa a la ultima importacion (es decir,
+  /// cuando se importo), o null si no hay. Para "Deshacer la ultima
+  /// importacion" en Ajustes.
+  Future<DateTime?> preImportCopyDate() async {
+    final file = await _preImportFile();
+    try {
+      return await file.exists() ? await file.lastModified() : null;
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  /// Vuelve a los datos de antes de la ultima importacion y borra la copia
+  /// (ya es igual a los datos actuales): un segundo "Deshacer" lanza
+  /// [BackupUndoUnavailableException] sin cambiar nada.
   Future<void> undoLastImport() async {
     final file = await _preImportFile();
     if (!await file.exists()) {
       throw BackupUndoUnavailableException('no hay copia previa');
     }
-    final result = decodeBackup(await file.readAsBytes());
+    final result =
+        decodeBackup(await file.readAsBytes(), checkMaxDate: false);
     switch (result) {
       case BackupParseSuccess(:final data):
         // La copia la escribe esta version (schema actual); una copia v3
         // de antes de actualizar se convierte igual que un respaldo.
         await _repository.replaceAllWithBackup(_upgrade(data));
+        try {
+          await file.delete();
+        } on FileSystemException {
+          // Queda hasta la proxima importacion o "Borrar todos los datos";
+          // deshacer otra vez deja los mismos datos.
+        }
       case BackupParseFailure():
         throw BackupUndoUnavailableException('copia previa invalida: $result');
       case BackupNeedsPassword():
@@ -618,6 +675,10 @@ class BackupService {
   /// VACUUM INTO). Se llama al abrir la app.
   Future<void> deleteExpiredPreMigrationCopy() async {
     final files = await _preMigrationFiles();
+    // Un .tmp suelto es una copia a medias de un intento cortado: no sirve
+    // para nada y es una base completa con datos de salud.
+    final tmp = files.last;
+    if (await tmp.exists()) await tmp.delete();
     final target = files.first;
     if (!await target.exists()) return;
     final age = _clock().difference(await target.lastModified());
@@ -636,8 +697,8 @@ class BackupService {
 
   /// "Borrar todos los datos": la base, la carpeta respaldos/ completa
   /// (copia previa a importar, copia previa a la migracion v4 y cualquier
-  /// .tmp huerfano), los temporales del respaldo y el estado del
-  /// recordatorio de respaldo. Intenta siempre todos los pasos aunque
+  /// .tmp huerfano), los temporales del respaldo, el estado del
+  /// recordatorio de respaldo y los ajustes de este telefono. Intenta siempre todos los pasos aunque
   /// alguno falle, para no dejar datos de salud por un error en otro
   /// paso, y al final lanza un unico [BackupDeleteException] si alguno
   /// fallo.
@@ -661,6 +722,7 @@ class BackupService {
     });
     await attempt(BackupDeleteStep.temporaryFiles, cleanTemporaryFiles);
     await attempt(BackupDeleteStep.backupReminder, _reminderStore.delete);
+    await attempt(BackupDeleteStep.deviceSettings, _deviceSettings.delete);
 
     if (failedSteps.isNotEmpty) {
       throw BackupDeleteException(failedSteps, errors);
@@ -678,7 +740,7 @@ class BackupService {
   /// intento anterior se borra antes, y el propio se limpia si algo
   /// falla.
   Future<void> _writePreImportCopy() async {
-    final json = await buildExportJson();
+    final json = await _buildJson(checkMaxDate: false);
     final target = await _preImportFile();
     final tmp = File('${target.path}.tmp');
     try {
@@ -706,6 +768,7 @@ BackupService get backupService => _backupServiceInstance ??= BackupService(
       supportDirectory: getApplicationSupportDirectory,
       temporaryDirectory: getTemporaryDirectory,
       reminderStore: backupReminderStore,
+      deviceSettings: deviceSettingsStore,
     );
 
 /// Solo para tests: reemplaza el servicio global.

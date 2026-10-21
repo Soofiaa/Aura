@@ -20,7 +20,10 @@ class DayKey {
 
   /// Parsea una clave 'yyyy-MM-dd' a un DateTime.utc a medianoche,
   /// usado solo como ancla para aritmetica de dias (no representa un
-  /// instante real en UTC).
+  /// instante real en UTC). Rechaza claves sin ceros a la izquierda o de
+  /// dias que no existen ('2026-02-30' no pasa a marzo): con ellas
+  /// [compare] (orden de texto) e [isBefore] (orden de fechas) dejarian de
+  /// coincidir.
   static DateTime toUtcAnchor(String key) {
     final parts = key.split('-');
     if (parts.length != 3) {
@@ -29,7 +32,11 @@ class DayKey {
     final y = int.parse(parts[0]);
     final m = int.parse(parts[1]);
     final d = int.parse(parts[2]);
-    return DateTime.utc(y, m, d);
+    final date = DateTime.utc(y, m, d);
+    if (fromDate(date) != key) {
+      throw FormatException('Clave de dia invalida: $key');
+    }
+    return date;
   }
 
   /// Diferencia en dias calendario entre [a] y [b] (b - a).

@@ -30,19 +30,21 @@ class PluginBackupFileGateway implements BackupFileGateway {
   }) async {
     // Escribe directo en el destino elegido (SAF): no deja copia en la
     // cache. null = la usuaria cancelo.
-    final path = await FilePicker.saveFile(
+    final uri = await FilePicker.saveFile(
       fileName: fileName,
       bytes: bytes,
+      mimeType: 'application/json',
     );
-    return path != null;
+    return uri != null;
   }
 
   @override
   Future<String?> pickBackupFile() async {
     // FileType.any y no custom/json: algunos proveedores (HyperOS, Drive)
     // informan un .json con un tipo MIME generico y el filtro lo dejaria
-    // gris. El contenido se valida igual en decodeBackup.
-    final result = await FilePicker.pickFiles(type: FileType.any);
-    return result?.files.single.path;
+    // gris. El contenido se valida igual en decodeBackup. Lista vacia =
+    // la usuaria cancelo (file_picker 13 ya no devuelve null).
+    final files = await FilePicker.pickFiles(type: FileType.any);
+    return files.isEmpty ? null : files.single.path;
   }
 }

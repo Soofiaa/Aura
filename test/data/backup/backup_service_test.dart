@@ -10,6 +10,7 @@ import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/backup/pre_migration_copy.dart';
 import 'package:aura/data/database/app_database.dart';
+import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
@@ -138,18 +139,43 @@ void main() {
           .existsSync(), isFalse);
     });
 
-    test('la misma fecha fuera de rango bloquea la importacion (no hay copia '
-        'previa posible) con el mismo dato estructurado', () async {
+    test('la misma fecha fuera de rango NO bloquea la importacion: la copia '
+        'previa la guarda y Deshacer la devuelve', () async {
+      // Antes, un dia asi en la base (por ejemplo, importado de un archivo
+      // con exportedAt en el futuro) impedia exportar e importar.
       await repo.markPeriodDay('2031-01-01');
 
-      await expectLater(
-        service.importBackup(_fixture()),
-        throwsA(isA<BackupWriteException>()
-            .having((e) => e.cause, 'cause', BackupWriteCause.dateOutOfRange)
-            .having((e) => e.outOfRangeDate, 'outOfRangeDate', '2031-01-01')),
-      );
-      expect(await repo.countDays(), 1);
+      await service.importBackup(_fixture());
+      expect(await repo.getPeriodDayDates(), isNot(contains('2031-01-01')));
+
+      await service.undoLastImport();
+      expect(await repo.getPeriodDayDates(), ['2031-01-01']);
     });
+  });
+
+  test('importar un archivo con exportedAt en el futuro rechaza los dias '
+      'posteriores a hoy + 2 (despues no se podrian exportar)', () async {
+    final map = jsonDecode(File('test/fixtures/backup_v5.json')
+        .readAsStringSync()) as Map<String, dynamic>;
+    map['exportedAt'] = '2099-03-10T08:00:00+01:00';
+    ((map['data'] as Map)['dailyLogs'] as List).add({
+      'date': '2099-03-11',
+      'isPeriodDay': true,
+      'flow': null,
+      'mood': null,
+      'notes': null,
+      'periodDayExplicit': false,
+      'periodEnd': null,
+      'symptoms': <String>[],
+    });
+    (map['counts'] as Map)['dailyLogs'] =
+        ((map['data'] as Map)['dailyLogs'] as List).length;
+    final file = File(p.join(temp.path, 'futuro.json'))
+      ..writeAsStringSync(jsonEncode(map));
+
+    final result = await service.readBackupFile(file.path);
+
+    expect((result as BackupParseFailure).outOfRangeDate, '2099-03-11');
   });
 
   test('cleanTemporaryFiles borra solo las carpetas del respaldo', () async {
@@ -207,14 +233,15 @@ void main() {
       expect(copia.existsSync(), isFalse);
     });
 
-    test('mas de 5 MB se rechaza por tamano (sin decodificar) y se borra',
-        () async {
-      final copia = copiaDelSelector(List.filled(maxBackupSizeBytes + 1, 0x20));
+    test('mas grande que el tope se rechaza por tamano (sin decodificar) y '
+        'se borra', () async {
+      final copia =
+          copiaDelSelector(List.filled(maxEncryptedBackupSizeBytes + 1, 0x20));
 
       final result = await service.readBackupFile(copia.path);
 
       expect((result as BackupParseFailure).error, BackupError.tooLarge);
-      expect(result.detail, '${maxBackupSizeBytes + 1} bytes');
+      expect(result.detail, '${maxEncryptedBackupSizeBytes + 1} bytes');
       expect(copia.existsSync(), isFalse);
     });
 
@@ -369,18 +396,21 @@ void main() {
       expect(await currentDataJson(), antes);
     });
 
-    test('no sobrescribe antes_de_importar.json y se puede repetir', () async {
+    test('despues de deshacer borra la copia (ya es igual a los datos); un '
+        'segundo Deshacer no cambia nada', () async {
       await seedCurrentData();
       await service.importBackup(_fixture());
-      final copia = preImportFile().readAsBytesSync();
-      final modificada = preImportFile().lastModifiedSync();
+      expect(await service.preImportCopyDate(), isNotNull);
 
-      now = DateTime(2026, 10, 4, 18);
       await service.undoLastImport();
-      await service.undoLastImport();
+      expect(preImportFile().existsSync(), isFalse);
+      expect(await service.hasPreImportCopy(), isFalse);
+      expect(await service.preImportCopyDate(), isNull);
 
-      expect(preImportFile().readAsBytesSync(), copia);
-      expect(preImportFile().lastModifiedSync(), modificada);
+      final antes = await currentDataJson();
+      await expectLater(service.undoLastImport(),
+          throwsA(isA<BackupUndoUnavailableException>()));
+      expect(await currentDataJson(), antes);
       expect(await repo.countDays(), 3);
     });
 
@@ -431,6 +461,7 @@ void main() {
       // El recordatorio tiene su propia carpeta: aqui solo falla respaldos/.
       reminderStore: BackupReminderStore(
           supportDirectory: () async => support, clock: () => now),
+      deviceSettings: DeviceSettingsStore(supportDirectory: () async => support),
     );
 
     await expectLater(
@@ -460,6 +491,19 @@ void main() {
     expect(Directory(p.join(temp.path, BackupService.exportDirName))
         .existsSync(), isFalse);
     expect(Directory(p.join(temp.path, 'share_plus')).existsSync(), isFalse);
+  });
+
+  test('borrar todos los datos devuelve los ajustes de este telefono a los '
+      'valores por defecto', () async {
+    final ajustes = DeviceSettingsStore(supportDirectory: () async => support);
+    await ajustes.setOcultarEnRecientes(false);
+    await ajustes.setAvisoAtraso(true);
+
+    await service.deleteAllData();
+
+    expect(File(p.join(support.path, DeviceSettingsStore.fileName))
+        .existsSync(), isFalse);
+    expect(await ajustes.read(), const DeviceSettings());
   });
   // Recordatorio de respaldo (CP2): vive en files/, fuera de la base y del
   // respaldo exportado.

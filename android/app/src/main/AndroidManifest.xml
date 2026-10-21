@@ -9,16 +9,19 @@
         android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:allowBackup="false">
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:targetApi="31">
 
         <!-- Orientacion bloqueada en vertical: la app esta pensada para
              telefonos en vertical. Por eso se ignoran los avisos de lint
              LockedOrientationActivity y DiscouragedApi. Android 16 ignora
              el bloqueo en pantallas de 600 dp o mas (tablets, plegables
              abiertos); ahi la app gira y se comprobo sin desbordes en
-             horizontal. -->
+             horizontal. MainActivity (Kotlin) solo agrega la proteccion de
+             pantalla y abrir los ajustes de notificaciones. -->
         <activity
-            android:name="io.flutter.embedding.android.FlutterActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"

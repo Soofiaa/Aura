@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/main.dart';
+import 'package:aura/screens/stats_screen.dart' show moodChartColors;
 import 'package:aura/utils/colors.dart';
 
 import '../support/contrast.dart';
@@ -61,6 +62,12 @@ void main() {
         tinte(Colors.red, 0.10), 4.5);
     minimo('"Borrar todos los datos" (error del tema) sobre el fondo',
         tema.error, fondo, 4.5);
+    minimo('"Marcar periodo" de la hoja (textPrimary sobre accent)',
+        AppColors.textPrimary, AppColors.accent, 4.5);
+    for (final entry in moodChartColors.entries) {
+      minimo('texto blanco sobre la porcion de ${entry.key.name}',
+          blanco, entry.value, 4.5);
+    }
 
     // Graficos, bordes e iconos (3:1).
     minimo('acento fuerte sobre el fondo', AppColors.accentStrong, fondo, 3);

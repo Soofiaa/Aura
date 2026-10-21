@@ -40,6 +40,104 @@ const _settingsBase = NotificationSettings(
 );
 
 void main() {
+  group('planNotifications - aviso de atraso (102)', () {
+    const conAtraso = NotificationSettings(
+      notificationsEnabled: true,
+      periodReminderEnabled: false,
+      fertileWindowRemindersEnabled: false,
+      showDetailsEnabled: true,
+      reminderHour: 9,
+      reminderMinute: 0,
+      latePeriodReminderEnabled: true,
+    );
+
+    test('el dia siguiente al extremo tardio, con texto propio', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: conAtraso,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      final aviso = plan.single;
+      expect(aviso.kind, NotificationKind.latePeriodReminder);
+      expect(aviso.id, 102);
+      expect(aviso.date, '2026-04-26'); // extremo tardio 25/04 + 1
+      expect(aviso.title, '¿Te llegó el período?');
+    });
+
+    test('sin detalles: el texto generico', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: conAtraso.copyWith(),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan.single.title, isNot(contains('Aura: recordatorio')));
+      final generico = planNotifications(
+        prediction: _prediction(),
+        settings: const NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: false,
+          fertileWindowRemindersEnabled: false,
+          showDetailsEnabled: false,
+          reminderHour: 9,
+          reminderMinute: 0,
+          latePeriodReminderEnabled: true,
+        ),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(generico.single.title, 'Aura: recordatorio');
+    });
+
+    test('apagado por defecto', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: conAtraso.copyWith(latePeriodReminderEnabled: false),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, isEmpty);
+      expect(_settingsBase.latePeriodReminderEnabled, isFalse);
+    });
+
+    test('ya atrasado (su dia paso): no se repite', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: conAtraso,
+        today: '2026-04-28',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan, isEmpty);
+    });
+  });
+
+  group('planNotifications - keepDueToday', () {
+    test('un aviso de hoy cuya hora ya paso vuelve como due', () {
+      final plan = planNotifications(
+        prediction: _prediction(nextPeriodEarliestDate: '2026-04-21'),
+        settings: _settingsBase,
+        today: '2026-04-20',
+        nowMinutesOfDay: 9 * 60 + 5,
+        keepDueToday: true,
+      );
+      final periodo = plan
+          .singleWhere((n) => n.kind == NotificationKind.periodReminder);
+      expect(periodo.due, isTrue);
+    });
+
+    test('uno futuro no es due', () {
+      final plan = planNotifications(
+        prediction: _prediction(),
+        settings: _settingsBase,
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+        keepDueToday: true,
+      );
+      expect(plan.every((n) => !n.due), isTrue);
+    });
+  });
+
   group('planNotifications - casos base', () {
     test('predice ambos avisos con todo activado y tiempo de sobra', () {
       final plan = planNotifications(

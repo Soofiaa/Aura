@@ -67,4 +67,17 @@ void main() {
       expect(DayKey.isBefore('2026-01-02', '2026-01-01'), isFalse);
     });
   });
+
+  group('DayKey.toUtcAnchor', () {
+    test('rechaza dias que no existen y claves sin ceros', () {
+      for (final key in ['2026-02-30', '2026-13-01', '2026-1-5', '2026-01']) {
+        expect(() => DayKey.toUtcAnchor(key), throwsFormatException,
+            reason: key);
+      }
+    });
+
+    test('acepta el 29 de febrero de un anio bisiesto', () {
+      expect(DayKey.toUtcAnchor('2028-02-29'), DateTime.utc(2028, 2, 29));
+    });
+  });
 }

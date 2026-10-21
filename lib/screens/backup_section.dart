@@ -64,6 +64,28 @@ class _BackupSectionState extends State<BackupSection> {
   /// respaldo (aqui o desde Inicio) o borrar los datos los cambia.
   late final Stream<BackupReminderState> _recordatorio = _store.watch();
 
+  /// Cuando se importo por ultima vez, mientras exista la copia previa:
+  /// "Deshacer la ultima importacion" sigue disponible aunque el aviso de
+  /// la importacion ya no este (otro aviso lo reemplaza). Null si no hay.
+  DateTime? _copiaPrevia;
+
+  @override
+  void initState() {
+    super.initState();
+    _leerCopiaPrevia();
+  }
+
+  Future<void> _leerCopiaPrevia() async {
+    DateTime? fecha;
+    try {
+      fecha = await widget.service.preImportCopyDate();
+    } catch (_) {
+      fecha = null;
+    }
+    if (!mounted) return;
+    setState(() => _copiaPrevia = fecha);
+  }
+
   // --- Crear respaldo ---
 
   Future<void> _crearRespaldo() => CreateBackupFlow(
@@ -158,9 +180,41 @@ class _BackupSectionState extends State<BackupSection> {
         return;
       }
       _mostrarExito(vista.incomingDayCount);
+      await _leerCopiaPrevia();
     } finally {
       _busy.value = false;
     }
+  }
+
+  /// "Deshacer la ultima importacion" desde Ajustes: puede ser dias
+  /// despues, asi que antes se confirma (lo registrado desde entonces se
+  /// pierde).
+  Future<void> _deshacerDesdeAjustes() async {
+    final fecha = _copiaPrevia;
+    if (fecha == null || _ocupada) return;
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Deshacer la última importación?'),
+        content: Text(
+          'Tus datos vuelven a como estaban antes de importar, el '
+          '${dayMonthLabelWithYear(DayKey.fromDate(fecha), today: _store.today())}. '
+          'Lo que registraste después de esa fecha se perderá.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Deshacer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+    await _deshacer();
   }
 
   /// Pide la contrasena y abre el respaldo cifrado (HU-06b CP4). Devuelve
@@ -282,6 +336,7 @@ class _BackupSectionState extends State<BackupSection> {
     } finally {
       _busy.value = false;
     }
+    await _leerCopiaPrevia();
   }
 
   // --- Utilidades ---
@@ -323,6 +378,15 @@ class _BackupSectionState extends State<BackupSection> {
               onChanged: estado == null ? null : _cambiarRecordatorio,
             ),
             _restaurarTile(),
+            if (_copiaPrevia != null)
+              ListTile(
+                leading: const Icon(Icons.undo),
+                title: const Text('Deshacer la última importación'),
+                subtitle: const Text(
+                    'Vuelve a tus datos de antes de importar'),
+                enabled: !_ocupada,
+                onTap: _deshacerDesdeAjustes,
+              ),
           ],
         );
       },

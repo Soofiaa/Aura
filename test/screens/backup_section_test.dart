@@ -445,6 +445,41 @@ void main() {
       await db.close();
     });
 
+    testWidgets('"Deshacer la ultima importacion" en Ajustes: aparece tras '
+        'importar, pide confirmacion y desaparece al deshacer',
+        (tester) async {
+      const deshacerTile = 'Deshacer la última importación';
+      await seedDays(3);
+      await pumpSettings(tester);
+      expect(find.text(deshacerTile), findsNothing);
+
+      await importarFixture(tester);
+      // Otro aviso reemplaza al de la importacion: el de Ajustes sigue.
+      ScaffoldMessenger.of(tester.element(find.text('Ajustes')))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+      expect(find.text(deshacerTile), findsOneWidget);
+
+      await tester.tap(find.text(deshacerTile));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Lo que registraste después'),
+          findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(backup.undoCount, 0);
+
+      await tester.tap(find.text(deshacerTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(
+          of: find.byType(AlertDialog), matching: find.text('Deshacer')));
+      await tester.pumpAndSettle();
+
+      expect(backup.undoCount, 1);
+      expect(await repo.countDays(), 3);
+      expect(find.text(deshacerTile), findsNothing);
+      await db.close();
+    });
+
     testWidgets('doble toque en Reemplazar importa una sola vez y no cierra '
         'la pantalla de Ajustes', (tester) async {
       await pumpSettings(tester);

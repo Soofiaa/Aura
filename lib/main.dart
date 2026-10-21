@@ -6,7 +6,9 @@ import 'app_startup.dart';
 import 'data/backup/backup_file_gateway.dart';
 import 'data/backup/backup_service.dart';
 import 'data/backup/plugin_backup_file_gateway.dart';
+import 'data/device_settings_store.dart';
 import 'data/notifications/notification_reconciler.dart';
+import 'utils/android_system.dart';
 import 'utils/aura_localizations.dart';
 import 'utils/colors.dart';
 import 'screens/onboarding_screen.dart';
@@ -22,9 +24,22 @@ Future<void> main() async {
   // LocaleDataException la primera vez que se usan.
   await initializeDateFormatting();
 
-  await notificationScheduler.init();
+  // Un fallo de las notificaciones (zona horaria, plugin) no debe dejar la
+  // app en el splash: sin init, los avisos no se programan, pero la app
+  // abre.
+  try {
+    await notificationScheduler.init();
+  } catch (_) {}
 
   backupFileGateway = const PluginBackupFileGateway();
+
+  // MainActivity arranca con FLAG_SECURE; aqui se aplica lo elegido en
+  // Ajustes ("Ocultar Aura en Recientes") y cada cambio. Sin leer el
+  // archivo se deja como esta (protegida).
+  deviceSettingsStore.watch().listen(
+        (ajustes) => androidSystem.setScreenProtection(ajustes.ocultarEnRecientes),
+        onError: (Object _) {},
+      );
 
   // La base se abre (y migra) ANTES que todo lo que la usa: si falla, se
   // muestra UpdateErrorScreen y no se programan notificaciones ni se

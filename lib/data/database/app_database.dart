@@ -378,7 +378,17 @@ QueryExecutor openDatabaseFile({
   required Directory backupsDir,
 }) {
   ensurePreMigrationCopy(database: database, backupsDir: backupsDir);
-  return NativeDatabase.createInBackground(database, setup: enableForeignKeys);
+  return NativeDatabase.createInBackground(database, setup: configureConnection);
+}
+
+/// Configuracion de cada conexion a la base real: [enableForeignKeys] y
+/// secure_delete. sqlite3_flutter_libs no compila SQLite con
+/// SQLITE_SECURE_DELETE: sin esto, un DELETE solo marca las paginas como
+/// libres y las notas y sintomas borrados siguen en el archivo hasta que
+/// algo las pise.
+void configureConnection(Database database) {
+  enableForeignKeys(database);
+  database.execute('PRAGMA secure_delete = ON');
 }
 
 /// SQLite no aplica ON DELETE CASCADE salvo que foreign_keys este

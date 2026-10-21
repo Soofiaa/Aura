@@ -276,9 +276,14 @@ class FakeBackupService extends BackupService {
     if (copy == null) {
       throw BackupUndoUnavailableException('no hay copia previa');
     }
-    final result = decodeBackup(utf8.encode(copy));
+    final result = decodeBackup(utf8.encode(copy), checkMaxDate: false);
     await _repo.replaceAllWithBackup((result as BackupParseSuccess).data);
+    _preImportCopy = null;
   }
+
+  @override
+  Future<DateTime?> preImportCopyDate() async =>
+      _preImportCopy == null ? null : DateTime(2026, 10, 4, 10, 15);
 
   @override
   Future<void> deleteAllData() async {

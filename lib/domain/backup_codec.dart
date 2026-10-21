@@ -45,6 +45,12 @@ const int minBackupSchemaVersion = 3;
 /// cargar en memoria un archivo cualquiera elegido por error.
 const int maxBackupSizeBytes = 5 * 1024 * 1024;
 
+/// Tope de un archivo cifrado: el documento de [maxBackupSizeBytes] en
+/// base64 (4/3) mas el encabezado. Con el mismo tope que el sin cifrar, un
+/// respaldo que se podia guardar sin contrasena fallaba con contrasena.
+const int maxEncryptedBackupSizeBytes =
+    maxBackupSizeBytes * 4 ~/ 3 + 64 * 1024;
+
 /// Fecha minima aceptada en un respaldo. Ninguna pantalla permitio nunca
 /// fechas anteriores a 2020 (formulario y calendario desde v1.0), pero la
 /// pregunta de Inicio guarda "hoy" segun el reloj del telefono, que puede
@@ -328,15 +334,26 @@ String formatExportedAt(DateTime local) {
 /// Valida y decodifica un archivo de respaldo completo. No lanza: todo
 /// problema vuelve como [BackupParseFailure]. Un respaldo cifrado con un
 /// encabezado valido vuelve como [BackupNeedsPassword], sin derivar nada.
-BackupParseResult decodeBackup(List<int> bytes) {
-  if (bytes.length > maxBackupSizeBytes) {
-    return BackupParseFailure(
-        BackupError.tooLarge, '${bytes.length} bytes');
-  }
+///
+/// [today] ('yyyy-MM-dd', el dia del telefono que importa) acota tambien
+/// el tope de fechas: un archivo con `exportedAt` en el futuro no puede
+/// meter dias que despues esta misma app no podria exportar (y que
+/// bloquearian exportar e importar). [checkMaxDate] en false solo para
+/// las copias que escribe la propia app (la copia previa a importar):
+/// tienen que poder guardar y devolver lo que ya hay en la base.
+BackupParseResult decodeBackup(
+  List<int> bytes, {
+  String? today,
+  bool checkMaxDate = true,
+}) {
+  final tooLarge =
+      BackupParseFailure(BackupError.tooLarge, '${bytes.length} bytes');
+  if (bytes.length > maxEncryptedBackupSizeBytes) return tooLarge;
   final Object? root;
   try {
     root = jsonDecode(utf8.decode(bytes));
   } on FormatException catch (e) {
+    if (bytes.length > maxBackupSizeBytes) return tooLarge;
     // Un respaldo de Aura cortado a la mitad deja de ser JSON valido,
     // pero sigue siendo "un respaldo danado" y no "otro archivo".
     final text = utf8.decode(bytes, allowMalformed: true);
@@ -346,14 +363,17 @@ BackupParseResult decodeBackup(List<int> bytes) {
     return BackupParseFailure(error, 'no es JSON: $e');
   }
   if (root is! Map<String, dynamic> || root['format'] != backupFormatId) {
+    if (bytes.length > maxBackupSizeBytes) return tooLarge;
     return const BackupParseFailure(
         BackupError.notABackup, 'falta format: aura-backup');
   }
   if (root['formatVersion'] == encryptedBackupFormatVersion) {
     return _parseEncrypted(root);
   }
+  if (bytes.length > maxBackupSizeBytes) return tooLarge;
   try {
-    return BackupParseSuccess(_parseRoot(root));
+    return BackupParseSuccess(
+        _parseRoot(root, today: today, checkMaxDate: checkMaxDate));
   } on _Invalid catch (e) {
     return BackupParseFailure(e.error, e.detail,
         outOfRangeDate: e.outOfRangeDate);
@@ -383,10 +403,11 @@ Future<BackupParseResult> decodeEncryptedBackup(
   BackupNeedsPassword pending,
   String password, {
   BackupKeyDeriver deriveKey = deriveBackupKey,
+  String? today,
 }) async {
   final inner = await decryptBackupEnvelope(pending.envelope, password,
       deriveKey: deriveKey);
-  final result = decodeBackup(inner);
+  final result = decodeBackup(inner, today: today);
   if (result is BackupNeedsPassword) {
     // Adentro solo puede ir un documento de formatVersion 1.
     return const BackupParseFailure(
@@ -407,7 +428,11 @@ class _Invalid implements Exception {
   final String? outOfRangeDate;
 }
 
-BackupData _parseRoot(Map<String, dynamic> root) {
+BackupData _parseRoot(
+  Map<String, dynamic> root, {
+  required String? today,
+  required bool checkMaxDate,
+}) {
   final formatVersion = _int(root, 'formatVersion');
   if (formatVersion > backupFormatVersion) {
     throw _Invalid('formatVersion $formatVersion', BackupError.newerVersion);
@@ -436,7 +461,11 @@ BackupData _parseRoot(Map<String, dynamic> root) {
   if (exportedAtDate == null) throw _Invalid('exportedAt $exportedAt');
 
   final data = _map(root, 'data');
-  final maxDate = _maxAllowedDate(exportedAt);
+  var maxDate = checkMaxDate ? _maxAllowedDate(exportedAt) : '9999-12-31';
+  if (checkMaxDate && today != null) {
+    final todayMax = _maxAllowedDate(today);
+    if (todayMax.compareTo(maxDate) < 0) maxDate = todayMax;
+  }
   final rawLogs = _list(data, 'dailyLogs');
   final days = <BackupDay>[];
   final seen = <String>{};
@@ -471,7 +500,8 @@ BackupData _parseRoot(Map<String, dynamic> root) {
 /// Tope superior de fechas: el mayor entre el limite historico del
 /// formulario v1.0 y la fecha de exportacion mas un margen. Que dependa
 /// de `exportedAt` hace que un telefono con el reloj adelantado siga
-/// pudiendo restaurar lo que el mismo guardo.
+/// pudiendo restaurar lo que el mismo guardo. Acepta tambien un dia
+/// 'yyyy-MM-dd' (el "hoy" de [decodeBackup]).
 String _maxAllowedDate(String exportedAt) {
   final exportDay =
       exportedAt.length >= 10 ? exportedAt.substring(0, 10) : '';

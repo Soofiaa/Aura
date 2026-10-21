@@ -1,7 +1,10 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tzdata;
+// latest_all, no latest: latest deja fuera los alias y nombres antiguos
+// (America/Buenos_Aires, Asia/Calcutta, Etc/UTC...) que algunos telefonos
+// todavia informan.
+import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import '../domain/notification_planner.dart';
 
@@ -42,6 +45,52 @@ const _fertileChannelName = 'Ventana fértil';
 const _fertileChannelDescription =
     'Aviso al comenzar tu ventana de mayor fertilidad estimada.';
 
+const _lateChannelId = 'aura_late_period_reminder';
+const _lateChannelName = 'Período atrasado';
+const _lateChannelDescription =
+    'Aviso el primer día de atraso de tu período estimado.';
+
+/// Avisos propios pendientes que ya no corresponden: todo id de
+/// [ownedIds] que no este en [plan]. Uno [PlannedNotification.due] del plan
+/// no se cancela (ni se vuelve a programar): Android puede no haberlo
+/// entregado todavia.
+Set<int> idsToCancel({
+  required Iterable<int> pendingIds,
+  required Iterable<int> ownedIds,
+  required List<PlannedNotification> plan,
+}) {
+  final owned = ownedIds.toSet();
+  final planned = {for (final p in plan) p.id};
+  return {
+    for (final id in pendingIds)
+      if (owned.contains(id) && !planned.contains(id)) id,
+  };
+}
+
+/// Zona de tz para el nombre que informa el telefono. Un nombre que la
+/// base de timezone no conoce (zona nueva, o "GMT+03:00" de algunas ROMs)
+/// no debe impedir abrir la app: se usa Etc/GMT con el desfase actual en
+/// horas enteras, o UTC. Requiere tzdata.initializeTimeZones().
+tz.Location resolveTimeZoneLocation(String? name, Duration offset) {
+  if (name != null) {
+    try {
+      return tz.getLocation(name);
+    } on tz.LocationNotFoundException {
+      // Sigue con el desfase.
+    }
+  }
+  if (offset.inMinutes % 60 == 0 && offset.inHours != 0) {
+    // Etc/GMT invierte el signo: Etc/GMT+3 es UTC-3.
+    final hours = -offset.inHours;
+    try {
+      return tz.getLocation('Etc/GMT${hours > 0 ? '+' : ''}$hours');
+    } on tz.LocationNotFoundException {
+      // Desfase fuera de -14..+12: UTC.
+    }
+  }
+  return tz.UTC;
+}
+
 class FlutterLocalNotificationsScheduler implements NotificationScheduler {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -63,8 +112,14 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
   }
 
   Future<void> _syncTimeZoneLocation() async {
-    final name = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(name));
+    String? name;
+    try {
+      name = await FlutterTimezone.getLocalTimezone();
+    } catch (_) {
+      // Sin nombre se usa el desfase actual (ver resolveTimeZoneLocation).
+    }
+    tz.setLocalLocation(
+        resolveTimeZoneLocation(name, DateTime.now().timeZoneOffset));
   }
 
   @override
@@ -88,16 +143,30 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
 
   @override
   Future<void> reconcile(List<PlannedNotification> plan) async {
-    final plannedIds = plan.map((p) => p.id).toSet();
     final pending = await _plugin.pendingNotificationRequests();
-    for (final request in pending) {
-      if (_ownedIds.contains(request.id) && !plannedIds.contains(request.id)) {
-        await _plugin.cancel(request.id);
+    final toCancel = idsToCancel(
+      pendingIds: pending.map((r) => r.id),
+      ownedIds: _ownedIds,
+      plan: plan,
+    );
+    // Un fallo en un aviso no impide cancelar ni programar los demas; el
+    // primero se relanza al final (el reconciliador lo absorbe).
+    Object? firstError;
+    for (final id in toCancel) {
+      try {
+        await _plugin.cancel(id);
+      } catch (e) {
+        firstError ??= e;
       }
     }
-    for (final item in plan) {
-      await _scheduleOne(item);
+    for (final item in plan.where((p) => !p.due)) {
+      try {
+        await _scheduleOne(item);
+      } catch (e) {
+        firstError ??= e;
+      }
     }
+    if (firstError != null) throw firstError;
   }
 
   Future<void> _scheduleOne(PlannedNotification item) async {
@@ -118,8 +187,6 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
       scheduled,
       _detailsFor(item.kind),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -135,11 +202,16 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
           _fertileChannelName,
           _fertileChannelDescription,
         ),
+      NotificationKind.latePeriodReminder => (
+          _lateChannelId,
+          _lateChannelName,
+          _lateChannelDescription,
+        ),
     };
 
-    // NOTA: flutter_local_notifications 17.1.2 no expone `publicVersion`
-    // en AndroidNotificationDetails (a diferencia de la API nativa de
-    // Android, que si lo tiene). Sin esto, en pantalla de bloqueo
+    // NOTA: flutter_local_notifications 19.5.0 tampoco expone
+    // `publicVersion` en AndroidNotificationDetails (la API nativa de
+    // Android si lo tiene). Sin esto, en pantalla de bloqueo
     // segura Android muestra su propio placeholder generico del
     // sistema (icono + nombre de la app) en vez de un publicVersion
     // redactado por la app - igual de discreto en la practica, pero no

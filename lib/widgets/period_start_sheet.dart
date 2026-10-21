@@ -258,7 +258,8 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.background,
+            // textPrimary, como "Me llego hoy": el claro daba 2,25:1.
+            foregroundColor: AppColors.textPrimary,
             minimumSize: const Size.fromHeight(48),
           ),
           onPressed:

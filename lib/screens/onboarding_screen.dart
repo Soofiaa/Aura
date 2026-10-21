@@ -49,8 +49,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  /// Doble toque en "Comenzar": sin esto, dos pushReplacement.
+  bool _finalizando = false;
+
   void _finalizarOnboarding() async {
-    await (widget.repository ?? cycleRepository).setOnboardingSeen(true);
+    if (_finalizando) return;
+    _finalizando = true;
+    try {
+      await (widget.repository ?? cycleRepository).setOnboardingSeen(true);
+    } catch (_) {
+      // Se vuelve a mostrar la proxima vez; igual se entra a la app.
+    }
 
     if (!mounted) return;
     Navigator.pushReplacement(

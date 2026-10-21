@@ -2,9 +2,13 @@ import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../widgets/symptom_selector.dart';
 import '../utils/app_snackbar.dart';
+
+/// Largo maximo de las notas de un dia.
+const int maxNoteLength = 2000;
 
 class AddCycleScreen extends StatefulWidget {
   const AddCycleScreen({super.key});
@@ -39,6 +43,16 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   /// cambios sin guardar y salir o cambiar de fecha pregunta (hallazgo #3).
   _DatosDelDia _cargado = _DatosDelDia.vacio;
 
+  /// Guardando: el boton queda deshabilitado. Dos toques seguidos
+  /// escribian dos veces y hacian dos pop (el segundo sacaba Inicio y
+  /// dejaba la pantalla en negro).
+  bool _guardando = false;
+
+  /// Fecha de la ultima carga pedida: si una carga anterior termina
+  /// despues, se descarta (si no, el formulario mostraria los datos de
+  /// otro dia bajo la fecha elegida y se guardarian ahi).
+  String? _cargaPedida;
+
   @override
   void initState() {
     super.initState();
@@ -63,10 +77,11 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
   /// resetea a los valores por defecto si no hay nada registrado.
   Future<void> _cargarDia(DateTime date) async {
     final dateKey = DayKey.fromDate(date);
+    _cargaPedida = dateKey;
     final existing = await cycleRepository.getDay(dateKey);
     final symptoms = await cycleRepository.getSymptomsForDay(dateKey);
 
-    if (!mounted) return;
+    if (!mounted || _cargaPedida != dateKey) return;
     setState(() {
       _teniaRegistro = existing != null;
       if (existing != null) {
@@ -163,6 +178,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
       _selectedSymptoms.isEmpty;
 
   Future<void> _guardarRegistro() async {
+    if (_guardando) return;
     if (_registroVacio) {
       // No se crea una fila vacia: Estadisticas seguiria mostrando datos
       // y el respaldo contaria un "dia con registro" que no lo es.
@@ -175,14 +191,23 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
           .map((label) => Symptom.values.firstWhere((s) => s.label == label))
           .toSet();
 
-      await cycleRepository.upsertDay(
-        date: DayKey.fromDate(_selectedDate),
-        isPeriodDaySwitch: _esDiaDeSangrado,
-        flow: _esDiaDeSangrado ? _flujo : null,
-        mood: _estadoAnimo,
-        notes: _notasController.text.trim(),
-        symptoms: symptoms,
-      );
+      setState(() => _guardando = true);
+      try {
+        await cycleRepository.upsertDay(
+          date: DayKey.fromDate(_selectedDate),
+          isPeriodDaySwitch: _esDiaDeSangrado,
+          flow: _esDiaDeSangrado ? _flujo : null,
+          mood: _estadoAnimo,
+          notes: _notasController.text.trim(),
+          symptoms: symptoms,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _guardando = false);
+        showAppSnackBar(
+            context, "No se pudo guardar el registro. Inténtalo de nuevo.");
+        return;
+      }
 
       if (!mounted) return;
       showAppSnackBar(context, "Registro guardado correctamente.");
@@ -236,7 +261,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                                  fullDateLabel(DayKey.fromDate(_selectedDate)),
                                   style: const TextStyle(fontSize: 16),
                                 ),
                               ),
@@ -332,6 +357,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                       TextFormField(
                         controller: _notasController,
                         maxLines: 4,
+                        // Tope: sin el, notas muy largas podian pasar el tope
+                        // de tamano del respaldo y dejar de poder exportarse.
+                        maxLength: maxNoteLength,
                         decoration: const InputDecoration(
                           hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
                           border: OutlineInputBorder(),
@@ -349,7 +377,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
                 child: ElevatedButton.icon(
-                  onPressed: _guardarRegistro,
+                  onPressed: _guardando ? null : _guardarRegistro,
                   icon: const Icon(Icons.save),
                   label: const Text("Guardar registro"),
                   style: ElevatedButton.styleFrom(
