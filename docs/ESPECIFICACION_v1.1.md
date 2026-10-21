@@ -841,7 +841,7 @@ Cómo queda el formulario tras el parche v1.0.1 (B-1 a B-3) y la tanda 2 (T2-1 a
 
 | ID | Requisito |
 |---|---|
-| RNF-1 | **Privacidad:** el APK de release no declara el permiso `INTERNET` (verificar con `aapt dump permissions`). |
+| RNF-1 | **Privacidad:** el APK de release no declara el permiso `INTERNET` (verificar con `aapt dump permissions`). *Nota (HU-09): desde la v1.2 el release declara `INTERNET` solo para el respaldo automático en Drive; rige el RNF-1 v1.2 de `HU-09_respaldo_drive_v1.2.md`, con su lista permitida de permisos.* |
 | RNF-2 | **Datos:** cada cambio de schema lleva migración y **test de migración**; ningún dato existente se pierde al actualizar. |
 | RNF-3 | **Calidad:** `flutter analyze` sin advertencias y toda la batería de tests en verde antes de cada merge. |
 | RNF-4 | **Pruebas:** cada HU agrega tests en la capa donde vive la regla (dominio puro primero, luego repositorio, luego widget). |
@@ -862,7 +862,7 @@ Marcadas para resolver en la **Etapa A** (propuesta de Claude Code) antes de imp
 | **T-02 / T-03** | ¿El ícono de notificación y el ícono monocromo se corrigen dentro de T-01? | Separarlos en tareas propias. | Resuelta: ver sección 10 |
 | **D-5** | ¿El Calendario debe marcar el próximo período estimado? Hoy solo marca los días que faltan del período en curso, y es intencional según E-1. | Consultar a las testers antes de decidir. Si se marca, no debe confundirse con un día registrado ni con los estimados del período en curso (principio 1). | Pendiente: consultar a las testers |
 | **D-6** | ¿Volvió tu período o es manchado? Cuando aparece sangrado después de un período cerrado, la app no lo distingue: a 7 días o menos del último día se suma a ese período y lo reabre (R-4); a más de 7 días empieza un período nuevo. | Preguntar a las testers. Una opción es preguntarlo al marcar el día ("¿Volvió tu período o es manchado?"). No se implementa en la 1.1. | Pendiente: consultar a las testers |
-| **D-7** | ¿Aura debe respaldar automáticamente a una carpeta elegida por la usuaria (por ejemplo, una carpeta sincronizada)? | Dos opciones: no hacerlo; o hacerlo en la 1.2 con su propio diseño de seguridad (clave derivada guardada en el Keystore de Android, sin pedir la contraseña cada vez). | Pendiente: consultar a las testers, junto con D-5 y D-6 |
+| **D-7** | ¿Aura debe respaldar automáticamente a una carpeta elegida por la usuaria (por ejemplo, una carpeta sincronizada)? | Dos opciones: no hacerlo; o hacerlo en la 1.2 con su propio diseño de seguridad (clave derivada guardada en el Keystore de Android, sin pedir la contraseña cada vez). | **Resuelta (HU-09, v1.2):** sí, con el diseño previsto: respaldo diario opt-in a una carpeta propia **Aura** en Google Drive de la usuaria, siempre cifrado con una contraseña elegida una sola vez y sellada con el Keystore de Android, alcance `drive.file` (Aura solo ve los archivos que ella misma crea) e `INTERNET` declarado solo para eso. Detalle en `HU-09_respaldo_drive_v1.2.md`. |
 | **D-8** | ¿La transferencia entre dispositivos de Android (cable o Wi-Fi al cambiar de teléfono) copia los datos de Aura? Con `targetSdk` 36, `allowBackup="false"` apaga el respaldo en la nube, pero no necesariamente la transferencia directa si no hay `dataExtractionRules`. | Bloquearla: se agregó `dataExtractionRules` con un archivo vacío (auditoría 2026-10). El camino documentado para cambiar de teléfono es el respaldo propio (HU-06) y su recordatorio (HU-08). | Resuelta: ver sección 10 (RR-6, actualizado) |
 
 ### Limitaciones conocidas de la 1.1.0

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'package:aura/data/backup/auto_drive_backup_service.dart';
 import 'package:aura/data/backup/backup_file_gateway.dart';
 import 'package:aura/data/backup/backup_reminder_store.dart';
 import 'package:aura/data/backup/backup_service.dart';
@@ -18,6 +19,8 @@ import 'package:aura/screens/main_navigation_screen.dart';
 import 'package:aura/screens/settings_screen.dart';
 
 import '../support/fake_backup.dart';
+import '../support/fake_drive_backup.dart';
+import '../support/fake_drive_backup_settings_store.dart';
 import '../support/fake_notification_scheduler.dart';
 
 /// test/fixtures/backup_v3.json: 7 dias, exportado el 2026-10-04.
@@ -42,6 +45,17 @@ void main() {
     // Respaldo exitoso: anota la fecha en memoria (la E/S real no
     // avanza dentro de testWidgets).
     backupReminderStore = FakeBackupReminderStore();
+    // HU-09: "Borrar todos los datos" tambien borra los ajustes del
+    // respaldo en Drive; con el singleton real esa E/S no avanza en el
+    // reloj falso, igual que con el recordatorio.
+    autoDriveBackupService = AutoDriveBackupService(
+      settings: FakeDriveBackupSettingsStore(),
+      gateway: FakeBlankDriveBackupGateway(),
+      vault: FakeBlankKeystoreVault(),
+      buildExportJson: () async => '{}',
+      recordBackup: () async {},
+      runner: runInSameIsolate,
+    );
   });
 
   /// Pantalla alta para que toda la lista de Ajustes quepa sin scroll.

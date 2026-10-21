@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.0 (en preparación)
+
+### Nuevo
+
+- **Respaldo automático en Google Drive** (opcional, apagado por defecto), en Ajustes → "Tus datos": una vez al día —al abrir la app, al reanudarla o al guardar un registro— sube a una carpeta **Aura** de la cuenta de Google de la usuaria el mismo respaldo cifrado de la HU-06, siempre con una contraseña que se elige una sola vez (la clave queda sellada en el Keystore de Android; Aura no la conoce). La conexión usa el alcance `drive.file`, con el que solo ve los archivos que ella misma crea, y se desconecta desde Ajustes (cierra la sesión de Google); "Borrar todos los datos" también olvida la cuenta. La compilación necesita un client ID de OAuth: ver `docs/DRIVE_SETUP.md`.
+- El APK de release declara `INTERNET`, solo para ese respaldo (RNF-1 v1.2 en `docs/HU-09_respaldo_drive_v1.2.md`).
+
 ## 1.1.1 (en preparación)
 
 ### Nuevo
