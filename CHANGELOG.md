@@ -1,6 +1,51 @@
 # Cambios
 
-## 1.1.0 (sin publicar)
+## 1.1.1 (en preparación)
+
+### Nuevo
+
+- **Aviso "¿Te llegó el período?"** en Ajustes → Notificaciones (apagado por defecto): un aviso el primer día de atraso, con el mismo texto discreto que los demás recordatorios, y desactivable igual que ellos.
+- **"Ocultar Aura en Recientes"** en Ajustes → Privacidad, activado por defecto: la vista previa de la app en Recientes sale en blanco y no se pueden hacer capturas ni grabaciones de la pantalla, porque Aura guarda datos de salud.
+- **"Deshacer la última importación"** en Ajustes → "Tus datos", mientras exista la copia guardada antes de importar: pide confirmación (lo que registraste después de importar se pierde) y ya no depende del mensaje de éxito, que se cierra cuando llega otro aviso.
+- **"Ir a hoy"** en la barra del Calendario.
+- **"Abrir ajustes"** en el aviso de permiso de notificaciones: si Android dejó de preguntar tras dos negativas, ese es el único camino para volver a activarlas.
+
+### Cambiado
+
+- Ajustes avisa "No se pudo guardar el cambio. Inténtalo de nuevo." si un ajuste no se pudo guardar: antes el interruptor se movía igual y el valor volvía al recargar.
+- Las fechas de Inicio y de "Registrar día" se leen como "21 de abril" en vez de "21/04/2026" (el lector de pantalla lo lee mucho mejor).
+- El gráfico de ánimo usa un color fijo y oscuro por estado (el texto blanco llega al contraste mínimo), no escribe dentro de las porciones chicas y suma una leyenda con color y porcentaje. Estadísticas muestra "No se pudieron cargar las estadísticas." si la lectura falla, en vez de la pantalla entera en error.
+- "Registrar día" pone un límite de 2000 caracteres a las notas.
+- El Calendario pasa de día solo cuando la medianoche pasa con la app abierta, y al volver a primer plano. Los nombres de los días crecen con el tamaño de letra del sistema.
+- Al cambiar de teléfono por cable o por Wi-Fi, Android ya no copia los datos de Aura: los datos solo salen con un respaldo propio de la app.
+- "Borrar todos los datos" también borra los ajustes de este teléfono (ocultar en Recientes y aviso de atraso vuelven a sus valores por defecto) y compacta la base para no dejar restos de lo borrado.
+- Compilar un AAB para Play sin `key.properties` falla con un mensaje claro; `assembleRelease` sigue cayendo a la firma de debug para poder probar en el teléfono.
+- Cadena de compilación de Android actualizada (AGP 8.13, Gradle 8.14.3, Kotlin 2.2.20) y dependencias a sus versiones actuales; se quita `enableJetifier`.
+
+### Corregido
+
+- **Una zona horaria que Aura no conocía dejaba la app en la pantalla de inicio, sin abrir.** Algunos teléfonos informan nombres antiguos (`America/Buenos_Aires`, `Asia/Calcutta`) o un desfase simple (`GMT+03:00`). Ahora se usa el alias correcto, el desfase del teléfono y, en el peor caso, UTC: la app abre y los avisos se programan igual.
+- **Al abrir la app se cancelaban avisos ya programados.** El reconciliador armaba el plan antes de tener todos los datos (ciclos, ajustes de notificaciones y ajustes de este teléfono) y con ese plan a medias borraba lo que había; ahora espera a los tres y pone las corridas en fila, sin solaparse.
+- **Se perdía un aviso del día si su hora ya había pasado** aunque Android todavía no lo hubiera entregado.
+- **Con ciclos largos y variables (por ejemplo 42 y 58 días) la predicción decía "datos desactualizados" dentro de su propio rango.** Ahora se muestran hasta 7 días de atraso antes de eso.
+- **Con ciclos de 15 a 19 días la ventana fértil y la ovulación se pintaban sobre el sangrado.** Ahora no se muestran si la ovulación estimada caería dentro de la duración estimada del período, y la ventana empieza como pronto un día después del sangrado.
+- **Un respaldo con la fecha adelantada podía meter días que después impedían exportar e importar.** El tope de fechas se acota también con el día del teléfono que importa, y la copia previa a importar acepta lo que ya hay en la base (antes, un día así bloqueaba el siguiente respaldo).
+- **Un respaldo cifrado de hasta 6,7 MB se rechazaba por demasiado grande**: el tope del archivo sin cifrar no contemplaba que el cifrado lo agranda en base64.
+- **Abrir un respaldo de varios MB congelaba la pantalla** un instante: ahora se analiza en segundo plano.
+- **"Guardar registro" con dos toques rápidos guardaba dos veces y podía dejar la pantalla en negro** (doble `pop`).
+- **Si al cargar un día tardaba la lectura de otro, se guardaban los datos del segundo en la fecha elegida.**
+- **Las notas muy largas podían hacer que el respaldo deje de poder exportarse** por superar el tope de tamaño del archivo.
+- **Después del 31/12/2030 el Calendario dejaba de abrir** (su último día estaba fijo); ahora llega un año más allá de hoy.
+- **Con la app abierta, el Calendario seguía diciendo que hoy era ayer**: los días futuros se deshabilitaban y los estimados y la ventana fértil quedaban un día atrasados hasta el próximo toque.
+- **Onboarding no liberaba su control de páginas**, y un doble toque en "Comenzar" navegaba dos veces.
+- **Contraste:** "Marcar período" de la hoja (2,25:1) pasa a usar el texto principal; los textos secundarios de Inicio pasan a `textSecondary`; el gráfico de ánimo deja los amarillos y limas que no llegaban a 2:1 con texto blanco.
+- **Al borrar todos los datos no se borraban de verdad** las notas y síntomas: SQLite solo marcaba las páginas como libres, así que seguían en el archivo. Ahora cada conexión activa `secure_delete` (sobrescribe con ceros) y el borrado total compacta la base con `VACUUM`.
+- La pantalla de error de arranque decía "No se pudo actualizar Aura" incluso cuando no había actualización: ahora es "No se pudieron abrir tus datos".
+- Un `.tmp` a medias de la copia guardada antes de actualizar quedaba en el teléfono para siempre.
+- Los bytes de la contraseña y el documento descifrado se borran de memoria al usarlos (mejor esfuerzo).
+- Los tests del manifest verifican `MainActivity`, `dataExtractionRules` y `FLAG_SECURE`.
+
+## 1.1.0 (en prueba cerrada)
 
 ### Nuevo
 
