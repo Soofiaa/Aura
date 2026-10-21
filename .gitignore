@@ -44,3 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /graphify-out
+
+# Definiciones con valores reales para --dart-define-from-file (HU-09:
+# client IDs de OAuth). Nunca se commitean; plantilla en docs/DRIVE_SETUP.md.
+/secrets.json

@@ -4,6 +4,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- El respaldo automatico en Google Drive (HU-09) sube el archivo
+         cifrado por HTTPS. Flutter solo agrega INTERNET en depuracion:
+         sin este permiso la compilacion de release no sube nada. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
         android:label="${appLabel}"

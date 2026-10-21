@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app_startup.dart';
+import 'data/backup/auto_drive_backup_service.dart';
 import 'data/backup/backup_file_gateway.dart';
 import 'data/backup/backup_service.dart';
 import 'data/backup/plugin_backup_file_gateway.dart';
@@ -59,7 +60,17 @@ Future<void> main() async {
     unawaited(backupService
         .deleteExpiredPreMigrationCopy()
         .catchError((Object _) {}));
+
+    // Respaldo automatico en Drive (HU-09): al abrir la app se intenta el
+    // del dia (si ya salio, no hace nada). El de reanudar esta en
+    // _RespaldoAlReanudar y el de guardar, en add_cycle_screen.
+    intentarRespaldoAutomatico();
   });
+
+  // Con la base abierta y antes de runApp: el observer vive el resto de
+  // la app, igual que notificationReconciler.
+  WidgetsBinding.instance.addObserver(_RespaldoAlReanudar());
+
   final result = await startup.open();
 
   runApp(AuraRoot(startup: startup, initialResult: result));
@@ -71,6 +82,16 @@ ThemeData auraTheme() => ThemeData(
       scaffoldBackgroundColor: AppColors.background,
       useMaterial3: true,
     );
+
+/// HU-09: al volver a primer plano se intenta el respaldo automatico del
+/// dia (si ya salio hoy, no hace nada; si falla, lo reintenta el proximo
+/// trigger).
+class _RespaldoAlReanudar with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) intentarRespaldoAutomatico();
+  }
+}
 
 /// Raiz de la app: la app normal si la base abrio, o la pantalla de error
 /// con "Reintentar" si no.

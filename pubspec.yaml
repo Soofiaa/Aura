@@ -54,8 +54,14 @@ dependencies:
   # puro. Version exacta; sin cryptography_flutter.
   cryptography: 2.9.0
   # Enlace a la politica de privacidad en Ajustes: abre el navegador del
-  # telefono con una intencion del sistema; la app no hace red.
+  # telefono con una intencion del sistema; la app no hace red (salvo el
+  # respaldo en Google Drive, HU-09, que solo se activa a pedido).
   url_launcher: ^6.3.3
+  # HU-09, respaldo automatico en Google Drive: inicio de sesion con la
+  # cuenta del telefono y subida por la API de Drive (alcance drive.file,
+  # la app solo ve los archivos que ella crea).
+  google_sign_in: ^7.2.0
+  http: ^1.4.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
