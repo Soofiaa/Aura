@@ -35,7 +35,19 @@ class _StatsScreenState extends State<StatsScreen> {
       body: StreamBuilder<StatsSnapshot>(
         stream: _statsStream,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  "No se pudieron cargar las estadísticas.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            );
+          }
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -128,11 +140,12 @@ class _StatsScreenState extends State<StatsScreen> {
                                   .reduce((a, b) => a + b);
                           return PieChartSectionData(
                             value: entry.value.toDouble(),
-                            color: Colors.primaries[
-                            estadosAnimo.keys.toList().indexOf(entry.key) %
-                                Colors.primaries.length],
-                            title:
-                            "${entry.key.label}\n${_percent(porcentaje)}%",
+                            color: moodChartColors[entry.key],
+                            // En una porcion chica el texto se pisaba con
+                            // el de al lado: ahi solo queda en la leyenda.
+                            title: porcentaje < _minPercentForTitle
+                                ? ''
+                                : "${entry.key.label}\n${_percent(porcentaje)}%",
                             radius: 70,
                             titleStyle: const TextStyle(
                                 color: Colors.white,
@@ -144,6 +157,8 @@ class _StatsScreenState extends State<StatsScreen> {
                     ),
                   ),
                   ),
+                  const SizedBox(height: 12),
+                  ExcludeSemantics(child: _MoodLegend(moods: estadosAnimo)),
                 ],
               ],
             ),
@@ -231,6 +246,61 @@ class _SymptomBars extends StatelessWidget {
 
 /// Porcentaje redondeado que muestra el grafico de animo.
 String _percent(double fraction) => (fraction * 100).toStringAsFixed(0);
+
+/// Debajo de esta fraccion la porcion no lleva texto (ver la leyenda).
+const double _minPercentForTitle = 0.08;
+
+/// Un color fijo por estado de animo, oscuro para que el texto blanco de
+/// las porciones llegue a 4,5:1 (antes Colors.primaries: amarillo, lima o
+/// cian no llegaban a 2:1).
+const Map<Mood, Color> moodChartColors = {
+  Mood.feliz: Color(0xFFB0480F),
+  Mood.triste: Color(0xFF2F6690),
+  Mood.irritable: Color(0xFFB3261E),
+  Mood.cansada: Color(0xFF6A4C93),
+  Mood.normal: Color(0xFF3E7A4A),
+};
+
+/// Leyenda del grafico de animo: color, estado y porcentaje de cada
+/// porcion (tambien las que no llevan texto). El lector de pantalla ya lee
+/// el resumen del grafico.
+class _MoodLegend extends StatelessWidget {
+  const _MoodLegend({required this.moods});
+
+  final Map<Mood, int> moods;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = moods.values.fold<int>(0, (a, b) => a + b);
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        for (final e in moods.entries)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: moodChartColors[e.key],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${e.key.label} ${_percent(e.value / total)}%',
+                style: const TextStyle(
+                    fontSize: 14, color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
 
 /// Lo que lee el lector de pantalla del grafico de animo, en el mismo
 /// orden que las porciones: "Estados de animo: Cansada: 31 %. ...".
