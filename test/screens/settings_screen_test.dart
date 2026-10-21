@@ -7,17 +7,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import 'package:aura/data/database/app_database.dart';
+import 'package:aura/data/backup/auto_drive_backup_service.dart';
+import 'package:aura/data/backup/backup_service.dart';
+import 'package:aura/data/backup/drive_backup_gateway.dart';
+import 'package:aura/data/backup/drive_backup_settings_store.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/main.dart';
 import 'package:aura/screens/settings_screen.dart';
 import 'package:aura/utils/app_version.dart';
+import 'package:aura/utils/keystore_vault.dart';
 
 import '../support/contrast.dart';
 import '../support/fake_backup.dart';
 import '../support/fake_device_settings.dart';
+import '../support/fake_drive_backup_settings_store.dart';
 import '../support/fake_notification_scheduler.dart';
 import '../support/fake_url_launcher.dart';
+
+/// Gateway y vault en blanco: este archivo solo necesita que el servicio
+/// de Drive exista y que "Borrar todos los datos" borre sus ajustes (la
+/// parte de Drive se prueba a fondo en test/screens/drive_backup_section_test.dart).
+class _GatewayEnBlanco implements DriveBackupGateway {
+  @override
+  Future<DriveSignInResult> signIn() async => const DriveSignedIn('x@y.z');
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<String?> restoreSession() async => null;
+
+  @override
+  Future<void> uploadBackup({
+    required String fileName,
+    required List<int> bytes,
+  }) async {}
+}
+
+class _VaultEnBlanco implements KeystoreVault {
+  @override
+  Future<String> seal(String plaintext) async => 'sellada:$plaintext';
+
+  @override
+  Future<String> open(String blob) async => blob.substring('sellada:'.length);
+}
 
 void main() {
   late AppDatabase db;
@@ -40,10 +74,21 @@ void main() {
 
   late FakeDeviceSettingsStore ajustesTelefono;
   late FakeAndroidSystem system;
+  late FakeDriveBackupSettingsStore ajustesDrive;
+  late AutoDriveBackupService servicioDrive;
 
   setUp(() {
     ajustesTelefono = FakeDeviceSettingsStore();
     system = FakeAndroidSystem();
+    ajustesDrive = FakeDriveBackupSettingsStore();
+    servicioDrive = AutoDriveBackupService(
+      settings: ajustesDrive,
+      gateway: _GatewayEnBlanco(),
+      vault: _VaultEnBlanco(),
+      buildExportJson: () async => '{}',
+      recordBackup: () async {},
+      runner: runInSameIsolate,
+    );
   });
 
   Future<void> pumpScreen(WidgetTester tester) async {
@@ -55,6 +100,7 @@ void main() {
         fileGateway: FakeBackupFileGateway(),
         deviceSettings: ajustesTelefono,
         androidSystem: system,
+        driveBackup: servicioDrive,
       ),
     ));
     await tester.pumpAndSettle();
@@ -276,11 +322,17 @@ void main() {
 
   testWidgets(
       'Borrar todos los datos pasa por BackupService (que tambien borra la '
-      'copia previa y los temporales) y reinicia los interruptores',
+      'copia previa y los temporales), borra los ajustes del respaldo en '
+      'Drive y reinicia los interruptores',
       (tester) async {
     await repo.setNotificationsEnabled(true);
     await repo.setReminderTime(hour: 21, minute: 30);
     await repo.markPeriodDay('2026-01-01');
+    await ajustesDrive.guardar(const DriveBackupSettings(
+      habilitado: true,
+      cuenta: 'ana@ejemplo.com',
+      claveSellada: 'sellada:frase con varias palabras',
+    ));
     await pumpScreen(tester);
 
     await tester.scrollUntilVisible(find.text('Borrar todos los datos'), 200);
@@ -296,6 +348,8 @@ void main() {
 
     expect(backup.deleteAllDataCallCount, 1);
     expect(await repo.countDays(), 0);
+    expect((await ajustesDrive.read()).habilitado, isFalse,
+        reason: 'los ajustes del respaldo en Drive se borran con todo');
     expect(find.text('Datos borrados correctamente.'), findsOneWidget);
 
     await tester.scrollUntilVisible(

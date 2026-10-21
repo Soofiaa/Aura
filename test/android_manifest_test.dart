@@ -54,4 +54,12 @@ void main() {
         ?.group(0);
     expect(onCreate, contains('FLAG_SECURE'));
   });
+
+  // HU-09: sin INTERNET, la compilacion de release (que Flutter no le agrega
+  // el permiso) no puede subir el respaldo cifrado a Google Drive. El
+  // respaldo es de la app y opt-in; el backup automatico del sistema sigue
+  // apagado en el test de RR-6 de arriba.
+  test('permiso INTERNET declarado para el respaldo en Drive (HU-09)', () {
+    expect(manifest, contains('android.permission.INTERNET'));
+  });
 }

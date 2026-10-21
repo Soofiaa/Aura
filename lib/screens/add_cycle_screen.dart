@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
+import '../data/backup/auto_drive_backup_service.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../utils/date_labels.dart';
@@ -211,6 +212,10 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
       if (!mounted) return;
       showAppSnackBar(context, "Registro guardado correctamente.");
+
+      // HU-09: un registro guardado es buen momento para el respaldo
+      // automatico del dia; si ya salio hoy, no hace nada.
+      intentarRespaldoAutomatico();
 
       Navigator.pop(context);
     }

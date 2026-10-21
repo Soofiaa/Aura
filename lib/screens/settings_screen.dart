@@ -426,6 +426,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     try {
       await _backupService.deleteAllData();
+      // HU-09: los ajustes del respaldo en Drive (cuenta y clave sellada)
+      // tambien son datos de la usuaria y se borran con todo. La seccion
+      // los ve llegar por watch().
+      await _driveBackup.deleteAllData();
     } catch (_) {
       if (!mounted) return;
       showAppSnackBar(

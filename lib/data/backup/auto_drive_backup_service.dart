@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:aura/domain/backup_crypto.dart';
@@ -236,3 +237,15 @@ AutoDriveBackupService get autoDriveBackupService =>
 /// Solo para tests: reemplaza el servicio global.
 set autoDriveBackupService(AutoDriveBackupService value) =>
     _autoDriveBackupServiceInstance = value;
+
+/// Dispara un intento de respaldo automatico sin esperarlo y tragando
+/// cualquier fallo: los triggers (abrir la app, reanudarla, guardar un
+/// registro) no deben romper lo que este haciendo la usuaria. Si el
+/// respaldo del dia ya salio, no hace nada; si falla, lo anota el propio
+/// servicio y lo reintenta el proximo trigger.
+void intentarRespaldoAutomatico() {
+  unawaited(autoDriveBackupService.maybeBackup().then<void>(
+    (_) {},
+    onError: (Object _) {},
+  ));
+}
