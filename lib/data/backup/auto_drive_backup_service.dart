@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:aura/domain/backup_crypto.dart';
 import 'package:aura/utils/day_key.dart';
+import 'package:aura/utils/drive_client_config.dart';
 import 'package:aura/utils/keystore_vault.dart';
 
+import 'backup_reminder_store.dart';
 import 'backup_service.dart';
 import 'drive_api_client.dart';
 import 'drive_backup_gateway.dart';
@@ -75,6 +77,7 @@ class AutoDriveBackupService {
     required Future<String> Function() buildExportJson,
     required Future<void> Function() recordBackup,
     BackupEncryptFunction encrypt = encryptBackupDocument,
+    BackupTaskRunner runner = runInIsolate,
     DateTime Function()? now,
   })  : _settings = settings,
         _gateway = gateway,
@@ -82,6 +85,7 @@ class AutoDriveBackupService {
         _buildExportJson = buildExportJson,
         _recordBackup = recordBackup,
         _encrypt = encrypt,
+        _runner = runner,
         _now = now ?? DateTime.now;
 
   final DriveBackupSettingsStore _settings;
@@ -90,14 +94,20 @@ class AutoDriveBackupService {
   final Future<String> Function() _buildExportJson;
   final Future<void> Function() _recordBackup;
   final BackupEncryptFunction _encrypt;
+  final BackupTaskRunner _runner;
   final DateTime Function() _now;
 
-  /// Respaldos en fila: uno a la vez, cada llamada con su resultado.
-  Future<void> _fila = Future.value();
+  /// Respaldos en fila: uno a la vez, cada llamada con su resultado. Se
+  /// crea perezosa para que el primer Future nazca dentro de la zona que
+  /// llame a [maybeBackup]: en tests de widget (reloj falso) un Future
+  /// creado en el constructor (por ejemplo en setUp, fuera de la zona)
+  /// nunca drena y la fila se atasca para siempre.
+  Future<void>? _fila;
 
   /// Respaldar si toca. Con [force] ignora el tope de "una vez al dia".
   Future<AutoBackupStatus> maybeBackup({bool force = false}) {
-    final result = _fila.then((_) => _ejecutar(force: force));
+    final anterior = _fila ??= Future<void>.value();
+    final result = anterior.then((_) => _ejecutar(force: force));
     _fila = result.then((_) {}, onError: (_) {});
     return result;
   }
@@ -163,7 +173,7 @@ class AutoDriveBackupService {
       // La referencia al cifrador sale como variable local: el closure que
       // viaja al isolate no puede capturar "this".
       final encrypt = _encrypt;
-      contenido = await runInIsolate(
+      contenido = await _runner(
           () => encrypt(json, clave, Argon2idParams.production));
     } catch (_) {
       return AutoBackupStatus.failed;
@@ -208,3 +218,21 @@ class AutoDriveBackupService {
     }
   }
 }
+
+AutoDriveBackupService? _autoDriveBackupServiceInstance;
+
+/// Instancia unica para la app, como [backupService]. El gateway se arma
+/// con el client ID que traiga la compilacion (dart-define; vacio en
+/// compilaciones sin configurar).
+AutoDriveBackupService get autoDriveBackupService =>
+    _autoDriveBackupServiceInstance ??= AutoDriveBackupService(
+      settings: driveBackupSettingsStore,
+      gateway: PluginDriveBackupGateway(clientId: driveClientId()),
+      vault: keystoreVault,
+      buildExportJson: () => backupService.buildExportJson(),
+      recordBackup: () => backupReminderStore.recordBackup(),
+    );
+
+/// Solo para tests: reemplaza el servicio global.
+set autoDriveBackupService(AutoDriveBackupService value) =>
+    _autoDriveBackupServiceInstance = value;

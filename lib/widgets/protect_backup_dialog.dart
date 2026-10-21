@@ -8,6 +8,12 @@ sealed class ProtectBackupChoice {
   const ProtectBackupChoice();
 }
 
+/// Para que es el dialogo de contrasena: el del respaldo manual (HU-06b),
+/// donde la contrasena es opcional, o el del respaldo automatico en Drive
+/// (HU-09), donde SIEMPRE hay contrasena (los archivos que salen de la app
+/// van cifrados) y no se vuelve a pedir en este telefono.
+enum ProtectBackupPurpose { manual, drive }
+
 /// Exportar cifrado con [password]. La contrasena viaja solo de aqui a
 /// BackupService.writeExportFile; no se guarda en ningun otro lado.
 class ProtectWithPassword extends ProtectBackupChoice {
@@ -33,12 +39,26 @@ Future<ProtectBackupChoice?> showProtectBackupDialog(BuildContext context) =>
       builder: (_) => const ProtectBackupDialog(),
     );
 
+/// Abre "Proteger respaldos en Drive" (HU-09): igual, pero sin salida
+/// "sin contrasena" (el respaldo automatico siempre va cifrado). Devuelve
+/// null si se cancela.
+Future<ProtectBackupChoice?> showDriveBackupPasswordDialog(
+        BuildContext context) =>
+    showDialog<ProtectBackupChoice>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const ProtectBackupDialog(
+          purpose: ProtectBackupPurpose.drive),
+    );
+
 /// Dialogo para elegir la contrasena del respaldo cifrado (HU6b-1, HU6b-3,
 /// HU6b-4). La contrasena vive solo en los TextEditingController de este
 /// dialogo; al cerrarse se limpian y se liberan (mejor esfuerzo: Dart no
 /// puede borrar un String de la memoria).
 class ProtectBackupDialog extends StatefulWidget {
-  const ProtectBackupDialog({super.key});
+  const ProtectBackupDialog({super.key, this.purpose = ProtectBackupPurpose.manual});
+
+  final ProtectBackupPurpose purpose;
 
   @override
   State<ProtectBackupDialog> createState() => _ProtectBackupDialogState();
@@ -158,20 +178,26 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final esDrive = widget.purpose == ProtectBackupPurpose.drive;
     final showLengthError = _passwordTouched && !_longEnough;
     final showMatchError = _repeatTouched && !_matches;
     return AlertDialog(
       // scrollable: titulo y contenido se desplazan juntos y las acciones
       // quedan fijas; asi caben con el teclado abierto (360x640).
       scrollable: true,
-      title: const Text('Proteger tu respaldo'),
+      title: Text(esDrive ? 'Proteger respaldos en Drive' : 'Proteger tu respaldo'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Elige una contraseña para cifrar el archivo. Sin ella, nadie '
-            'podrá leerlo aunque lo obtenga.',
+          Text(
+            esDrive
+                ? 'Elige la contraseña con la que Aura cifrará tus respaldos '
+                    'en Google Drive. Se te pedirá solo una vez: en este '
+                    'teléfono quedará guardada en el Keystore de Android y '
+                    'no se vuelve a preguntar.'
+                : 'Elige una contraseña para cifrar el archivo. Sin ella, '
+                    'nadie podrá leerlo aunque lo obtenga.',
           ),
           const SizedBox(height: 12),
           Container(
@@ -193,8 +219,13 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Aura no guarda tu contraseña y no puede recuperarla. '
-                    'Si la olvidas, no podrás abrir este respaldo.',
+                    esDrive
+                        ? 'Aura no guarda tu contraseña y no puede '
+                            'recuperarla. Si la olvidas, no podrás abrir '
+                            'tus respaldos de Drive ni en otro teléfono.'
+                        : 'Aura no guarda tu contraseña y no puede '
+                            'recuperarla. Si la olvidas, no podrás abrir '
+                            'este respaldo.',
                     style: TextStyle(
                       color: theme.colorScheme.onErrorContainer,
                       fontWeight: FontWeight.bold,
@@ -255,10 +286,11 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          TextButton(
-            onPressed: _withoutPassword,
-            child: const Text('Continuar sin contraseña'),
-          ),
+          if (!esDrive)
+            TextButton(
+              onPressed: _withoutPassword,
+              child: const Text('Continuar sin contraseña'),
+            ),
         ],
       ),
       actions: [
@@ -268,7 +300,7 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
         ),
         FilledButton(
           onPressed: _valid ? _continue : null,
-          child: const Text('Proteger y continuar'),
+          child: Text(esDrive ? 'Activar respaldo' : 'Proteger y continuar'),
         ),
       ],
     );

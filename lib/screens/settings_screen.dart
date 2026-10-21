@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/backup/backup_file_gateway.dart' show BackupFileGateway;
 import '../data/backup/backup_reminder_store.dart' show BackupReminderStore;
 import '../data/backup/backup_service.dart';
+import '../data/backup/auto_drive_backup_service.dart';
 import '../data/device_settings_store.dart';
 import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
@@ -15,6 +16,7 @@ import '../utils/app_version.dart';
 import '../utils/colors.dart';
 import '../utils/notifications.dart';
 import 'backup_section.dart';
+import 'drive_backup_section.dart';
 import '../utils/app_snackbar.dart';
 
 /// Politica de privacidad publicada (GitHub Pages). Se abre en el
@@ -32,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
   final BackupReminderStore? reminderStore;
   final DeviceSettingsStore? deviceSettings;
   final AndroidSystem? androidSystem;
+  final AutoDriveBackupService? driveBackup;
 
   const SettingsScreen({
     super.key,
@@ -42,6 +45,7 @@ class SettingsScreen extends StatefulWidget {
     this.reminderStore,
     this.deviceSettings,
     this.androidSystem,
+    this.driveBackup,
   });
 
   @override
@@ -58,6 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   late final DeviceSettingsStore _deviceSettings =
       widget.deviceSettings ?? deviceSettingsStore;
   late final AndroidSystem _system = widget.androidSystem ?? androidSystem;
+  late final AutoDriveBackupService _driveBackup =
+      widget.driveBackup ?? autoDriveBackupService;
 
   // Ajustes de este telefono (aviso de atraso y Recientes), en vivo como
   // los demas. Null si todavia no se leyeron.
@@ -584,6 +590,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             gateway: widget.fileGateway,
             reminderStore: widget.reminderStore,
           ),
+          const SizedBox(height: 10),
+          DriveBackupSection(service: _driveBackup),
           const SizedBox(height: 20),
           // Accion destructiva: boton con borde en el color de error del
           // tema, compacto y menos prominente que "Crear respaldo". El
