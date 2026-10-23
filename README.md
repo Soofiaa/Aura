@@ -34,6 +34,13 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
 
+## Documentación
+
+- [Especificación funcional v1.1](docs/ESPECIFICACION_v1.1.md): historias de usuario, requisitos y criterios de aceptación.
+- [HU-09: respaldo en Google Drive](docs/HU-09_respaldo_drive_v1.2.md)
+- [Configuración de Drive](docs/DRIVE_SETUP.md)
+- [Política de privacidad](docs/privacy.html)
+
 ## Arquitectura
 
 ```mermaid
@@ -54,6 +61,7 @@ lib/
 ├── domain/        # lógica pura, sin Flutter ni base de datos
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
+│   ├── backup_reminder.dart
 │   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
@@ -61,7 +69,8 @@ lib/
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
 │   ├── password_strength.dart
-│   └── range_selection.dart
+│   ├── range_selection.dart
+│   └── symptom_ranking.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + respaldo en Drive
 │   ├── database/        # drift (esquema v5)
@@ -90,7 +99,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-1296 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
+Más de 1200 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 

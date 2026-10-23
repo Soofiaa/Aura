@@ -1,6 +1,6 @@
 # Cambios
 
-## 1.2.0 (en prueba interna)
+## 1.2.0 (en prueba cerrada)
 
 Incluye también los cambios de 1.1.1, que no se publicó por separado.
 

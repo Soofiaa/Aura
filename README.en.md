@@ -34,6 +34,13 @@ An Android app to log your menstrual cycle and estimate its phases. **Local-firs
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
 - Privacy policy: [`docs/privacy.html`](docs/privacy.html).
 
+## Documentation
+
+- [Functional specification v1.1](docs/ESPECIFICACION_v1.1.md): user stories, requirements and acceptance criteria (in Spanish).
+- [HU-09: Google Drive backup](docs/HU-09_respaldo_drive_v1.2.md) (in Spanish)
+- [Drive setup](docs/DRIVE_SETUP.md) (in Spanish)
+- [Privacy policy](docs/privacy.html)
+
 ## Architecture
 
 ```mermaid
@@ -54,6 +61,7 @@ lib/
 ├── domain/        # pure logic, no Flutter or database
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
+│   ├── backup_reminder.dart
 │   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
@@ -61,7 +69,8 @@ lib/
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
 │   ├── password_strength.dart
-│   └── range_selection.dart
+│   ├── range_selection.dart
+│   └── symptom_ranking.dart
 ├── data/
 │   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + Drive backup
 │   ├── database/        # drift (schema v5)
@@ -90,7 +99,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-1,296 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+More than 1,200 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 
