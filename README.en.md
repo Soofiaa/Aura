@@ -6,6 +6,12 @@ An Android app to log your menstrual cycle and estimate its phases. **Local-firs
 
 > **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
 
+## Screenshots
+
+<table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Home: current phase and next period"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendar with the estimated fertile window"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Log a day"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Statistics"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Settings and data"></td></tr></table>
+
+Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screenshot is from 1.1.0, before the Drive backup.* (The app UI is in Spanish.)
+
 ## What it does
 
 - Logs bleeding days, flow intensity, mood, symptoms and notes.

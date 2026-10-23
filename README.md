@@ -6,6 +6,12 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 > **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
 
+## Capturas
+
+<table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Inicio: fase actual y próximo período"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendario con la ventana fértil estimada"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Registrar día"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Estadísticas"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Ajustes y datos"></td></tr></table>
+
+Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las capturas de Ajustes corresponden a la 1.1.0, antes del respaldo en Drive.*
+
 ## Qué hace
 
 - Registra días de sangrado, intensidad del flujo, ánimo, síntomas y notas.
