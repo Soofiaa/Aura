@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Informe del proyecto Aura: motivación, funciones, arquitectura, privacidad, calidad y decisiones, con resumen ejecutivo en inglés.">
+<title>Informe de Aura</title>
+<!-- Sin recursos externos: solo tipografías del sistema, igual que privacy.html. -->
+<style>
+/* Concepto: el anillo del ciclo (28 días) como firma visual; páginas de lectura limpias sobre la paleta de la app. */
+:root{
+  --bg:#F8FAFB; --surface:#FFFFFF; --surface-2:#EEF5F8; --line:#DCE6EA;
+  --text:#333333; --text-2:#5F6B70;
+  --sky:#A8D8EA; --blush:#FAD4D8; --rose:#EE8CA7; --rose-strong:#E76085; --fertile:#3A8BAA;
+  --on-rose:#FFFFFF; --link:#2C7391;
+  --f-display:ui-serif,Georgia,'Iowan Old Style','Palatino Linotype','Times New Roman',serif;
+  --f-body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --f-mono:ui-monospace,'SF Mono',Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+a{color:var(--link)}
+h1,h2,h3{font-family:var(--f-display);line-height:1.12;text-wrap:balance;margin:0}
+p{margin:0 0 .9em;max-width:68ch}
+.wrap{max-width:1040px;margin:0 auto}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+
+/* Cabecera */
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:18px;font-size:14px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rose-strong);margin-right:8px}
+.nav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.nav a{color:var(--text-2);text-decoration:none}
+.nav a:hover{color:var(--text);text-decoration:underline}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px 48px;align-items:center;padding-block:36px 56px}
+.hero h1{font-size:clamp(56px,10vw,104px);font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.hero h1 span{color:var(--rose-strong)}
+.lead{font-size:clamp(18px,2.4vw,22px);line-height:1.5;color:var(--text);margin-top:18px;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--text-2)}
+.chip b{color:var(--text);font-weight:600}
+.ringbox{min-width:0}
+.ring{width:100%;height:auto;max-width:440px;display:block;margin:0 auto}
+.ring .per{fill:var(--rose-strong)} .ring .fol{fill:var(--sky);opacity:.55} .ring .lut{fill:var(--blush)}
+.ring .fer{fill:var(--fertile);opacity:.62} .ring .ovu{fill:var(--fertile)}
+.ring .rl{font:500 12px var(--f-mono);fill:var(--text-2)}
+.ring .rc1{font:700 22px var(--f-display);fill:var(--text)}
+.ring .rc2{font:500 13px var(--f-mono);fill:var(--text-2);letter-spacing:.08em;text-transform:uppercase}
+.ring .rc3{font:400 11px var(--f-body);fill:var(--text-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:13px;color:var(--text-2);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+
+/* Secciones */
+section{padding-block:44px;border-top:1px solid var(--line)}
+section>.wrap>h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:8px 0 22px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.cols>div{min-width:0}
+.note{background:var(--surface-2);border-left:3px solid var(--fertile);border-radius:6px;padding:14px 18px;max-width:72ch;font-size:15px}
+.note.warn{border-left-color:var(--rose-strong)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:0}
+.card h3{font-size:19px;margin-bottom:6px}
+.card p{font-size:15px;color:var(--text-2);margin:0}
+.card .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose-strong);display:block;margin-bottom:8px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2);font-weight:500;background:var(--surface-2);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:600}
+.pill.ok{background:color-mix(in srgb,var(--fertile) 18%,transparent);color:var(--fertile)}
+.pill.no{background:color-mix(in srgb,var(--rose-strong) 16%,transparent);color:var(--rose-strong)}
+
+/* Flujo de datos */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:8px 0 24px}
+.step{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;position:relative;min-width:0}
+.step small{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.step.keep{border-color:var(--rose-strong)} .step.keep small{color:var(--rose-strong)}
+.step.calc small{color:var(--fertile)}
+.step b{font-family:var(--f-display);font-size:18px}
+.step p{font-size:14px;color:var(--text-2);margin:4px 0 0}
+
+/* Arquitectura */
+.arch{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.layers{display:grid;gap:10px}
+.layer{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 18px;display:grid;grid-template-columns:150px 1fr;gap:4px 16px;min-width:0}
+.layer b{font-family:var(--f-display);font-size:17px}
+.layer span{font-size:14.5px;color:var(--text-2)}
+.layer.core{border-color:var(--fertile);background:color-mix(in srgb,var(--fertile) 8%,var(--surface))}
+.ext{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:14.5px;color:var(--text-2);min-width:0}
+.ext b{display:block;font-family:var(--f-display);color:var(--text);font-size:17px;margin-bottom:6px}
+.ext ul{margin:0;padding-left:18px}
+
+.kpis{display:flex;flex-wrap:wrap;gap:28px 44px;margin:6px 0 26px}
+.kpi b{display:block;font-family:var(--f-display);font-size:40px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13.5px;color:var(--text-2)}
+
+ul.clean{margin:0 0 1em;padding-left:20px}
+ul.clean li{margin-bottom:.4em;max-width:68ch}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.docs a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;text-decoration:none;color:var(--text);font-size:15px}
+.docs a:hover{border-color:var(--fertile)}
+.docs a small{display:block;color:var(--text-2);font-size:13px}
+footer{padding-block:36px 48px;border-top:1px solid var(--line);font-size:14px;color:var(--text-2)}
+
+/* Resumen en inglés */
+#en .sum{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px 40px}
+#en h3{font-size:18px;margin:18px 0 6px}
+#en p,#en li{font-size:15.5px}
+#en .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;padding-block:20px 36px}
+  .cols,.arch,#en .sum{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .layer{grid-template-columns:1fr}
+  section{padding-block:34px}
+}
+@media (max-width:460px){.flow{grid-template-columns:1fr}.kpis{gap:20px 28px}}
+
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{padding:0;font-size:12px;background:#fff}
+  .nav,.top .nav{display:none}
+  section{padding-block:22px;break-inside:auto}
+  .card,.step,.layer,.kpi,tr,.note{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .hero{padding-block:10px 24px;grid-template-columns:1.1fr .9fr}
+  .cols{grid-template-columns:1fr 1fr}
+  #en{break-before:page;border-top:0}
+  .tablewrap{overflow:visible}
+  #en{padding-block:0}
+  #en h2{font-size:26px;margin:4px 0 10px}
+  #en .sum{gap:14px 26px}
+  #en h3{font-size:14.5px;margin:10px 0 3px}
+  #en p,#en li,#en td{font-size:11.5px;line-height:1.45;margin-bottom:.5em}
+  #en .box{padding:10px 14px}
+  #en .kpi b{font-size:28px}
+  #en td{padding:5px 8px}
+  #en ul.clean{margin-bottom:.4em}
+  footer{padding-block:14px 0;font-size:10.5px}
+}
+
+.hero2{padding-block:34px 30px}
+.hero2 h1{font-size:clamp(40px,7vw,68px);letter-spacing:-.03em}
+.hero2 h1 span{color:var(--rose-strong)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:14px;text-decoration:none;color:var(--text)}
+.toc a:hover{border-color:var(--fertile)}
+details{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:0;margin-bottom:10px}
+summary{cursor:pointer;padding:14px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--rose-strong);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details>div{padding:0 18px 14px;color:var(--text-2);font-size:15.5px}
+details>div p{margin-bottom:.6em}
+summary:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.how ol{margin:8px 0 0;padding-left:20px;font-size:15px;color:var(--text-2)}
+.how li{margin-bottom:4px}
+.how h3{font-size:19px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.conf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.conf .card h3{display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.case{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.case input{width:20px;height:20px;margin-top:4px;accent-color:var(--rose-strong)}
+.case h3{font-size:18px}
+.case .meta{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-2)}
+.case ol{margin:6px 0 8px;padding-left:20px;font-size:15px}
+.case .exp{font-size:14.5px;color:var(--text-2);border-top:1px dashed var(--line);padding-top:8px}
+.case .exp b{color:var(--fertile)}
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);font-size:14px;color:var(--text-2);display:flex;gap:12px;align-items:center}
+.progress progress{flex:1;height:8px;accent-color:var(--rose-strong)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.copy{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:3px 10px;cursor:pointer}
+@media (max-width:640px){.conf{grid-template-columns:1fr}}
+
+.sitenav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.sitenav a{color:var(--text-2);text-decoration:none;font-size:14px}
+.sitenav a[aria-current="page"]{color:var(--text);font-weight:600}
+.sitenav a:hover{text-decoration:underline}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-block;border-radius:999px;padding:10px 20px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.btn.primary{background:var(--rose-strong);border-color:var(--rose-strong);color:var(--on-rose)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><i></i>Aura</div>
+    <nav class="sitenav" aria-label="Sitio"><a href="index.html">Inicio</a><a href="guia.html">Guía de uso</a><a href="informe.html" aria-current="page">Informe</a><a href="testers.html">Testers</a><a href="privacy.html">Privacidad</a></nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Informe del proyecto · versión 1.2.0 (build 7)</div>
+      <h1 style="margin-top:14px">Aura<span>.</span></h1>
+      <p class="lead">Una app Android para registrar el ciclo menstrual y estimar, con honestidad, lo que viene después. Los datos de salud se quedan en el teléfono.</p>
+      <div class="chips">
+        <span class="chip"><b>Flutter</b> + SQLite (drift)</span>
+        <span class="chip"><b>Android 7+</b></span>
+        <span class="chip"><b>Prueba cerrada</b> en Google Play</span>
+        <span class="chip"><b>1296</b> pruebas, 0 fallos</span>
+      </div>
+    </div>
+    <div class="ringbox">
+      <svg class="ring" viewBox="0 0 420 420" role="img" aria-label="Ejemplo de un ciclo de 28 días: días 1 a 5 de período, días 9 a 13 de ventana fértil, día 14 de ovulación.">
+<path class="per" d="M212.2 50.0 A160 160 0 0 1 243.4 53.5 L234.2 96.6 A116 116 0 0 0 211.6 94.0Z"><title>Día 1</title></path><path class="per" d="M247.8 54.5 A160 160 0 0 1 277.4 64.9 L258.9 104.8 A116 116 0 0 0 237.4 97.3Z"><title>Día 2</title></path><path class="per" d="M281.4 66.8 A160 160 0 0 1 308.0 83.5 L281.1 118.3 A116 116 0 0 0 261.8 106.2Z"><title>Día 3</title></path><path class="per" d="M311.5 86.3 A160 160 0 0 1 333.7 108.5 L299.7 136.4 A116 116 0 0 0 283.6 120.3Z"><title>Día 4</title></path><path class="per" d="M336.5 112.0 A160 160 0 0 1 353.2 138.6 L313.8 158.2 A116 116 0 0 0 301.7 138.9Z"><title>Día 5</title></path><path class="fol" d="M355.1 142.6 A160 160 0 0 1 365.5 172.2 L322.7 182.6 A116 116 0 0 0 315.2 161.1Z"><title>Día 6</title></path><path class="fol" d="M366.5 176.6 A160 160 0 0 1 370.0 207.8 L326.0 208.4 A116 116 0 0 0 323.4 185.8Z"><title>Día 7</title></path><path class="fol" d="M370.0 212.2 A160 160 0 0 1 366.5 243.4 L323.4 234.2 A116 116 0 0 0 326.0 211.6Z"><title>Día 8</title></path><path class="fer" d="M365.5 247.8 A160 160 0 0 1 355.1 277.4 L315.2 258.9 A116 116 0 0 0 322.7 237.4Z"><title>Día 9</title></path><path class="fer" d="M353.2 281.4 A160 160 0 0 1 336.5 308.0 L301.7 281.1 A116 116 0 0 0 313.8 261.8Z"><title>Día 10</title></path><path class="fer" d="M333.7 311.5 A160 160 0 0 1 311.5 333.7 L283.6 299.7 A116 116 0 0 0 299.7 283.6Z"><title>Día 11</title></path><path class="fer" d="M308.0 336.5 A160 160 0 0 1 281.4 353.2 L261.8 313.8 A116 116 0 0 0 281.1 301.7Z"><title>Día 12</title></path><path class="fer" d="M277.4 355.1 A160 160 0 0 1 247.8 365.5 L237.4 322.7 A116 116 0 0 0 258.9 315.2Z"><title>Día 13</title></path><path class="ovu" d="M243.4 366.5 A160 160 0 0 1 212.2 370.0 L211.6 326.0 A116 116 0 0 0 234.2 323.4Z"><title>Día 14</title></path><path class="lut" d="M207.8 370.0 A160 160 0 0 1 176.6 366.5 L185.8 323.4 A116 116 0 0 0 208.4 326.0Z"><title>Día 15</title></path><path class="lut" d="M172.2 365.5 A160 160 0 0 1 142.6 355.1 L161.1 315.2 A116 116 0 0 0 182.6 322.7Z"><title>Día 16</title></path><path class="lut" d="M138.6 353.2 A160 160 0 0 1 112.0 336.5 L138.9 301.7 A116 116 0 0 0 158.2 313.8Z"><title>Día 17</title></path><path class="lut" d="M108.5 333.7 A160 160 0 0 1 86.3 311.5 L120.3 283.6 A116 116 0 0 0 136.4 299.7Z"><title>Día 18</title></path><path class="lut" d="M83.5 308.0 A160 160 0 0 1 66.8 281.4 L106.2 261.8 A116 116 0 0 0 118.3 281.1Z"><title>Día 19</title></path><path class="lut" d="M64.9 277.4 A160 160 0 0 1 54.5 247.8 L97.3 237.4 A116 116 0 0 0 104.8 258.9Z"><title>Día 20</title></path><path class="lut" d="M53.5 243.4 A160 160 0 0 1 50.0 212.2 L94.0 211.6 A116 116 0 0 0 96.6 234.2Z"><title>Día 21</title></path><path class="lut" d="M50.0 207.8 A160 160 0 0 1 53.5 176.6 L96.6 185.8 A116 116 0 0 0 94.0 208.4Z"><title>Día 22</title></path><path class="lut" d="M54.5 172.2 A160 160 0 0 1 64.9 142.6 L104.8 161.1 A116 116 0 0 0 97.3 182.6Z"><title>Día 23</title></path><path class="lut" d="M66.8 138.6 A160 160 0 0 1 83.5 112.0 L118.3 138.9 A116 116 0 0 0 106.2 158.2Z"><title>Día 24</title></path><path class="lut" d="M86.3 108.5 A160 160 0 0 1 108.5 86.3 L136.4 120.3 A116 116 0 0 0 120.3 136.4Z"><title>Día 25</title></path><path class="lut" d="M112.0 83.5 A160 160 0 0 1 138.6 66.8 L158.2 106.2 A116 116 0 0 0 138.9 118.3Z"><title>Día 26</title></path><path class="lut" d="M142.6 64.9 A160 160 0 0 1 172.2 54.5 L182.6 97.3 A116 116 0 0 0 161.1 104.8Z"><title>Día 27</title></path><path class="lut" d="M176.6 53.5 A160 160 0 0 1 207.8 50.0 L208.4 94.0 A116 116 0 0 0 185.8 96.6Z"><title>Día 28</title></path>
+<text x="229.7" y="39.1" text-anchor="middle" class="rl">1</text><text x="359.0" y="120.4" text-anchor="middle" class="rl">5</text><text x="376.1" y="272.1" text-anchor="middle" class="rl">9</text><text x="229.7" y="388.9" text-anchor="middle" class="rl">14</text><text x="190.3" y="39.1" text-anchor="middle" class="rl">28</text>
+<circle cx="229.7" cy="384.9" r="0" fill="none"/>
+<text x="210" y="196" text-anchor="middle" class="rc1">Ciclo de 28 días</text>
+<text x="210" y="222" text-anchor="middle" class="rc2">ejemplo</text>
+<text x="210" y="244" text-anchor="middle" class="rc3">ovulación = próximo período − 14</text>
+</svg>
+      <div class="legend">
+        <span style="--c:var(--rose-strong)">Período</span>
+        <span style="--c:var(--sky)">Fase folicular</span>
+        <span style="--c:var(--fertile)">Ventana fértil y ovulación</span>
+        <span style="--c:var(--blush)">Fase lútea</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="resumen" style="border-top:0;padding-top:8px"><div class="wrap">
+  <div class="cols">
+    <div>
+      <div class="eyebrow">En un minuto</div>
+      <h2 style="font-size:clamp(26px,3.4vw,34px);margin:8px 0 16px">Registrar, estimar, y no mostrar más de lo que se sabe</h2>
+      <p>Aura guarda días de sangrado, flujo, ánimo, síntomas y notas. Con eso estima el próximo período, la fase actual y, cuando hay datos suficientes, la ovulación y la ventana fértil.</p>
+      <p>No tiene cuenta, anuncios ni analítica. La única salida de datos es un respaldo opcional en el Google Drive de la propia usuaria, siempre cifrado.</p>
+    </div>
+    <div class="note warn" style="align-self:start">
+      <b>Aviso de salud.</b> Aura ofrece estimaciones informativas. No es un método anticonceptivo ni un dispositivo médico.
+    </div>
+  </div>
+</div></section>
+
+<section id="motivacion"><div class="wrap">
+  <div class="eyebrow">Por qué existe</div>
+  <h2>Motivación</h2>
+  <div class="cols">
+    <div>
+      <p>Aura nació como un proyecto de <b>Sofia Menzel</b>, ingeniera en ejecución informática, para tener una app de ciclo que ella misma quisiera usar y, a la vez, una pieza de portafolio que muestre un proceso completo de ingeniería.</p>
+      <p>La primera versión se construyó con Flutter y Hive y quedó inconclusa. Se retomó con otra base: SQLite con drift, una especificación funcional escrita antes de programar y pruebas desde el principio.</p>
+      <p>La versión 1.1 salió de las notas de uso de la propia autora: registrar el período sin marcar día por día, estadísticas más claras y un cierre explícito del período.</p>
+    </div>
+    <div>
+      <h3 style="font-size:20px;margin-bottom:10px">Tres convicciones guían el diseño</h3>
+      <ul class="clean">
+        <li><b>Un ciclo es un dato de salud.</b> Por eso la regla de partida es que los datos no salen del teléfono salvo que la usuaria lo decida.</li>
+        <li><b>Una predicción es una estimación.</b> Aura muestra un rango y un nivel de confianza, y calla cuando faltan datos en vez de inventar precisión.</li>
+        <li><b>Lo registrado y lo estimado no se mezclan.</b> Un día estimado nunca se guarda como si fuera real.</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section id="funciones"><div class="wrap">
+  <div class="eyebrow">Para quien la usa</div>
+  <h2>Qué hace Aura</h2>
+  <div class="grid3">
+    <div class="card"><span class="tag">Registro</span><h3>Un día, completo</h3><p>Sangrado, intensidad del flujo, ánimo, ocho síntomas y notas de hasta 2000 caracteres. Guardar un día vacío no escribe nada.</p></div>
+    <div class="card"><span class="tag">Registro</span><h3>«Me llegó hoy»</h3><p>Un toque marca el primer día. Los siguientes se muestran como estimados y solo se guardan si ella los confirma.</p></div>
+    <div class="card"><span class="tag">Calendario</span><h3>Rangos y deshacer</h3><p>Marcar varios días de una vez, alargar o acortar un rango, y «Deshacer» en cada acción. Estimado con borde punteado, registrado con relleno.</p></div>
+    <div class="card"><span class="tag">Predicción</span><h3>Con rango y confianza</h3><p>Próximo período, fase actual y, cuando hay datos, ovulación y ventana fértil. Todo opcional de ver.</p></div>
+    <div class="card"><span class="tag">Estadísticas</span><h3>Tus ciclos</h3><p>Duración típica, más corto y más largo, regularidad, síntomas y ánimo más frecuentes. Con menos de dos ciclos, avisa en vez de promediar mal.</p></div>
+    <div class="card"><span class="tag">Avisos</span><h3>Recordatorios discretos</h3><p>Apagados por defecto. El texto es genérico en la pantalla de bloqueo, salvo que se active «Mostrar detalles».</p></div>
+    <div class="card"><span class="tag">Respaldo</span><h3>Archivo, con clave si quiere</h3><p>Exportar e importar en un archivo validado antes de tocar nada, con cifrado opcional y «Deshacer» tras importar.</p></div>
+    <div class="card"><span class="tag">Respaldo</span><h3>Automático en Drive</h3><p>Opcional y apagado por defecto. Un archivo cifrado que se reemplaza una vez al día, como el respaldo de WhatsApp.</p></div>
+    <div class="card"><span class="tag">Privacidad</span><h3>Oculta en Recientes</h3><p>La vista previa sale en blanco y se bloquean capturas y grabaciones de pantalla. Se puede apagar.</p></div>
+  </div>
+  <h3 style="font-size:20px;margin:30px 0 10px">Lo que Aura todavía no hace</h3>
+  <p style="color:var(--text-2)">iOS, interfaz en inglés, modo oscuro dentro de la app, cifrado de la base dentro del teléfono, historial de anticonceptivos (diseñado, no construido), cuenta o sincronización propia y exportación a PDF clínico.</p>
+</div></section>
+
+<section id="calculo"><div class="wrap">
+  <div class="eyebrow">Reglas de negocio</div>
+  <h2>Cómo calcula</h2>
+  <p>Aura usa el método del calendario. Son decisiones de producto documentadas, no criterios clínicos, y viven concentradas en un solo lugar del código (<code>PredictionConfig</code>).</p>
+  <div class="tablewrap" style="margin-top:18px"><table>
+    <thead><tr><th>Concepto</th><th>Regla</th></tr></thead>
+    <tbody>
+      <tr><td>Período nuevo</td><td>Un día de sangrado a más de <b class="n">7 días</b> del anterior</td></tr>
+      <tr><td>Ciclo válido</td><td>De <b class="n">15 a 60 días</b>; los demás no cuentan</td></tr>
+      <tr><td>Ciclos que promedian</td><td>Los <b class="n">6</b> más recientes, con más peso los últimos</td></tr>
+      <tr><td>Rango del próximo período</td><td>El mayor entre <b class="n">1,5 σ</b> y <b class="n">2 días</b>; 3 días con menos de dos ciclos</td></tr>
+      <tr><td>Confianza</td><td>Baja con menos de 2 ciclos o dispersión alta; media con 2 o 3 ciclos estables; alta desde 4 ciclos estables</td></tr>
+      <tr><td>Ovulación</td><td>Próximo período esperado menos <b class="n">14 días</b></td></tr>
+      <tr><td>Ventana fértil</td><td>Desde <b class="n">5 días</b> antes de la ovulación hasta la ovulación. Solo con confianza media o alta y sin atraso</td></tr>
+      <tr><td>Datos desactualizados</td><td>Más de <b class="n">60 días</b> desde el último inicio: Aura deja de predecir</td></tr>
+    </tbody></table></div>
+  <h3 style="font-size:22px;margin:36px 0 10px">El principio que ordena todo</h3>
+  <p>Solo se guarda lo que la usuaria registró: los días de sangrado y sus detalles. Todo lo demás se calcula cada vez, de modo que corregir un solo día recalcula el resto sin contradicciones.</p>
+  <div class="flow">
+    <div class="step keep"><small>Se guarda</small><b>Días de sangrado</b><p>Lo único que Aura escribe en la base.</p></div>
+    <div class="step calc"><small>Se calcula</small><b>Períodos y ciclos</b><p>Brecha de más de 7 días inicia uno nuevo.</p></div>
+    <div class="step calc"><small>Se calcula</small><b>Predicción</b><p>Rango, confianza, ovulación y ventana.</p></div>
+    <div class="step calc"><small>Se calcula</small><b>Fases y avisos</b><p>Lo que se ve y lo que se programa.</p></div>
+  </div>
+</div></section>
+
+<section id="arquitectura"><div class="wrap">
+  <div class="eyebrow">Cómo está construida</div>
+  <h2>Arquitectura</h2>
+  <p>Una app Flutter solo para Android, organizada en capas para que las reglas del ciclo se puedan probar sin teléfono, sin base de datos y sin reloj real.</p>
+  <div class="arch">
+    <div class="layers">
+      <div class="layer"><b>Presentación</b><span>Pantallas y diálogos: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. Reaccionan a flujos de datos y no contienen reglas del ciclo.</span></div>
+      <div class="layer"><b>Servicios y datos</b><span>Repositorio, base SQLite con drift, respaldo, respaldo en Drive, reconciliador de avisos y archivos de estado con escritura atómica.</span></div>
+      <div class="layer core"><b>Dominio puro</b><span>Funciones sin Flutter ni base de datos: derivar ciclos, predecir, decidir qué se muestra, planificar avisos, codificar y cifrar respaldos.</span></div>
+    </div>
+    <div class="ext"><b>Fuera del código propio</b>
+      <ul><li>Keystore de Android: sella la contraseña del respaldo automático</li><li>API de Google Drive: solo con el respaldo automático activo</li><li>Notificaciones del sistema</li></ul>
+    </div>
+  </div>
+  <h3 style="font-size:20px;margin:30px 0 10px">Robustez por diseño</h3>
+  <ul class="clean">
+    <li>La base se abre <b>antes</b> que cualquier otra cosa. Si falla, la app muestra una pantalla con «Reintentar» en lugar de quedarse congelada.</li>
+    <li>Cada migración corre en una transacción con verificaciones y una copia previa del archivo.</li>
+    <li>Argon2id se calcula en un hilo aparte para no congelar la interfaz. Medido: entre 0,42 y 0,50 s en un POCO X6 Pro.</li>
+    <li>Reloj y base de datos inyectables, para probar cambios de día y migraciones con fechas fijas.</li>
+  </ul>
+</div></section>
+
+<section id="privacidad"><div class="wrap">
+  <div class="eyebrow">Datos de salud</div>
+  <h2>Privacidad y permisos</h2>
+  <div class="cols">
+    <div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Permiso</th><th>Para qué</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">POST_NOTIFICATIONS</td><td>Mostrar los recordatorios, solo si los activa</td></tr>
+          <tr><td class="mono">RECEIVE_BOOT_COMPLETED</td><td>Reprogramar los avisos tras reiniciar</td></tr>
+          <tr><td class="mono">INTERNET</td><td>Únicamente el respaldo automático en Drive</td></tr>
+        </tbody></table></div>
+      <p style="margin-top:14px;color:var(--text-2);font-size:14.5px">No pide ubicación, contactos, cámara, micrófono ni almacenamiento amplio.</p>
+    </div>
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">Qué sale del teléfono, y cuándo</h3>
+      <ul class="clean">
+        <li><b>Nada</b>, mientras no haya un respaldo.</li>
+        <li><b>Respaldo manual:</b> un archivo que ella guarda o comparte, con clave opcional.</li>
+        <li><b>Respaldo en Drive:</b> un archivo siempre cifrado, una vez al día, solo si lo activa. Google ve que existe y cuándo cambió, no su contenido.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:18px">
+    <div class="note"><b>Cifrado.</b> Argon2id (19 456 KiB, 2 iteraciones) y AES-256-GCM con la biblioteca <code>cryptography</code>. El encabezado del archivo está autenticado: si alguien lo altera, no se descifra. Hay pruebas con vectores conocidos.</div>
+    <div class="note warn"><b>Lo que no protege.</b> La base dentro del teléfono no está cifrada. Un respaldo sin clave es texto legible. El respaldo automático guarda su contraseña sellada con el Keystore de Android, a diferencia de los manuales, donde Aura no guarda ninguna.</div>
+  </div>
+  <p style="margin-top:16px">Android no copia los datos de Aura ni a la nube ni al cambiar de teléfono (<code>allowBackup="false"</code>). La <a href="privacy.html">política de privacidad</a> está publicada.</p>
+</div></section>
+
+<section id="calidad"><div class="wrap">
+  <div class="eyebrow">QA</div>
+  <h2>Calidad y pruebas</h2>
+  <div class="kpis">
+    <div class="kpi"><b>1296</b><span>casos automáticos, todos aprobados</span></div>
+    <div class="kpi"><b>74</b><span>archivos de prueba</span></div>
+    <div class="kpi"><b>0</b><span>problemas en <code>flutter analyze</code></span></div>
+  </div>
+  <p style="color:var(--text-2);font-size:14.5px;margin-top:-8px">Ejecución local del 24 de octubre de 2026 sobre la versión 1.2.0 (build 7).</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Nivel</th><th>Archivos</th><th>Qué verifica</th></tr></thead>
+    <tbody>
+      <tr><td>Dominio (unitarias)</td><td class="n">12</td><td>Ciclos, predicción, ventana fértil, avisos, formato y cifrado del respaldo</td></tr>
+      <tr><td>Datos e integración</td><td class="n">20</td><td>Repositorio con base real, migraciones, respaldo, cliente de Drive, avisos</td></tr>
+      <tr><td>Pantallas y widgets</td><td class="n">30</td><td>Lo que la usuaria ve y toca, mensajes de error y estados vacíos</td></tr>
+      <tr><td>Plataforma y utilidades</td><td class="n">12</td><td>Manifest, arranque, fechas y zona horaria de Chile, contraste de colores</td></tr>
+    </tbody></table></div>
+  <div class="cols" style="margin-top:22px">
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">Cómo se prueba</h3>
+      <ul class="clean">
+        <li>Valores límite: ciclos de 15 y 60 días, brecha de 7 y 8 días, notas de 2000 caracteres.</li>
+        <li>Fechas fijas y reloj inyectado, incluido el cambio de hora de Chile a medianoche.</li>
+        <li>Respaldos reales de versiones anteriores como datos de prueba.</li>
+        <li>Cada corrección conserva su prueba de regresión.</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">Brechas reconocidas</h3>
+      <ul class="clean">
+        <li>Sin integración continua ni pruebas de extremo a extremo en dispositivo.</li>
+        <li>Porcentaje de cobertura todavía sin calcular.</li>
+        <li>El código nativo en Kotlin se verifica solo a mano.</li>
+        <li>Teléfonos de gama baja y TalkBack sin probar de forma sistemática.</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section id="decisiones"><div class="wrap">
+  <div class="eyebrow">Registro de decisiones</div>
+  <h2>Decisiones que definen el producto</h2>
+  <div class="grid3">
+    <div class="card"><span class="tag">Datos</span><h3>Derivar, no almacenar</h3><p>Solo se guardan los días de sangrado. Una fuente de verdad: corregir un día recalcula todo. Costo: no hay historial de predicciones pasadas.</p></div>
+    <div class="card"><span class="tag">Datos</span><h3>Fechas como texto, en UTC</h3><p>Un día de calendario no es un instante. En Chile el cambio de hora ocurre a medianoche y a veces esa hora no existe; operar en UTC elimina esa clase de errores.</p></div>
+    <div class="card"><span class="tag">Respaldo</span><h3>JSON propio y versionado</h3><p>No es una copia de la base. Se valida completo antes de tocar nada, y un esquema anterior se importa convirtiéndolo.</p></div>
+    <div class="card"><span class="tag">Drive</span><h3>Un solo archivo, como WhatsApp</h3><p>Simple para la usuaria: una copia, siempre la última. Costo asumido: sin historial ni verificación posterior. El diseño original de siete archivos se conserva documentado.</p></div>
+    <div class="card"><span class="tag">Drive</span><h3>Mínimo privilegio</h3><p>Alcance <code>drive.file</code>: Aura solo ve los archivos que ella misma crea. La usuaria puede verlos y borrarlos desde su Drive.</p></div>
+    <div class="card"><span class="tag">Robustez</span><h3>Abrir la base primero</h3><p>Antes, un fallo al abrirla dejaba la app congelada. Ahora ningún aviso se programa hasta que la base abre, y hay pantalla de reintento.</p></div>
+  </div>
+</div></section>
+
+<section id="estado"><div class="wrap">
+  <div class="eyebrow">Hoy y después</div>
+  <h2>Estado y próximos pasos</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tema</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>Versión</td><td>1.2.0 (build 7) en prueba cerrada Alpha de Google Play</td></tr>
+      <tr><td>Publicación</td><td><span class="pill no">Pendiente</span> Necesita completar la prueba cerrada con testers antes de publicar</td></tr>
+      <tr><td>Declaraciones de Google Play</td><td><span class="pill no">Abierta</span> Seguridad de datos del respaldo en Drive</td></tr>
+      <tr><td>Exportación de criptografía (EE. UU.)</td><td><span class="pill no">En consulta</span> Clasificación aún no determinada</td></tr>
+      <tr><td>Historial de anticonceptivos</td><td>Diseñado en la especificación, sin construir</td></tr>
+      <tr><td>Ideas a futuro</td><td>Salud reproductiva más amplia, incluido un modo embarazo</td></tr>
+    </tbody></table></div>
+</div></section>
+
+<section id="perfil"><div class="wrap">
+  <div class="eyebrow">Para quien evalúa el proyecto</div>
+  <h2>Qué demuestra Aura</h2>
+  <p>El proyecto busca mostrar el proceso completo, más allá del código: entender un problema, especificarlo, construirlo, probarlo y documentar por qué se decidió cada cosa.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Área</th><th>Evidencia en el repositorio</th></tr></thead>
+    <tbody>
+      <tr><td>Análisis funcional</td><td>Especificación con historias de usuario, reglas de negocio con identificadores (D-1, E-1, R-4…), 19 requisitos funcionales y 15 no funcionales, casos de uso y diagramas</td></tr>
+      <tr><td>QA y testing</td><td>1296 pruebas en cuatro niveles, valores límite, tablas de decisión, matriz de trazabilidad requisito a prueba y brechas declaradas</td></tr>
+      <tr><td>Automatización</td><td>Suite determinística con reloj inyectado, dobles de prueba con pruebas de paridad y esquemas de migración generados</td></tr>
+      <tr><td>Datos y backend</td><td>Modelo relacional con restricciones <code>CHECK</code>, migraciones transaccionales verificadas, formato de intercambio versionado, cifrado con KDF y AEAD</td></tr>
+      <tr><td>Documentación técnica</td><td>Este informe, ocho anexos, registro de decisiones y especificación viva</td></tr>
+      <tr><td>Criterio de producto</td><td>Privacidad por defecto, estimaciones con confianza explícita y limitaciones documentadas con la misma claridad que los logros</td></tr>
+    </tbody></table></div>
+  <h3 style="font-size:20px;margin:30px 0 12px">Documentación completa</h3>
+  <div class="docs">
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/01_requisitos.md">Requisitos<small>Funcionales, no funcionales y umbrales</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/02_casos_de_uso.md">Casos de uso<small>Actores, flujos y diagramas</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/03_arquitectura.md">Arquitectura<small>Capas, arranque y concurrencia</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/04_modelo_de_datos.md">Modelo de datos<small>Tablas, migraciones y respaldo</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/05_permisos_y_privacidad.md">Permisos y privacidad<small>Amenazas y cumplimiento</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/06_calidad_y_pruebas.md">Calidad y pruebas<small>Estrategia, trazabilidad y resultados</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/07_decisiones.md">Decisiones<small>Qué se decidió y por qué</small></a>
+    <a href="https://github.com/Soofiaa/Aura">Repositorio<small>Código fuente en GitHub</small></a>
+  </div>
+</div></section>
+
+<section id="en"><div class="wrap">
+  <div class="eyebrow">Executive summary · one page</div>
+  <h2>Aura at a glance</h2>
+  <div class="sum">
+    <div>
+      <h3 style="margin-top:0">What it is</h3>
+      <p>Aura is an Android app for tracking the menstrual cycle. It records bleeding days, flow, mood, symptoms and notes, and estimates the next period, the current phase and, when there is enough data, ovulation and the fertile window. It is informational and is not a contraceptive or a medical device.</p>
+      <h3>Why it exists</h3>
+      <p>Built by Sofia Menzel, a junior IT graduate, as an app she wanted to use herself and as a portfolio piece that shows a full engineering process. Cycle data is health data, so the design starts from one rule: data stays on the phone unless the user decides otherwise.</p>
+      <h3>How it works</h3>
+      <ul class="clean">
+        <li><b>Stores only what the user logs.</b> Cycles, predictions and phases are derived on demand, so fixing one day recalculates everything consistently.</li>
+        <li><b>Honest predictions.</b> A range and a confidence level, and silence when data is missing or stale.</li>
+        <li><b>Pure domain layer.</b> The rules are plain functions, testable without a device, a database or a real clock.</li>
+        <li><b>Optional encrypted backup.</b> Argon2id and AES-256-GCM, to a file or to the user's own Google Drive. No accounts, ads or analytics.</li>
+      </ul>
+      <h3>Status</h3>
+      <p>Version 1.2.0 is in closed testing on Google Play. Known gaps are listed openly: no CI yet, no end-to-end tests on device, and coverage still to be measured.</p>
+    </div>
+    <div>
+      <div class="box">
+        <div class="kpis" style="margin:0 0 14px;gap:18px 30px">
+          <div class="kpi"><b>1296</b><span>automated tests, all passing</span></div>
+          <div class="kpi"><b>0</b><span>analyzer issues</span></div>
+        </div>
+        <table><tbody>
+          <tr><td>Stack</td><td>Flutter, Dart, SQLite (drift)</td></tr>
+          <tr><td>Platform</td><td>Android 7+</td></tr>
+          <tr><td>Test levels</td><td>Unit, data, widget, platform</td></tr>
+          <tr><td>Permissions</td><td>Notifications, boot, internet (Drive only)</td></tr>
+          <tr><td>Documents</td><td>Requirements, use cases, architecture, data model, privacy, QA, decisions</td></tr>
+        </tbody></table>
+      </div>
+      <h3>Skills it shows</h3>
+      <ul class="clean">
+        <li>Functional analysis: user stories, numbered business rules, traceability.</li>
+        <li>QA: boundary values, decision tables, regression tests, declared gaps.</li>
+        <li>Data and backend: relational model with constraints, verified migrations, versioned format, encryption.</li>
+        <li>Documentation that states limits as clearly as achievements.</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<div class="wrap"><footer>
+  <a href="Aura_Informe.pdf">Descargar el informe en PDF</a> · <a href="index.html">Inicio</a><br>
+  Aura 1.2.0 (build 7) · Informe del 24 de octubre de 2026 · Autora: Sofia Menzel · Todos los derechos reservados.<br>
+  Las cifras de pruebas provienen de una ejecución local de <code>flutter test</code> y <code>flutter analyze</code>. Las reglas del ciclo son decisiones de producto, no criterios clínicos.
+</footer></div>
+</body>
+</html>
