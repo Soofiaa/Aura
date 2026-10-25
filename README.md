@@ -59,18 +59,25 @@ flowchart LR
     Dom --> Plan[notification_planner]
     Plan --> Rec[NotificationReconciler]
     Rec --> Sch[NotificationScheduler]
+    UI --> Bak[BackupService]
+    Bak --> Repo
+    Bak --> Drv[AutoDriveBackupService]
+    Drv --> Api[DriveApiClient]
+    Drv --> Vault[KeystoreVault]
     DB -. streams reactivos .-> UI
 ```
 
 ```
 lib/
+├── app_startup.dart
+├── main.dart
 ├── domain/        # lógica pura, sin Flutter ni base de datos
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
 │   ├── backup_reminder.dart
-│   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── current_period.dart
 │   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
@@ -78,13 +85,17 @@ lib/
 │   ├── range_selection.dart
 │   └── symptom_ranking.dart
 ├── data/
-│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + respaldo en Drive
+│   ├── backup/          # BackupService, almacenes de archivo y recordatorio
+│   │                    # + respaldo automático en Drive (HU-09): drive_api_client,
+│   │                    #   auto_drive_backup_service, drive_backup_gateway, pre_migration_copy
 │   ├── database/        # drift (esquema v5)
+│   ├── models/          # enums de día (flujo, ánimo, síntomas)
 │   ├── repositories/    # CycleRepository
-│   ├── notifications/   # reconciler + scheduler
+│   ├── notifications/   # reconciler
 │   └── device_settings_store.dart  # ajustes de este teléfono (sin migración)
-├── screens/       # home, calendario, registro, estadísticas, ajustes, onboarding
-└── utils/         # DayKey, colores, textos, zona horaria, canales de Android
+├── screens/       # inicio, calendario, registro, estadísticas, ajustes, respaldo, onboarding
+├── widgets/       # diálogos de contraseña, hojas de inicio de período, selector de síntomas, tarjeta de respaldo
+└── utils/         # DayKey, colores, textos, zona horaria, Keystore, canales de Android
 ```
 
 ## Decisiones de diseño (y por qué)
@@ -105,7 +116,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-Más de 1200 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
+Más de 1290 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 

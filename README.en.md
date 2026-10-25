@@ -59,18 +59,25 @@ flowchart LR
     Dom --> Plan[notification_planner]
     Plan --> Rec[NotificationReconciler]
     Rec --> Sch[NotificationScheduler]
+    UI --> Bak[BackupService]
+    Bak --> Repo
+    Bak --> Drv[AutoDriveBackupService]
+    Drv --> Api[DriveApiClient]
+    Drv --> Vault[KeystoreVault]
     DB -. reactive streams .-> UI
 ```
 
 ```
 lib/
+├── app_startup.dart
+├── main.dart
 ├── domain/        # pure logic, no Flutter or database
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
 │   ├── backup_reminder.dart
-│   ├── current_period.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
+│   ├── current_period.dart
 │   ├── fertile_marks.dart
 │   ├── legacy_period_ends.dart
 │   ├── notification_planner.dart
@@ -78,13 +85,17 @@ lib/
 │   ├── range_selection.dart
 │   └── symptom_ranking.dart
 ├── data/
-│   ├── backup/          # BackupService + BackupFileGateway (share_plus, file_picker) + Drive backup
+│   ├── backup/          # BackupService, file and reminder stores
+│   │                    # + automatic Drive backup (HU-09): drive_api_client,
+│   │                    #   auto_drive_backup_service, drive_backup_gateway, pre_migration_copy
 │   ├── database/        # drift (schema v5)
+│   ├── models/          # day enums (flow, mood, symptoms)
 │   ├── repositories/    # CycleRepository
-│   ├── notifications/   # reconciler + scheduler
+│   ├── notifications/   # reconciler
 │   └── device_settings_store.dart  # per-phone settings (no migration needed)
-├── screens/       # home, calendar, add entry, stats, settings, onboarding
-└── utils/         # DayKey, colors, strings, time zone, Android channels
+├── screens/       # home, calendar, add entry, stats, settings, backup, onboarding
+├── widgets/       # password dialogs, period start sheet, symptom selector, backup card
+└── utils/         # DayKey, colors, strings, time zone, Keystore, Android channels
 ```
 
 ## Design decisions (and why)
@@ -105,7 +116,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-More than 1,200 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+More than 1,290 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 
