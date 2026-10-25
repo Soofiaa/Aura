@@ -1,9 +1,100 @@
 # Aura v1.2 — HU-09 · Respaldo automático en Google Drive
 
-> **PROPUESTA para v1.2. No vigente en la v1.1. No reemplaza al RNF-1 de ESPECIFICACION_v1.1.md hasta la publicación de la 1.2.**
-> **Excepción:** el criterio 21 (memoria insuficiente al restaurar) ya rige desde la 1.1.0 (commit `c44b803`).
-> Estado: propuesta para aprobación · Base: 1.1.0 etiquetada `v1.1.0` y subida a la prueba cerrada de Play (versionCode 6) (`main` 5e70431 (v1.1.0), schema drift v5) · Fecha: 2026-10-14.
-> Mientras la 1.2 no se publique, rigen `ESPECIFICACION_v1.1.md` y su RNF-1 (el APK de release no declara `INTERNET`).
+> **Estado:** implementado en la **1.2.0 (build 7)**, en prueba cerrada de Google Play.
+> **Última revisión:** 2026-10-24, comparando este documento con el código (`lib/data/backup/`, `lib/screens/drive_backup_section.dart`, `lib/utils/keystore_vault.dart`).
+>
+> Este documento tiene dos partes:
+>
+> - **Parte A** describe lo que Aura **hace hoy**. Es la parte vigente.
+> - **Parte B** conserva el **diseño ampliado** que se planeó antes de implementar. **No describe la 1.2.0**: es una hoja de ruta para versiones futuras.
+>
+> Si la Parte A y la Parte B se contradicen, vale la Parte A.
+
+---
+
+# Parte A — Tal como se construyó (1.2.0)
+
+## A.1 Qué hace
+
+Si la usuaria lo activa, Aura sube una vez al día un respaldo **cifrado** de sus registros a una carpeta llamada **Aura** en su propio Google Drive. Está **apagado por defecto**. Mientras está apagado, Aura no usa la red.
+
+## A.2 Decisión de producto: un solo respaldo, como WhatsApp
+
+**Decisión (Sofia, confirmada el 2026-10-24):** el respaldo automático es **un solo archivo** que se reemplaza en cada respaldo, igual que el respaldo de WhatsApp. No se guarda un historial de versiones.
+
+**Por qué:** la usuaria no tiene que administrar archivos, carpetas ni versiones. La cuenta de Google se elige dentro de la app (decisión del 2026-10-14) y el respaldo se mantiene solo.
+
+**Qué se cedió a cambio:** ver A.5. En particular, no hay una copia anterior a la cual volver si un respaldo saliera mal.
+
+## A.3 Cómo funciona (criterios verificados en el código)
+
+| N.º | Comportamiento |
+|---|---|
+| CA-1 | **Apagado por defecto.** Con el interruptor apagado, el servicio no sube nada. Si la compilación no trae el client ID de Google, la sección muestra «Configuración pendiente» y el interruptor queda deshabilitado (`docs/DRIVE_SETUP.md`). |
+| CA-2 | **Activación.** En *Ajustes → Tus datos → Respaldar automáticamente en Google Drive*: 1) la usuaria elige una contraseña (mínimo 10 caracteres, repetida); 2) elige su cuenta de Google y autoriza el acceso; 3) Aura guarda la contraseña sellada con el Keystore de Android; 4) se hace un primer respaldo de inmediato. Si cancela la cuenta de Google, no queda nada activado. |
+| CA-3 | **Alcance mínimo en Google.** Solo `drive.file`: Aura ve únicamente los archivos que ella misma crea. No lee ni borra nada más del Drive. |
+| CA-4 | **Cifrado.** El mismo formato que el respaldo manual protegido (`formatVersion` 2): AES-256-GCM con clave derivada con Argon2id y los parámetros de producción. La derivación corre en un `Isolate`. El automático **nunca sube un archivo sin cifrar**. |
+| CA-5 | **Cuándo respalda.** Al abrir la app, al volver a ella o al guardar un registro, y **como máximo una vez al día**. «Respaldar ahora» ignora el límite diario. |
+| CA-6 | **Un solo archivo.** `aura_respaldo_automatico.json`, dentro de la carpeta **Aura**. Si el archivo ya existe se reemplaza su contenido; si no, se crea. |
+| CA-7 | **Estado visible.** La sección muestra la cuenta conectada, la fecha del último respaldo («hoy» o «el 4 de octubre») y, si el último intento falló, el motivo en palabras simples. |
+| CA-8 | **Fallos.** Cuatro casos con mensaje propio: sin conexión, sesión de Google caducada, Google rechazó el intento y clave de cifrado no disponible. Nunca se muestra el texto técnico del error ni datos de salud. El siguiente disparador reintenta. |
+| CA-9 | **Recordatorio de respaldo (HU-08).** Un respaldo automático correcto cuenta como respaldo y reinicia el aviso de los 30 días. |
+| CA-10 | **Desactivar.** Pide confirmación, deja de subir, cierra la sesión de Google en el teléfono y borra el estado local. Los archivos que ya están en Drive **se quedan**; la usuaria puede borrarlos desde Drive. |
+| CA-11 | **Borrar todos los datos.** Elimina también el estado del respaldo automático y olvida la cuenta. |
+| CA-12 | **Red mínima.** El permiso `INTERNET` existe solo para esta función. El único código con red es el cliente de Drive, que habla por HTTPS con `www.googleapis.com`. Sin analítica ni servidor propio. |
+
+## A.4 Dónde queda la contraseña (importante para la privacidad)
+
+Para poder respaldar sin pedirla cada día, Aura **guarda la contraseña, sellada (cifrada) con el Keystore de Android**, y no en claro ni en ningún archivo. Esto es distinto del respaldo manual, donde Aura no guarda la contraseña.
+
+- Si se borra la app o el Keystore pierde la clave, Aura avisa «Este teléfono ya no tiene la clave de cifrado» y pide activar de nuevo.
+- Los archivos ya subidos siguen abriéndose con la contraseña que la usuaria eligió.
+- Los textos de privacidad deben decir esta diferencia con precisión (pendiente de revisar en `privacy.html`).
+
+## A.5 Limitaciones conocidas
+
+Son consecuencias del diseño simple. Ninguna es un error; son lo que se cedió por la simplicidad.
+
+1. **Sin copia anterior ni verificación.** El archivo nuevo reemplaza al anterior y no se vuelve a descargar para comprobar que se puede abrir. Si un respaldo saliera dañado, no habría otro al cual volver.
+2. **Sin detección de cambios.** Sube una vez al día aunque no haya registros nuevos.
+3. **Sin restauración dentro de la app.** No hay «Restaurar desde Google Drive». Para restaurar, la usuaria descarga el archivo desde Drive y usa *Restaurar un respaldo* con su contraseña (mismo formato). *Pendiente de probar con el archivo automático; se probó con un respaldo manual guardado en Drive el 2026-10-14.*
+4. **Sin «Cambiar contraseña»** en esta sección.
+5. **Sin estado «pausado».** Si la sesión de Google caduca, la sección muestra el fallo y la usuaria debe volver a conectar la cuenta.
+6. **Varios teléfonos con la misma cuenta** comparten el mismo archivo: el último teléfono en respaldar lo reemplaza. *Deducido del diseño, no probado.*
+7. **Rendimiento de Argon2id en teléfonos de gama baja** no medido; se estima entre 3 y 5 veces más lento que en el teléfono de prueba (decisión de aceptarlo, 2026-10-15).
+8. **Pendientes de publicación en Play:** la declaración de *Seguridad de datos* (Decisión 9, Parte B) sigue abierta; hay que decidirla antes de publicar.
+
+## A.6 Qué cambió respecto al diseño ampliado
+
+| Tema | Diseño ampliado (Parte B) | Construido (1.2.0) |
+|---|---|---|
+| Alcance de Google | `drive.appdata` (carpeta oculta) | `drive.file` (carpeta visible «Aura») |
+| Archivos | Uno nuevo por respaldo; se conservan los últimos 7 | Un solo archivo que se reemplaza |
+| Verificación | Subir, descargar y descifrar antes de rotar | No hay verificación posterior |
+| Cuándo respalda | Diario y solo si los datos cambiaron (huella HMAC) | Diario, sin comprobar cambios |
+| Argon2id | 64 MiB, 3 iteraciones, sal fija | Parámetros de producción del respaldo manual (19 456 KiB, 2 iteraciones) |
+| Qué guarda el Keystore | La clave derivada | La contraseña sellada |
+| Orden de activación | Contraseña, clave, Keystore, Google, primer respaldo | Contraseña (diálogo), cuenta de Google, Keystore, primer respaldo |
+| Restaurar desde Drive | Sí, con lista y varios teléfonos | No |
+| Cambiar contraseña | Sí | No |
+| Estado «pausado» y tarjetas en Inicio | Sí | No |
+| Identificador por instalación | Sí | No |
+
+## A.7 Archivos y pruebas relacionados
+
+- Código: `lib/data/backup/auto_drive_backup_service.dart`, `drive_api_client.dart`, `drive_backup_gateway.dart`, `drive_backup_settings_store.dart`; `lib/screens/drive_backup_section.dart`; `lib/utils/keystore_vault.dart`, `drive_client_config.dart`.
+- Tests: `test/data/backup/auto_drive_backup_service_test.dart`, `drive_api_client_test.dart`, `drive_backup_settings_store_test.dart`; `test/screens/drive_backup_section_test.dart`; `test/utils/keystore_vault_test.dart`; `test/android_manifest_test.dart`.
+- Configuración de Google Cloud: `docs/DRIVE_SETUP.md`.
+
+---
+
+# Parte B — Diseño ampliado (propuesta, **no implementado**)
+
+> Todo lo que sigue es el diseño que se escribió el **2026-10-14**, antes de implementar (base: `v1.1.0`, commit `5e70431`, schema drift v5). **No describe la 1.2.0.** Se conserva íntegro porque documenta el razonamiento de seguridad y sirve de hoja de ruta.
+>
+> Lo que no aparece en la Parte A **no está implementado**. En particular: criterios 8 (verificar antes de rotar), 12 (restaurar desde Drive), 13 (cambiar contraseña), 17 y 20 (clave invalidada y estado «pausado»), 19 (varios teléfonos) y las reglas R-1 a R-3.
+>
+> Donde esta parte dice `drive.appdata`, «últimos 7 respaldos» o «el automático nunca sobrescribe», lo vigente es la Parte A.
 
 ## 1. Contexto y objetivo
 

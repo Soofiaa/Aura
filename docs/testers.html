@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Guion de 14 casos de prueba para las testers de la prueba cerrada de Aura 1.2.0.">
+<title>Guion para testers de Aura</title>
+<!-- Sin recursos externos: solo tipografías del sistema, igual que privacy.html. -->
+<style>
+/* Concepto: el anillo del ciclo (28 días) como firma visual; páginas de lectura limpias sobre la paleta de la app. */
+:root{
+  --bg:#F8FAFB; --surface:#FFFFFF; --surface-2:#EEF5F8; --line:#DCE6EA;
+  --text:#333333; --text-2:#5F6B70;
+  --sky:#A8D8EA; --blush:#FAD4D8; --rose:#EE8CA7; --rose-strong:#E76085; --fertile:#3A8BAA;
+  --on-rose:#FFFFFF; --link:#2C7391;
+  --f-display:ui-serif,Georgia,'Iowan Old Style','Palatino Linotype','Times New Roman',serif;
+  --f-body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --f-mono:ui-monospace,'SF Mono',Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+a{color:var(--link)}
+h1,h2,h3{font-family:var(--f-display);line-height:1.12;text-wrap:balance;margin:0}
+p{margin:0 0 .9em;max-width:68ch}
+.wrap{max-width:1040px;margin:0 auto}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+
+/* Cabecera */
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:18px;font-size:14px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rose-strong);margin-right:8px}
+.nav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.nav a{color:var(--text-2);text-decoration:none}
+.nav a:hover{color:var(--text);text-decoration:underline}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px 48px;align-items:center;padding-block:36px 56px}
+.hero h1{font-size:clamp(56px,10vw,104px);font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.hero h1 span{color:var(--rose-strong)}
+.lead{font-size:clamp(18px,2.4vw,22px);line-height:1.5;color:var(--text);margin-top:18px;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--text-2)}
+.chip b{color:var(--text);font-weight:600}
+.ringbox{min-width:0}
+.ring{width:100%;height:auto;max-width:440px;display:block;margin:0 auto}
+.ring .per{fill:var(--rose-strong)} .ring .fol{fill:var(--sky);opacity:.55} .ring .lut{fill:var(--blush)}
+.ring .fer{fill:var(--fertile);opacity:.62} .ring .ovu{fill:var(--fertile)}
+.ring .rl{font:500 12px var(--f-mono);fill:var(--text-2)}
+.ring .rc1{font:700 22px var(--f-display);fill:var(--text)}
+.ring .rc2{font:500 13px var(--f-mono);fill:var(--text-2);letter-spacing:.08em;text-transform:uppercase}
+.ring .rc3{font:400 11px var(--f-body);fill:var(--text-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:13px;color:var(--text-2);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+
+/* Secciones */
+section{padding-block:44px;border-top:1px solid var(--line)}
+section>.wrap>h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:8px 0 22px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.cols>div{min-width:0}
+.note{background:var(--surface-2);border-left:3px solid var(--fertile);border-radius:6px;padding:14px 18px;max-width:72ch;font-size:15px}
+.note.warn{border-left-color:var(--rose-strong)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:0}
+.card h3{font-size:19px;margin-bottom:6px}
+.card p{font-size:15px;color:var(--text-2);margin:0}
+.card .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose-strong);display:block;margin-bottom:8px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2);font-weight:500;background:var(--surface-2);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:600}
+.pill.ok{background:color-mix(in srgb,var(--fertile) 18%,transparent);color:var(--fertile)}
+.pill.no{background:color-mix(in srgb,var(--rose-strong) 16%,transparent);color:var(--rose-strong)}
+
+/* Flujo de datos */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:8px 0 24px}
+.step{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;position:relative;min-width:0}
+.step small{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.step.keep{border-color:var(--rose-strong)} .step.keep small{color:var(--rose-strong)}
+.step.calc small{color:var(--fertile)}
+.step b{font-family:var(--f-display);font-size:18px}
+.step p{font-size:14px;color:var(--text-2);margin:4px 0 0}
+
+/* Arquitectura */
+.arch{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.layers{display:grid;gap:10px}
+.layer{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 18px;display:grid;grid-template-columns:150px 1fr;gap:4px 16px;min-width:0}
+.layer b{font-family:var(--f-display);font-size:17px}
+.layer span{font-size:14.5px;color:var(--text-2)}
+.layer.core{border-color:var(--fertile);background:color-mix(in srgb,var(--fertile) 8%,var(--surface))}
+.ext{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:14.5px;color:var(--text-2);min-width:0}
+.ext b{display:block;font-family:var(--f-display);color:var(--text);font-size:17px;margin-bottom:6px}
+.ext ul{margin:0;padding-left:18px}
+
+.kpis{display:flex;flex-wrap:wrap;gap:28px 44px;margin:6px 0 26px}
+.kpi b{display:block;font-family:var(--f-display);font-size:40px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13.5px;color:var(--text-2)}
+
+ul.clean{margin:0 0 1em;padding-left:20px}
+ul.clean li{margin-bottom:.4em;max-width:68ch}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.docs a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;text-decoration:none;color:var(--text);font-size:15px}
+.docs a:hover{border-color:var(--fertile)}
+.docs a small{display:block;color:var(--text-2);font-size:13px}
+footer{padding-block:36px 48px;border-top:1px solid var(--line);font-size:14px;color:var(--text-2)}
+
+/* Resumen en inglés */
+#en .sum{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px 40px}
+#en h3{font-size:18px;margin:18px 0 6px}
+#en p,#en li{font-size:15.5px}
+#en .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;padding-block:20px 36px}
+  .cols,.arch,#en .sum{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .layer{grid-template-columns:1fr}
+  section{padding-block:34px}
+}
+@media (max-width:460px){.flow{grid-template-columns:1fr}.kpis{gap:20px 28px}}
+
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{padding:0;font-size:12px;background:#fff}
+  .nav,.top .nav{display:none}
+  section{padding-block:22px;break-inside:auto}
+  .card,.step,.layer,.kpi,tr,.note{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .hero{padding-block:10px 24px;grid-template-columns:1.1fr .9fr}
+  .cols{grid-template-columns:1fr 1fr}
+  #en{break-before:page;border-top:0}
+  .tablewrap{overflow:visible}
+  #en{padding-block:0}
+  #en h2{font-size:26px;margin:4px 0 10px}
+  #en .sum{gap:14px 26px}
+  #en h3{font-size:14.5px;margin:10px 0 3px}
+  #en p,#en li,#en td{font-size:11.5px;line-height:1.45;margin-bottom:.5em}
+  #en .box{padding:10px 14px}
+  #en .kpi b{font-size:28px}
+  #en td{padding:5px 8px}
+  #en ul.clean{margin-bottom:.4em}
+  footer{padding-block:14px 0;font-size:10.5px}
+}
+
+.hero2{padding-block:34px 30px}
+.hero2 h1{font-size:clamp(40px,7vw,68px);letter-spacing:-.03em}
+.hero2 h1 span{color:var(--rose-strong)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:14px;text-decoration:none;color:var(--text)}
+.toc a:hover{border-color:var(--fertile)}
+details{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:0;margin-bottom:10px}
+summary{cursor:pointer;padding:14px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--rose-strong);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details>div{padding:0 18px 14px;color:var(--text-2);font-size:15.5px}
+details>div p{margin-bottom:.6em}
+summary:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.how ol{margin:8px 0 0;padding-left:20px;font-size:15px;color:var(--text-2)}
+.how li{margin-bottom:4px}
+.how h3{font-size:19px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.conf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.conf .card h3{display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.case{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.case input{width:20px;height:20px;margin-top:4px;accent-color:var(--rose-strong)}
+.case h3{font-size:18px}
+.case .meta{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-2)}
+.case ol{margin:6px 0 8px;padding-left:20px;font-size:15px}
+.case .exp{font-size:14.5px;color:var(--text-2);border-top:1px dashed var(--line);padding-top:8px}
+.case .exp b{color:var(--fertile)}
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);font-size:14px;color:var(--text-2);display:flex;gap:12px;align-items:center}
+.progress progress{flex:1;height:8px;accent-color:var(--rose-strong)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.copy{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:3px 10px;cursor:pointer}
+@media (max-width:640px){.conf{grid-template-columns:1fr}}
+
+.sitenav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.sitenav a{color:var(--text-2);text-decoration:none;font-size:14px}
+.sitenav a[aria-current="page"]{color:var(--text);font-weight:600}
+.sitenav a:hover{text-decoration:underline}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-block;border-radius:999px;padding:10px 20px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.btn.primary{background:var(--rose-strong);border-color:var(--rose-strong);color:var(--on-rose)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="brand"><i></i>Aura</div>
+    <nav class="sitenav" aria-label="Sitio"><a href="index.html">Inicio</a><a href="guia.html">Guía de uso</a><a href="informe.html">Informe</a><a href="testers.html" aria-current="page">Testers</a><a href="privacy.html">Privacidad</a></nav></header>
+  <div class="hero2">
+    <div class="eyebrow">Prueba cerrada · versión 1.2.0 (build 7)</div>
+    <h1 style="margin-top:12px">Guion para testers<span>.</span></h1>
+    <p class="lead">Gracias por probar Aura. Con estos 14 casos cubrimos lo más importante en unos 30 a 40 minutos. Puedes hacerlos en el orden que quieras.</p>
+  </div>
+</div>
+<div class="wrap"><div class="progress" role="status"><span id="ptxt">0 de 14 hechos</span><progress id="pbar" max="14" value="0"></progress></div></div>
+
+<section id="antes" style="border-top:0"><div class="wrap">
+  <h2>Antes de empezar</h2>
+  <ul class="clean">
+    <li><b>Usa datos de prueba.</b> No hace falta que registres tu ciclo real. Si lo haces, ten presente que cualquier captura o archivo que me envíes puede contener datos de salud.</li>
+    <li><b>Mantén Aura instalada</b> durante todo el período de la prueba: cuenta para que la prueba cerrada se complete.</li>
+    <li><b>Prueba con calma lo raro:</b> cerrar la app a mitad de una acción, girar el teléfono, cambiar la hora. Lo inesperado es lo más útil.</li>
+    <li><b>No hay respuestas incorrectas.</b> Si algo te confunde, aunque funcione, también es un hallazgo.</li>
+  </ul>
+  <div class="note">Tus marcas de avance se guardan solo en este navegador. Si lo prefieres, anota los resultados aparte.</div>
+</div></section>
+
+<section id="casos"><div class="wrap">
+  <h2>Casos de prueba</h2>
+  <div class="case"><input type="checkbox" id="c1" data-case aria-label="Caso 1 hecho"><div><div class="meta">T01 · Instalación</div><h3><label for="c1">Primer arranque</label></h3><ol><li>Instala Aura desde el enlace de la prueba cerrada y ábrela.</li><li>Recorre las páginas de presentación.</li></ol><div class="exp"><b>Esperado:</b> Son 4 páginas. La última explica que tus datos viven en el teléfono y recomienda hacer respaldos.</div></div></div><div class="case"><input type="checkbox" id="c2" data-case aria-label="Caso 2 hecho"><div><div class="meta">T02 · Registro</div><h3><label for="c2">«Me llegó hoy»</label></h3><ol><li>En Inicio toca «Me llegó hoy».</li><li>Elige hoy.</li><li>Mira el Calendario.</li></ol><div class="exp"><b>Esperado:</b> Solo hoy queda marcado. Los días siguientes aparecen estimados (borde punteado). «Deshacer» está disponible unos 7 segundos.</div></div></div><div class="case"><input type="checkbox" id="c3" data-case aria-label="Caso 3 hecho"><div><div class="meta">T03 · Registro</div><h3><label for="c3">Registrar un día completo</label></h3><ol><li>Abre un día y marca sangrado con una intensidad.</li><li>Elige ánimo, uno o más síntomas y escribe una nota.</li><li>Guarda y vuelve a abrir el día.</li><li>Repite, pero sal sin guardar tras cambiar algo.</li></ol><div class="exp"><b>Esperado:</b> Todo se conserva al guardar. Al salir con cambios sin guardar, Aura te pregunta antes de descartar.</div></div></div><div class="case"><input type="checkbox" id="c4" data-case aria-label="Caso 4 hecho"><div><div class="meta">T04 · Registro</div><h3><label for="c4">Indicar que terminó</label></h3><ol><li>Con un período en curso, elige «Terminó hoy».</li><li>Prueba también «Ya terminó antes» en otro período.</li></ol><div class="exp"><b>Esperado:</b> El período queda cerrado y los días sin registro entre medio se completan. Se puede reabrir dentro de 7 días.</div></div></div><div class="case"><input type="checkbox" id="c5" data-case aria-label="Caso 5 hecho"><div><div class="meta">T05 · Calendario</div><h3><label for="c5">Selección de rango</label></h3><ol><li>Entra al modo de selección de rango.</li><li>Marca un rango de 4 días.</li><li>Intenta un rango de más de 10 días.</li><li>Usa «Deshacer».</li></ol><div class="exp"><b>Esperado:</b> El rango de 4 días se guarda bien. Con más de 10 días Aura pide confirmación. «Deshacer» devuelve el estado anterior.</div></div></div><div class="case"><input type="checkbox" id="c6" data-case aria-label="Caso 6 hecho"><div><div class="meta">T06 · Estadísticas</div><h3><label for="c6">Estadísticas con pocos datos</label></h3><ol><li>Con menos de 2 ciclos registrados, abre Estadísticas.</li><li>Después registra 3 o más ciclos y vuelve.</li></ol><div class="exp"><b>Esperado:</b> Con pocos datos, Aura lo explica en lugar de mostrar un promedio engañoso. Con más ciclos aparecen duración típica, regularidad y frecuencias.</div></div></div><div class="case"><input type="checkbox" id="c7" data-case aria-label="Caso 7 hecho"><div><div class="meta">T07 · Avisos</div><h3><label for="c7">Recordatorios</label></h3><ol><li>En Ajustes activa los avisos y concede el permiso si Android lo pide.</li><li>Pon la hora a unos minutos más adelante.</li><li>Revisa la notificación en la pantalla de bloqueo.</li><li>Activa «Mostrar detalles» y compara.</li><li>En otra prueba, rechaza el permiso dos veces.</li></ol><div class="exp"><b>Esperado:</b> Llega una notificación con texto discreto; con «Mostrar detalles» el texto muestra más. Tras dos rechazos, Aura ofrece «Abrir ajustes».</div></div></div><div class="case"><input type="checkbox" id="c8" data-case aria-label="Caso 8 hecho"><div><div class="meta">T08 · Avisos</div><h3><label for="c8">Avisos tras reiniciar</label></h3><ol><li>Con avisos activados y programados, reinicia el teléfono.</li><li>Espera la hora configurada.</li></ol><div class="exp"><b>Esperado:</b> El aviso llega igual, sin abrir Aura.</div></div></div><div class="case"><input type="checkbox" id="c9" data-case aria-label="Caso 9 hecho"><div><div class="meta">T09 · Respaldo</div><h3><label for="c9">Respaldo en archivo sin contraseña</label></h3><ol><li>En Ajustes, «Tus datos», crea un respaldo sin contraseña y guárdalo.</li></ol><div class="exp"><b>Esperado:</b> Aura advierte que el archivo quedará legible por cualquiera. El archivo se guarda donde elegiste.</div></div></div><div class="case"><input type="checkbox" id="c10" data-case aria-label="Caso 10 hecho"><div><div class="meta">T10 · Respaldo</div><h3><label for="c10">Respaldo con contraseña e importación</label></h3><ol><li>Crea un respaldo con una contraseña de al menos 10 caracteres.</li><li>Importa ese archivo e ingresa una contraseña equivocada.</li><li>Vuelve a importar con la correcta.</li><li>Tras importar, usa «Deshacer».</li></ol><div class="exp"><b>Esperado:</b> Con la clave equivocada Aura muestra un mensaje claro y no cambia tus datos. Con la correcta pide confirmación con recuentos, reemplaza tus datos, y «Deshacer» los devuelve.</div></div></div><div class="case"><input type="checkbox" id="c11" data-case aria-label="Caso 11 hecho"><div><div class="meta">T11 · Respaldo</div><h3><label for="c11">Respaldo automático en Drive</label></h3><ol><li>En «Tus datos» activa el respaldo automático y elige tu cuenta de Google.</li><li>Define la contraseña.</li><li>Revisa tu Drive.</li><li>Al día siguiente, vuelve a mirar.</li></ol><div class="exp"><b>Esperado:</b> Aparece una carpeta «Aura» con un único archivo. Al día siguiente sigue habiendo un solo archivo, actualizado, no uno nuevo.</div></div></div><div class="case"><input type="checkbox" id="c12" data-case aria-label="Caso 12 hecho"><div><div class="meta">T12 · Privacidad</div><h3><label for="c12">Oculta en Recientes</label></h3><ol><li>Abre Aura y ve a la pantalla de aplicaciones recientes.</li><li>Intenta una captura de pantalla dentro de Aura.</li><li>Apaga «Ocultar Aura en Recientes» y repite.</li></ol><div class="exp"><b>Esperado:</b> Con la opción activa, la vista previa sale en blanco y la captura se bloquea. Apagada, ambas funcionan.</div></div></div><div class="case"><input type="checkbox" id="c13" data-case aria-label="Caso 13 hecho"><div><div class="meta">T13 · Accesibilidad</div><h3><label for="c13">Letra grande y toque</label></h3><ol><li>Sube el tamaño de fuente en los ajustes de Android.</li><li>Recorre Inicio, Calendario, Registrar día, Estadísticas y Ajustes.</li></ol><div class="exp"><b>Esperado:</b> Ningún texto queda cortado y los botones se pueden tocar sin errar.</div></div></div><div class="case"><input type="checkbox" id="c14" data-case aria-label="Caso 14 hecho"><div><div class="meta">T14 · Datos</div><h3><label for="c14">Borrar todos los datos</label></h3><ol><li>En Ajustes elige «Borrar todos los datos» y confirma.</li><li>Si usabas Drive, revisa tu Drive después.</li></ol><div class="exp"><b>Esperado:</b> No quedan registros ni ajustes en Aura. Los archivos que ya estaban en tu Drive siguen ahí y debes borrarlos tú.</div></div></div>
+</div></section>
+
+<section id="reportar"><div class="wrap">
+  <h2>Cómo reportar un problema</h2>
+  <div class="cols">
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">Qué incluir</h3>
+      <ul class="clean">
+        <li>El número del caso (por ejemplo T10) o la pantalla donde ocurrió.</li>
+        <li>Qué hiciste, paso por paso, y qué esperabas.</li>
+        <li>Qué pasó en realidad. Si apareció un mensaje, cópialo tal cual.</li>
+        <li>Modelo del teléfono y versión de Android.</li>
+        <li>Si ocurre siempre o a veces.</li>
+      </ul>
+      <p style="color:var(--text-2);font-size:14.5px">Para hacer una captura de pantalla, apaga antes «Ocultar Aura en Recientes» en Ajustes, porque por defecto Aura las bloquea. Evita mostrar datos reales.</p>
+    </div>
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">Cómo clasificarlo</h3>
+      <div class="tablewrap"><table><tbody>
+        <tr><td><b>Bloqueante</b></td><td>Se pierden datos o la app se cierra sola.</td></tr>
+        <tr><td><b>Importante</b></td><td>Una función no hace lo que dice.</td></tr>
+        <tr><td><b>Menor</b></td><td>Texto cortado, diseño raro, mensaje confuso.</td></tr>
+        <tr><td><b>Sugerencia</b></td><td>Algo que te gustaría que fuera distinto.</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+  <p style="margin-top:20px">Escríbeme a <b id="mail">sofia.menzel.dev@gmail.com</b> <button class="copy" type="button" id="cp">Copiar</button> o responde en el hilo donde recibiste la invitación.</p>
+</div></section>
+<div class="wrap"><footer>Aura 1.2.0 (build 7) · Guion del 24 de octubre de 2026 · Autora: Sofia Menzel · <a href="privacy.html">Política de privacidad</a></footer></div>
+<script>
+(function(){
+  var KEY='aura-tester-v1',boxes=[].slice.call(document.querySelectorAll('[data-case]')),saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  function upd(){var n=boxes.filter(function(b){return b.checked}).length;
+    document.getElementById('ptxt').textContent=n+' de '+boxes.length+' hechos';document.getElementById('pbar').value=n;}
+  boxes.forEach(function(b){ if(saved[b.id])b.checked=true;
+    b.addEventListener('change',function(){saved[b.id]=b.checked;try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){};upd()})});
+  upd();
+  document.getElementById('cp').addEventListener('click',function(){
+    var s=document.getElementById('mail').textContent,b=this;
+    function ok(){b.textContent='Copiado';setTimeout(function(){b.textContent='Copiar'},1600)}
+    function fb(){var r=document.createRange();r.selectNodeContents(document.getElementById('mail'));var x=getSelection();x.removeAllRanges();x.addRange(r)}
+    try{navigator.clipboard.writeText(s).then(ok,fb)}catch(e){fb()}
+  });
+})();
+</script>
+</body>
+</html>

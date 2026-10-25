@@ -4,6 +4,8 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 [English version](README.en.md)
 
+**Sitio web:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Guía de uso](https://soofiaa.github.io/Aura/guia.html) · [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html)
+
 > **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
 
 ## Capturas
@@ -34,7 +36,7 @@ Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las captura
 - `allowBackup="false"`: Android no los copia a la nube, y `dataExtractionRules` tampoco los copia al cambiar de teléfono por cable o Wi-Fi: la única salida es un respaldo propio de la app.
 - **"Ocultar Aura en Recientes"** (activo por defecto, se apaga desde Ajustes → Privacidad): la vista previa de la app en Recientes sale en blanco y no se pueden hacer capturas ni grabaciones de la pantalla.
 - Al borrar todos los datos, la base se compacta (`VACUUM`) y las páginas sobrescriben lo borrado (`secure_delete`): no quedan restos de notas o síntomas ya eliminados.
-- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo, o si activa el respaldo automático en su propio Google Drive (opcional, ver arriba). El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). Aura no guarda la contraseña ni puede recuperarla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia. El permiso `INTERNET` existe solo para el respaldo automático en Drive; con él apagado, la app no usa la red.
+- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo, o si activa el respaldo automático en su propio Google Drive (opcional, ver arriba). El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). En los respaldos en archivo, Aura no guarda la contraseña ni puede recuperarla; en el respaldo automático de Drive la guarda sellada con el Keystore de Android, para poder respaldar cada día sin pedirla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia. El permiso `INTERNET` existe solo para el respaldo automático en Drive; con él apagado, la app no usa la red.
 - Al actualizar desde la 1.0 (esquema v3), antes de convertir la base la app guarda una copia de seguridad en su almacenamiento privado; se borra al guardar un respaldo en el teléfono, al abrir la app si tiene más de 30 días, o con "Borrar todos los datos".
 - Al confirmar una importación, la app guarda antes una copia sin cifrar de los datos actuales en su almacenamiento privado, solo para "Deshacer"; la siguiente importación la reemplaza y "Borrar todos los datos" la elimina.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
@@ -42,10 +44,12 @@ Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las captura
 
 ## Documentación
 
+- [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html) (también en [PDF](docs/Aura_Informe.pdf)) y [guía de uso](https://soofiaa.github.io/Aura/guia.html)
+- [Anexos técnicos](docs/anexos/00_INDICE.md): requisitos, casos de uso, arquitectura, modelo de datos, permisos y privacidad, calidad y pruebas, decisiones
 - [Especificación funcional v1.1](docs/ESPECIFICACION_v1.1.md): historias de usuario, requisitos y criterios de aceptación.
 - [HU-09: respaldo en Google Drive](docs/HU-09_respaldo_drive_v1.2.md)
 - [Configuración de Drive](docs/DRIVE_SETUP.md)
-- [Política de privacidad](docs/privacy.html)
+- [Política de privacidad](https://soofiaa.github.io/Aura/privacy.html)
 
 ## Arquitectura
 
