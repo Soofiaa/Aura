@@ -66,6 +66,11 @@
            background: var(--primary); }
   .orb-b { width: 300px; height: 300px; top: -130px; left: calc(50% - 20px);
            background: var(--secondary); }
+  .back { position: relative; display: inline-block; margin-bottom: 14px;
+          font-size: .92rem; font-weight: 600; color: var(--accent-ink);
+          text-underline-offset: 3px; }
+  .back:hover { color: var(--accent-strong); }
+  .back:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; border-radius: 4px; }
   .brand {
     position: relative; margin: 0;
     font: 600 clamp(2.1rem, 6vw, 2.8rem)/1.1 var(--serif);
@@ -205,6 +210,7 @@
 <header class="hero">
   <span class="orb orb-a" aria-hidden="true"></span>
   <span class="orb orb-b" aria-hidden="true"></span>
+  <a class="back" href="index.html">← Volver a Aura · Back to Aura</a>
   <p class="brand">Aura</p>
   <p class="tagline">Política de privacidad · Privacy policy</p>
   <div class="lang-tabs" role="tablist" aria-label="Idioma / Language">
@@ -368,6 +374,7 @@
 </main>
 
 <footer>
+  <p><a href="index.html">← Volver a Aura · Back to Aura</a></p>
   <p><strong>Aura</strong> · Creada por Sofia Menzel</p>
   <p>Esta página es estática: no usa cookies, analítica ni recursos de terceros.<br>
      This page is static: no cookies, no analytics, no third-party resources.</p>
