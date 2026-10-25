@@ -4,6 +4,8 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 [English version](README.en.md)
 
+**Sitio web:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Guía de uso](https://soofiaa.github.io/Aura/guia.html) · [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html)
+
 > **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
 
 ## Capturas
@@ -42,10 +44,12 @@ Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las captura
 
 ## Documentación
 
+- [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html) (también en [PDF](docs/Aura_Informe.pdf)) y [guía de uso](https://soofiaa.github.io/Aura/guia.html)
+- [Anexos técnicos](docs/anexos/00_INDICE.md): requisitos, casos de uso, arquitectura, modelo de datos, permisos y privacidad, calidad y pruebas, decisiones
 - [Especificación funcional v1.1](docs/ESPECIFICACION_v1.1.md): historias de usuario, requisitos y criterios de aceptación.
 - [HU-09: respaldo en Google Drive](docs/HU-09_respaldo_drive_v1.2.md)
 - [Configuración de Drive](docs/DRIVE_SETUP.md)
-- [Política de privacidad](docs/privacy.html)
+- [Política de privacidad](https://soofiaa.github.io/Aura/privacy.html)
 
 ## Arquitectura
 

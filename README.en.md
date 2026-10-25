@@ -4,6 +4,8 @@ An Android app to log your menstrual cycle and estimate its phases. **Local-firs
 
 [Versión en español](README.md)
 
+**Website:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Project report](https://soofiaa.github.io/Aura/informe.html) (includes an English executive summary)
+
 > **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
 
 ## Screenshots
@@ -34,7 +36,7 @@ Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screens
 - `allowBackup="false"`: Android does not copy it to the cloud, and `dataExtractionRules` blocks direct phone-to-phone transfer over cable or Wi-Fi as well: the only way data leaves is through Aura's own backup file.
 - **"Hide Aura from Recents"** (on by default, can be turned off in Settings → Privacy): the app preview in the Recents screen is blank, and screenshots or screen recordings are blocked.
 - After deleting all data, the database is compacted (`VACUUM`) and freed pages overwrite what was deleted (`secure_delete`): no remnants of deleted notes or symptoms remain.
-- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with, or if they turn on the automatic backup to their own Google Drive (optional, see above). The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). Aura does not store the password and cannot recover it. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy. The `INTERNET` permission exists only for the automatic Drive backup; with it off, the app does not use the network.
+- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with, or if they turn on the automatic backup to their own Google Drive (optional, see above). The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). For file backups, Aura does not store the password and cannot recover it; for the automatic Drive backup it keeps it sealed in the Android Keystore so it can back up every day without asking. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy. The `INTERNET` permission exists only for the automatic Drive backup; with it off, the app does not use the network.
 - When updating from 1.0 (schema v3), before converting the database the app saves a safety copy in its private storage; it is deleted after saving a backup to the phone, on app start once it is more than 30 days old, or with "Delete all data".
 - When an import is confirmed, the app first saves an unencrypted copy of the current data in its private storage, only for "Undo"; the next import replaces it and "Delete all data" removes it.
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
@@ -42,10 +44,12 @@ Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screens
 
 ## Documentation
 
+- [Project report](https://soofiaa.github.io/Aura/informe.html) (Spanish, with an English executive summary; also as [PDF](docs/Aura_Informe.pdf))
+- [Technical annexes](docs/anexos/00_INDICE.md): requirements, use cases, architecture, data model, permissions and privacy, quality and testing, decisions (in Spanish)
 - [Functional specification v1.1](docs/ESPECIFICACION_v1.1.md): user stories, requirements and acceptance criteria (in Spanish).
 - [HU-09: Google Drive backup](docs/HU-09_respaldo_drive_v1.2.md) (in Spanish)
 - [Drive setup](docs/DRIVE_SETUP.md) (in Spanish)
-- [Privacy policy](docs/privacy.html)
+- [Privacy policy](https://soofiaa.github.io/Aura/privacy.html)
 
 ## Architecture
 
