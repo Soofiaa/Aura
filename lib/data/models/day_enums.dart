@@ -44,6 +44,11 @@ enum Symptom {
   hinchazon,
   acne,
   dolorDeEspalda,
+  // Sintomas del modo embarazo (backup schema 6): siempre al final.
+  nauseas,
+  acidez,
+  mareos,
+  sensibilidadSenos,
 }
 
 extension SymptomLabel on Symptom {
@@ -56,6 +61,24 @@ extension SymptomLabel on Symptom {
         Symptom.hinchazon => tr('Hinchazón', 'Bloating'),
         Symptom.acne => tr('Acné', 'Acne'),
         Symptom.dolorDeEspalda => tr('Dolor de espalda', 'Back pain'),
+        Symptom.nauseas => tr('Náuseas', 'Nausea'),
+        Symptom.acidez => tr('Acidez', 'Heartburn'),
+        Symptom.mareos => tr('Mareos', 'Dizziness'),
+        Symptom.sensibilidadSenos =>
+          tr('Sensibilidad en los senos', 'Breast tenderness'),
+      };
+}
+
+/// Como termino un embarazo (tabla pregnancies, columna outcome).
+enum PregnancyOutcome { nacimiento, perdida, sinEspecificar }
+
+extension PregnancyOutcomeLabel on PregnancyOutcome {
+  String get label => switch (this) {
+        PregnancyOutcome.nacimiento => tr('Nació mi bebé', 'My baby was born'),
+        PregnancyOutcome.perdida =>
+          tr('Pérdida del embarazo', 'Pregnancy loss'),
+        PregnancyOutcome.sinEspecificar =>
+          tr('Prefiero no decirlo', "I'd rather not say"),
       };
 }
 

@@ -20,6 +20,8 @@ import 'legacy_period_ends.dart';
 ///   que `formatVersion` sigue en 1.
 /// - v5: `showFertileWindow` en los ajustes (HU-05, H5-3). `formatVersion`
 ///   sigue en 1.
+/// - v6: `pregnancies` en los datos y en `counts` (modo embarazo), y
+///   sintomas nuevos. `formatVersion` sigue en 1.
 ///
 /// Respaldo cifrado (HU-06b): `formatVersion` 2, con el documento de
 /// `formatVersion` 1 cifrado adentro (ver backup_crypto.dart).
@@ -34,7 +36,7 @@ const int encryptedBackupFormatVersion = 2;
 
 /// Schema drift actual (AppDatabase.schemaVersion). Duplicado aca para
 /// que el dominio no importe drift; un test compara ambos valores.
-const int currentBackupSchemaVersion = 5;
+const int currentBackupSchemaVersion = 6;
 
 /// Primer schema que pudo exportar respaldos (la funcion nace en v3):
 /// un `schemaVersion` menor no puede venir de Aura.
@@ -180,6 +182,33 @@ class BackupSettings {
       showFertileWindow);
 }
 
+/// Un embarazo (v6). [endDate] y [outcome] van juntos: los dos null
+/// mientras esta activo.
+class BackupPregnancy {
+  const BackupPregnancy({
+    required this.startDate,
+    this.endDate,
+    this.outcome,
+  });
+
+  final String startDate;
+  final String? endDate;
+  final PregnancyOutcome? outcome;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BackupPregnancy &&
+      other.startDate == startDate &&
+      other.endDate == endDate &&
+      other.outcome == outcome;
+
+  @override
+  int get hashCode => Object.hash(startDate, endDate, outcome);
+
+  @override
+  String toString() => 'BackupPregnancy($startDate, $endDate, $outcome)';
+}
+
 /// Contenido completo de un respaldo, ya validado.
 class BackupData {
   const BackupData({
@@ -188,6 +217,7 @@ class BackupData {
     required this.exportedAt,
     required this.days,
     required this.settings,
+    this.pregnancies = const [],
   });
 
   final int schemaVersion;
@@ -199,6 +229,10 @@ class BackupData {
 
   final List<BackupDay> days;
   final BackupSettings settings;
+
+  /// Ordenados por inicio; sin solaparse y a lo sumo uno activo (el
+  /// ultimo). Vacio en un respaldo anterior a v6.
+  final List<BackupPregnancy> pregnancies;
 
   int get symptomCount =>
       days.fold(0, (total, day) => total + day.symptoms.length);
@@ -309,10 +343,21 @@ String encodeBackup(BackupData data) {
         // Solo desde v5: un respaldo v4 se escribe tal como lo haria la v4.
         if (data.schemaVersion >= 5) 'showFertileWindow': s.showFertileWindow,
       },
+      if (data.schemaVersion >= 6)
+        'pregnancies': [
+          for (final pr in [...data.pregnancies]
+            ..sort((a, b) => a.startDate.compareTo(b.startDate)))
+            {
+              'startDate': pr.startDate,
+              'endDate': pr.endDate,
+              'outcome': pr.outcome?.name,
+            },
+        ],
     },
     'counts': {
       'dailyLogs': days.length,
       'symptoms': data.symptomCount,
+      if (data.schemaVersion >= 6) 'pregnancies': data.pregnancies.length,
     },
   };
   return '${const JsonEncoder.withIndent('  ').convert(root)}\n';
@@ -479,22 +524,68 @@ BackupData _parseRoot(
 
   final settings = _parseSettings(_map(data, 'settings'), schemaVersion);
 
+  // v3 a v5 no tienen embarazos: si traen la clave, se ignora.
+  final pregnancies = schemaVersion >= 6
+      ? _parsePregnancies(_list(data, 'pregnancies'), maxDate)
+      : const <BackupPregnancy>[];
+
   final result = BackupData(
     schemaVersion: schemaVersion,
     appVersion: appVersion,
     exportedAt: exportedAt,
     days: List.unmodifiable(days),
     settings: settings,
+    pregnancies: pregnancies,
   );
 
   // counts detecta un archivo truncado o editado a mano que, aun siendo
   // JSON valido, perdio dias o sintomas.
   final counts = _map(root, 'counts');
   if (_int(counts, 'dailyLogs') != days.length ||
-      _int(counts, 'symptoms') != result.symptomCount) {
+      _int(counts, 'symptoms') != result.symptomCount ||
+      (schemaVersion >= 6 &&
+          _int(counts, 'pregnancies') != pregnancies.length)) {
     throw _Invalid('counts no coincide con los datos');
   }
   return result;
+}
+
+List<BackupPregnancy> _parsePregnancies(List<dynamic> raws, String maxDate) {
+  String date(Map<String, dynamic> raw, String key) {
+    final value = _string(raw, key);
+    if (!_isValidDayKey(value)) throw _Invalid('fecha invalida $value');
+    if (value.compareTo(minBackupDate) < 0 || value.compareTo(maxDate) > 0) {
+      throw _Invalid.outOfRange(value);
+    }
+    return value;
+  }
+
+  final result = <BackupPregnancy>[];
+  for (final raw in raws) {
+    if (raw is! Map<String, dynamic>) throw _Invalid('embarazo no es objeto');
+    final start = date(raw, 'startDate');
+    if (!raw.containsKey('endDate')) throw _Invalid('falta endDate');
+    final end = raw['endDate'] == null ? null : date(raw, 'endDate');
+    final outcome = _enumOrNull(raw, 'outcome', PregnancyOutcome.values);
+    if ((end == null) != (outcome == null)) {
+      throw _Invalid('embarazo $start: endDate y outcome van juntos');
+    }
+    if (end != null && end.compareTo(start) < 0) {
+      throw _Invalid('embarazo $start termina antes de empezar');
+    }
+    result.add(
+        BackupPregnancy(startDate: start, endDate: end, outcome: outcome));
+  }
+  result.sort((a, b) => a.startDate.compareTo(b.startDate));
+  // Cada uno termina antes de que empiece el siguiente: sin repetidos ni
+  // solapes, y a lo sumo uno activo (el ultimo).
+  for (var i = 1; i < result.length; i++) {
+    final prev = result[i - 1].endDate;
+    if (prev == null || prev.compareTo(result[i].startDate) >= 0) {
+      throw _Invalid('embarazos solapados en ${result[i].startDate}');
+    }
+  }
+  return List.unmodifiable(result);
 }
 
 /// Tope superior de fechas: el mayor entre el limite historico del
@@ -601,19 +692,20 @@ BackupSettings _parseSettings(Map<String, dynamic> raw, int schemaVersion) {
 /// convierte con la MISMA regla D-2 que la migracion de la base
 /// ([inferLegacyPeriodEnds]), con [today] = el dia de la importacion: asi
 /// importar un respaldo v3 da el mismo resultado que haber tenido esos
-/// datos en el telefono al actualizar. Uno v4 ya trae sus cierres: solo
-/// cambia el numero de schema (el ajuste nuevo de v5 ya vino del parseo
-/// con su valor por defecto). Uno del schema actual se devuelve tal cual.
-/// Funcion pura.
+/// datos en el telefono al actualizar. Uno v4 o v5 ya trae sus cierres:
+/// solo cambia el numero de schema (el ajuste de v5 ya vino del parseo con
+/// su valor por defecto, y no hay embarazos). Uno del schema actual se
+/// devuelve tal cual. Funcion pura.
 BackupData upgradeBackupData(BackupData data, {required String today}) {
   if (data.schemaVersion == currentBackupSchemaVersion) return data;
-  if (data.schemaVersion == 4) {
+  if (data.schemaVersion == 4 || data.schemaVersion == 5) {
     return BackupData(
       schemaVersion: currentBackupSchemaVersion,
       appVersion: data.appVersion,
       exportedAt: data.exportedAt,
       days: data.days,
       settings: data.settings,
+      pregnancies: data.pregnancies,
     );
   }
   if (data.schemaVersion != 3) {

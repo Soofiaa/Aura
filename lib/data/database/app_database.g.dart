@@ -1425,6 +1425,282 @@ class AppSettingsCompanion extends UpdateCompanion<AppSettingsRow> {
   }
 }
 
+class $PregnanciesTable extends Pregnancies
+    with TableInfo<$PregnanciesTable, PregnancyRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PregnanciesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<String> startDate = GeneratedColumn<String>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<String> endDate = GeneratedColumn<String>(
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<PregnancyOutcome?, String>
+  outcome = GeneratedColumn<String>(
+    'outcome',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<PregnancyOutcome?>($PregnanciesTable.$converteroutcomen);
+  @override
+  List<GeneratedColumn> get $columns => [startDate, endDate, outcome];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pregnancies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PregnancyRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {startDate};
+  @override
+  PregnancyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PregnancyRow(
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}start_date'],
+      )!,
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}end_date'],
+      ),
+      outcome: $PregnanciesTable.$converteroutcomen.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}outcome'],
+        ),
+      ),
+    );
+  }
+
+  @override
+  $PregnanciesTable createAlias(String alias) {
+    return $PregnanciesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<PregnancyOutcome, String, String>
+  $converteroutcome = const EnumNameConverter<PregnancyOutcome>(
+    PregnancyOutcome.values,
+  );
+  static JsonTypeConverter2<PregnancyOutcome?, String?, String?>
+  $converteroutcomen = JsonTypeConverter2.asNullable($converteroutcome);
+}
+
+class PregnancyRow extends DataClass implements Insertable<PregnancyRow> {
+  final String startDate;
+  final String? endDate;
+  final PregnancyOutcome? outcome;
+  const PregnancyRow({required this.startDate, this.endDate, this.outcome});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['start_date'] = Variable<String>(startDate);
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<String>(endDate);
+    }
+    if (!nullToAbsent || outcome != null) {
+      map['outcome'] = Variable<String>(
+        $PregnanciesTable.$converteroutcomen.toSql(outcome),
+      );
+    }
+    return map;
+  }
+
+  PregnanciesCompanion toCompanion(bool nullToAbsent) {
+    return PregnanciesCompanion(
+      startDate: Value(startDate),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
+      outcome: outcome == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outcome),
+    );
+  }
+
+  factory PregnancyRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PregnancyRow(
+      startDate: serializer.fromJson<String>(json['startDate']),
+      endDate: serializer.fromJson<String?>(json['endDate']),
+      outcome: $PregnanciesTable.$converteroutcomen.fromJson(
+        serializer.fromJson<String?>(json['outcome']),
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'startDate': serializer.toJson<String>(startDate),
+      'endDate': serializer.toJson<String?>(endDate),
+      'outcome': serializer.toJson<String?>(
+        $PregnanciesTable.$converteroutcomen.toJson(outcome),
+      ),
+    };
+  }
+
+  PregnancyRow copyWith({
+    String? startDate,
+    Value<String?> endDate = const Value.absent(),
+    Value<PregnancyOutcome?> outcome = const Value.absent(),
+  }) => PregnancyRow(
+    startDate: startDate ?? this.startDate,
+    endDate: endDate.present ? endDate.value : this.endDate,
+    outcome: outcome.present ? outcome.value : this.outcome,
+  );
+  PregnancyRow copyWithCompanion(PregnanciesCompanion data) {
+    return PregnancyRow(
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      outcome: data.outcome.present ? data.outcome.value : this.outcome,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PregnancyRow(')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('outcome: $outcome')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(startDate, endDate, outcome);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PregnancyRow &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.outcome == this.outcome);
+}
+
+class PregnanciesCompanion extends UpdateCompanion<PregnancyRow> {
+  final Value<String> startDate;
+  final Value<String?> endDate;
+  final Value<PregnancyOutcome?> outcome;
+  final Value<int> rowid;
+  const PregnanciesCompanion({
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PregnanciesCompanion.insert({
+    required String startDate,
+    this.endDate = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : startDate = Value(startDate);
+  static Insertable<PregnancyRow> custom({
+    Expression<String>? startDate,
+    Expression<String>? endDate,
+    Expression<String>? outcome,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (outcome != null) 'outcome': outcome,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PregnanciesCompanion copyWith({
+    Value<String>? startDate,
+    Value<String?>? endDate,
+    Value<PregnancyOutcome?>? outcome,
+    Value<int>? rowid,
+  }) {
+    return PregnanciesCompanion(
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      outcome: outcome ?? this.outcome,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (startDate.present) {
+      map['start_date'] = Variable<String>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<String>(endDate.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(
+        $PregnanciesTable.$converteroutcomen.toSql(outcome.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PregnanciesCompanion(')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('outcome: $outcome, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1433,6 +1709,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
+  late final $PregnanciesTable pregnancies = $PregnanciesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1441,6 +1718,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     dailyLogs,
     dailyLogSymptoms,
     appSettings,
+    pregnancies,
   ];
 }
 
@@ -2152,6 +2430,169 @@ typedef $$AppSettingsTableProcessedTableManager =
       AppSettingsRow,
       PrefetchHooks Function()
     >;
+typedef $$PregnanciesTableCreateCompanionBuilder =
+    PregnanciesCompanion Function({
+      required String startDate,
+      Value<String?> endDate,
+      Value<PregnancyOutcome?> outcome,
+      Value<int> rowid,
+    });
+typedef $$PregnanciesTableUpdateCompanionBuilder =
+    PregnanciesCompanion Function({
+      Value<String> startDate,
+      Value<String?> endDate,
+      Value<PregnancyOutcome?> outcome,
+      Value<int> rowid,
+    });
+
+class $$PregnanciesTableFilterComposer
+    extends Composer<_$AppDatabase, $PregnanciesTable> {
+  $$PregnanciesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<PregnancyOutcome?, PregnancyOutcome, String>
+  get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+}
+
+class $$PregnanciesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PregnanciesTable> {
+  $$PregnanciesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outcome => $composableBuilder(
+    column: $table.outcome,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PregnanciesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PregnanciesTable> {
+  $$PregnanciesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<String> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<PregnancyOutcome?, String> get outcome =>
+      $composableBuilder(column: $table.outcome, builder: (column) => column);
+}
+
+class $$PregnanciesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PregnanciesTable,
+          PregnancyRow,
+          $$PregnanciesTableFilterComposer,
+          $$PregnanciesTableOrderingComposer,
+          $$PregnanciesTableAnnotationComposer,
+          $$PregnanciesTableCreateCompanionBuilder,
+          $$PregnanciesTableUpdateCompanionBuilder,
+          (
+            PregnancyRow,
+            BaseReferences<_$AppDatabase, $PregnanciesTable, PregnancyRow>,
+          ),
+          PregnancyRow,
+          PrefetchHooks Function()
+        > {
+  $$PregnanciesTableTableManager(_$AppDatabase db, $PregnanciesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PregnanciesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PregnanciesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PregnanciesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> startDate = const Value.absent(),
+                Value<String?> endDate = const Value.absent(),
+                Value<PregnancyOutcome?> outcome = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PregnanciesCompanion(
+                startDate: startDate,
+                endDate: endDate,
+                outcome: outcome,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String startDate,
+                Value<String?> endDate = const Value.absent(),
+                Value<PregnancyOutcome?> outcome = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PregnanciesCompanion.insert(
+                startDate: startDate,
+                endDate: endDate,
+                outcome: outcome,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PregnanciesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PregnanciesTable,
+      PregnancyRow,
+      $$PregnanciesTableFilterComposer,
+      $$PregnanciesTableOrderingComposer,
+      $$PregnanciesTableAnnotationComposer,
+      $$PregnanciesTableCreateCompanionBuilder,
+      $$PregnanciesTableUpdateCompanionBuilder,
+      (
+        PregnancyRow,
+        BaseReferences<_$AppDatabase, $PregnanciesTable, PregnancyRow>,
+      ),
+      PregnancyRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2162,4 +2603,6 @@ class $AppDatabaseManager {
       $$DailyLogSymptomsTableTableManager(_db, _db.dailyLogSymptoms);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
+  $$PregnanciesTableTableManager get pregnancies =>
+      $$PregnanciesTableTableManager(_db, _db.pregnancies);
 }

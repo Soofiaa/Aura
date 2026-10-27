@@ -194,7 +194,7 @@ void main() {
       expect(await repo.getTypicalPeriodLength(), 7);
       await db.close();
 
-      expect(schema.rawDatabase.userVersion, 5);
+      expect(schema.rawDatabase.userVersion, 6);
       expect(_dumpV4Columns(schema), before);
       expect(
         schema.rawDatabase
@@ -243,7 +243,7 @@ void main() {
       final db = _open(schema);
       expect(await CycleRepository(db).getShowFertileWindow(), isTrue);
       await db.close();
-      expect(schema.rawDatabase.userVersion, 5);
+      expect(schema.rawDatabase.userVersion, 6);
       expect(_columns(schema, 'app_settings'), contains('show_fertile_window'));
     });
 
@@ -258,7 +258,7 @@ void main() {
         final db = _open(schema);
         expect(await CycleRepository(db).getShowFertileWindow(), isTrue);
         await db.close();
-        expect(schema.rawDatabase.userVersion, 5);
+        expect(schema.rawDatabase.userVersion, 6);
         expect(_columns(schema, 'daily_logs'), contains('period_end'));
         expect(
           _columns(schema, 'app_settings'),
@@ -295,7 +295,7 @@ void main() {
       final db = _open(schema);
       expect(await CycleRepository(db).getShowFertileWindow(), isTrue);
       await db.close();
-      expect(schema.rawDatabase.userVersion, 5);
+      expect(schema.rawDatabase.userVersion, 6);
       expect(_dumpV4Columns(schema), before);
     });
   });
@@ -314,7 +314,7 @@ void main() {
       db = _open(schema);
       expect(await CycleRepository(db).getShowFertileWindow(), isFalse);
       await db.close();
-      expect(schema.rawDatabase.userVersion, 5);
+      expect(schema.rawDatabase.userVersion, 6);
       expect(
         _columns(
           schema,
@@ -330,7 +330,7 @@ void main() {
         final db = _open(schema);
         expect(await CycleRepository(db).getShowFertileWindow(), isTrue);
         await db.close();
-        expect(schema.rawDatabase.userVersion, 5);
+        expect(schema.rawDatabase.userVersion, 6);
       }
     });
   });

@@ -66,7 +66,7 @@ void main() {
       expect(second, isA<StartupReady>());
       expect((second as StartupReady).onboardingSeen, isFalse);
       expect(readyCount, 1);
-      expect(schema.rawDatabase.userVersion, 5);
+      expect(schema.rawDatabase.userVersion, 6);
       final days = await appDatabase.select(appDatabase.dailyLogs).get();
       expect(days.single.date, '2026-08-01');
       await appDatabase.close();

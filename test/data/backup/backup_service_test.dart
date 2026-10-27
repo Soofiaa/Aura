@@ -584,8 +584,8 @@ void main() {
       }
       final data =
           (decodeBackup(utf8.encode(json)) as BackupParseSuccess).data;
-      expect(data.schemaVersion, 5);
-      expect(currentBackupSchemaVersion, 5);
+      expect(data.schemaVersion, 6);
+      expect(currentBackupSchemaVersion, 6);
     });
   });
 

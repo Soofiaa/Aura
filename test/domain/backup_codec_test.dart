@@ -35,6 +35,15 @@ String _fixtureV5Text() => File('test/fixtures/backup_v5.json')
 Map<String, dynamic> _fixtureV5Map() =>
     jsonDecode(_fixtureV5Text()) as Map<String, dynamic>;
 
+/// test/fixtures/backup_v6.json: el v5 en schema 6, con un sintoma nuevo
+/// (nauseas), un embarazo terminado y uno activo.
+String _fixtureV6Text() => File('test/fixtures/backup_v6.json')
+    .readAsStringSync()
+    .replaceAll('\r\n', '\n');
+
+Map<String, dynamic> _fixtureV6Map() =>
+    jsonDecode(_fixtureV6Text()) as Map<String, dynamic>;
+
 List<int> _bytes(Object json) => utf8.encode(jsonEncode(json));
 
 BackupParseResult _decodeMap(Map<String, dynamic> map) =>
@@ -258,8 +267,8 @@ void main() {
     });
 
     test('un respaldo del schema actual se devuelve sin cambios', () {
-      final v5 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
-      expect(identical(upgradeBackupData(v5, today: '2026-10-07'), v5),
+      final v6 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
+      expect(identical(upgradeBackupData(v6, today: '2026-10-07'), v6),
           isTrue);
     });
   });
@@ -630,11 +639,11 @@ void main() {
       }
     });
 
-    test('upgradeBackupData: v4 pasa a schema 5 sin tocar dias ni ajustes',
-        () {
+    test('upgradeBackupData: v4 pasa al schema actual sin tocar dias ni '
+        'ajustes', () {
       final v4 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV4Text())));
       final up = upgradeBackupData(v4, today: '2026-10-07');
-      expect(up.schemaVersion, 5);
+      expect(up.schemaVersion, currentBackupSchemaVersion);
       expect(up.days, v4.days);
       expect(up.settings, v4.settings);
       expect(up.settings.showFertileWindow, isTrue);
@@ -642,10 +651,10 @@ void main() {
       expect(up.exportedAt, v4.exportedAt);
     });
 
-    test('upgradeBackupData: v3 pasa a schema 5 con true', () {
+    test('upgradeBackupData: v3 pasa al schema actual con true', () {
       final v3 = _expectSuccess(decodeBackup(utf8.encode(_fixtureText())));
       final up = upgradeBackupData(v3, today: '2026-10-04');
-      expect(up.schemaVersion, 5);
+      expect(up.schemaVersion, currentBackupSchemaVersion);
       expect(up.settings.showFertileWindow, isTrue);
     });
 
@@ -671,10 +680,109 @@ void main() {
       }
     });
 
-    test('un schema posterior al actual (6) se rechaza como version mas '
+    test('un schema posterior al actual (7) se rechaza como version mas '
         'nueva, igual que la v4 rechaza un v5', () {
-      final map = _fixtureV5Map()..['schemaVersion'] = 6;
+      final map = _fixtureV6Map()..['schemaVersion'] = 7;
       _expectFailure(_decodeMap(map), BackupError.newerVersion);
+    });
+  });
+
+  group('modo embarazo - respaldo v6', () {
+    List<dynamic> pregnancies(Map<String, dynamic> map) =>
+        (map['data'] as Map<String, dynamic>)['pregnancies'] as List<dynamic>;
+    Map<String, dynamic> counts(Map<String, dynamic> map) =>
+        map['counts'] as Map<String, dynamic>;
+
+    test('el fixture v6 se lee con sus embarazos y el sintoma nuevo', () {
+      final data = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
+      expect(data.schemaVersion, 6);
+      expect(data.pregnancies, const [
+        BackupPregnancy(
+            startDate: '2025-01-10',
+            endDate: '2025-10-01',
+            outcome: PregnancyOutcome.nacimiento),
+        BackupPregnancy(startDate: '2026-07-28'),
+      ]);
+      expect(data.days.firstWhere((d) => d.date == '2026-07-15').symptoms,
+          contains(Symptom.nauseas));
+    });
+
+    test('al volver a codificarlo sale identico', () {
+      final text = _fixtureV6Text();
+      expect(encodeBackup(_expectSuccess(decodeBackup(utf8.encode(text)))),
+          text.replaceAll('\r\n', '\n'));
+    });
+
+    test('un v6 se devuelve sin cambios al convertir', () {
+      final v6 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
+      expect(identical(upgradeBackupData(v6, today: '2026-10-07'), v6),
+          isTrue);
+    });
+
+    test('un v5 pasa a v6 sin embarazos y se escribe con la lista vacia', () {
+      final v5 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
+      final up = upgradeBackupData(v5, today: '2026-10-07');
+      expect(up.schemaVersion, 6);
+      expect(up.days, v5.days);
+      expect(up.settings, v5.settings);
+      expect(up.pregnancies, isEmpty);
+      final map = jsonDecode(encodeBackup(up)) as Map<String, dynamic>;
+      expect(pregnancies(map), isEmpty);
+      expect(counts(map)['pregnancies'], 0);
+    });
+
+    test('un v5 se sigue escribiendo como v5 (sin pregnancies)', () {
+      final text = encodeBackup(
+          _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text()))));
+      expect(text, isNot(contains('pregnancies')));
+    });
+
+    test('datos invalidos: danado', () {
+      final cases = <String, void Function(Map<String, dynamic>)>{
+        'sin pregnancies': (m) =>
+            (m['data'] as Map<String, dynamic>).remove('pregnancies'),
+        'sin counts.pregnancies': (m) => counts(m).remove('pregnancies'),
+        'counts distinto': (m) => counts(m)['pregnancies'] = 1,
+        'fecha invalida': (m) => pregnancies(m)[0]['startDate'] = '2025-02-30',
+        'sin endDate': (m) => (pregnancies(m)[1] as Map).remove('endDate'),
+        'outcome desconocido': (m) => pregnancies(m)[0]['outcome'] = 'otro',
+        'fin sin outcome': (m) => pregnancies(m)[0]['outcome'] = null,
+        'outcome sin fin': (m) => pregnancies(m)[1]['outcome'] = 'perdida',
+        'termina antes de empezar': (m) =>
+            pregnancies(m)[0]['endDate'] = '2025-01-09',
+        'dos activos': (m) {
+          pregnancies(m)[0]['endDate'] = null;
+          pregnancies(m)[0]['outcome'] = null;
+        },
+        'solapados': (m) => pregnancies(m)[0]['endDate'] = '2026-07-28',
+        'inicio repetido': (m) {
+          pregnancies(m)[1]['startDate'] = '2025-01-10';
+          pregnancies(m)[1]['endDate'] = '2025-01-11';
+          pregnancies(m)[1]['outcome'] = 'perdida';
+        },
+        'no es objeto': (m) => pregnancies(m)[0] = 'x',
+      };
+      for (final entry in cases.entries) {
+        final map = _fixtureV6Map();
+        entry.value(map);
+        expect(_decodeMap(map), isA<BackupParseFailure>(), reason: entry.key);
+        _expectFailure(_decodeMap(map), BackupError.damaged);
+      }
+    });
+
+    test('un embarazo con fecha posterior al tope se rechaza', () {
+      final map = _fixtureV6Map();
+      pregnancies(map)[1]['startDate'] = '2031-01-01';
+      final result = _decodeMap(map) as BackupParseFailure;
+      expect(result.outOfRangeDate, '2031-01-01');
+    });
+
+    test('un v5 con un sintoma de embarazo se acepta (no es ambiguo)', () {
+      final map = _fixtureV5Map();
+      ((map['data'] as Map<String, dynamic>)['dailyLogs'] as List)[1]
+          ['symptoms'] = ['nauseas'];
+      (map['counts'] as Map<String, dynamic>)['symptoms'] = 4;
+      expect(_expectSuccess(_decodeMap(map)).symptomCount, 4);
     });
   });
 }

@@ -129,7 +129,27 @@ class AppSettings extends Table {
   List<String> get customConstraints => ['CHECK (id = 0)'];
 }
 
-@DriftDatabase(tables: [DailyLogs, DailyLogSymptoms, AppSettings])
+/// Embarazos (modo embarazo, schema v6). start_date es la fecha de la
+/// ultima regla ('yyyy-MM-dd'); end_date y outcome quedan en NULL mientras
+/// esta activo. A lo sumo uno activo: lo asegura CycleRepository.
+@DataClassName('PregnancyRow')
+class Pregnancies extends Table {
+  TextColumn get startDate => text()();
+  TextColumn get endDate => text().nullable()();
+  TextColumn get outcome => textEnum<PregnancyOutcome>().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {startDate};
+
+  @override
+  List<String> get customConstraints => [
+        'CHECK ((end_date IS NULL) = (outcome IS NULL))',
+        'CHECK (end_date IS NULL OR end_date >= start_date)',
+      ];
+}
+
+@DriftDatabase(
+    tables: [DailyLogs, DailyLogSymptoms, AppSettings, Pregnancies])
 class AppDatabase extends _$AppDatabase {
   AppDatabase()
       : _today = DayKey.today,
@@ -155,7 +175,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<void> Function(MigrationTestPoint point)? _migrationTestHook;
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -176,7 +196,8 @@ class AppDatabase extends _$AppDatabase {
           await m.runMigrationSteps(
             from: math.max(from, 3),
             to: to,
-            steps: migrationSteps(from3To4: _from3To4, from4To5: _from4To5),
+            steps: migrationSteps(
+                from3To4: _from3To4, from4To5: _from4To5, from5To6: _from5To6),
           );
         }),
         // PRAGMA foreign_keys se activaba solo via el `setup` del
@@ -300,6 +321,29 @@ class AppDatabase extends _$AppDatabase {
       }
     }
     // runMigrationSteps escribe user_version = 5 al volver.
+  }
+
+  /// Migracion 5 -> 6 (modo embarazo): solo crea la tabla pregnancies
+  /// (vacia); ningun otro dato cambia. Tolera la tabla ya existente, igual
+  /// que [_from4To5] con su columna.
+  Future<void> _from5To6(Migrator m, Schema6 schema) async {
+    final counts = {
+      for (final table in _allTables) table: await _count(table),
+    };
+    final exists = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+      "AND name = 'pregnancies'",
+    ).get();
+    if (exists.isEmpty) {
+      await m.createTable(schema.pregnancies);
+    }
+    for (final table in _allTables) {
+      if (await _count(table) != counts[table]) {
+        throw StateError('migracion v6: cambio la cantidad de filas de '
+            '$table');
+      }
+    }
+    // runMigrationSteps escribe user_version = 6 al volver.
   }
 
   static const _allTables = ['daily_logs', 'daily_log_symptoms', 'app_settings'];

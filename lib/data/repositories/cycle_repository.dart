@@ -682,6 +682,9 @@ class CycleRepository {
         symptomsByDate.putIfAbsent(row.logDate, () => []).add(row.symptom);
       }
       final settings = await _ensureSettingsRow();
+      final pregnancies = await (_db.select(_db.pregnancies)
+            ..orderBy([(t) => OrderingTerm.asc(t.startDate)]))
+          .get();
       return BackupData(
         // El schema del formato que se escribe (un test exige que sea el
         // de la base).
@@ -714,6 +717,11 @@ class CycleRepository {
           typicalPeriodLength: settings.typicalPeriodLength,
           showFertileWindow: settings.showFertileWindow,
         ),
+        pregnancies: [
+          for (final p in pregnancies)
+            BackupPregnancy(
+                startDate: p.startDate, endDate: p.endDate, outcome: p.outcome),
+        ],
       );
     });
   }
@@ -749,6 +757,7 @@ class CycleRepository {
       await _db.delete(_db.dailyLogSymptoms).go();
       await _db.delete(_db.dailyLogs).go();
       await _db.delete(_db.appSettings).go();
+      await _db.delete(_db.pregnancies).go();
 
       final s = data.settings;
       await _db.batch((batch) {
@@ -786,12 +795,64 @@ class CycleRepository {
             showFertileWindow: Value(s.showFertileWindow),
           ),
         );
+        batch.insertAll(_db.pregnancies, [
+          for (final p in data.pregnancies)
+            PregnanciesCompanion.insert(
+              startDate: p.startDate,
+              endDate: Value(p.endDate),
+              outcome: Value(p.outcome),
+            ),
+        ]);
       });
     });
   }
 
+  // --- Modo embarazo ---
+
+  /// Embarazos ordenados por inicio; el activo (sin endDate), si hay, es
+  /// el ultimo.
+  Stream<List<PregnancyRow>> watchPregnancies() =>
+      (_db.select(_db.pregnancies)
+            ..orderBy([(t) => OrderingTerm.asc(t.startDate)]))
+          .watch();
+
+  /// Activa el modo embarazo desde [startDate] (fecha de la ultima regla).
+  /// Lanza [StateError] si ya hay uno activo y [ArgumentError] si empieza
+  /// antes de que termine el anterior (mismas reglas que el respaldo).
+  Future<void> startPregnancy(String startDate) => _db.transaction(() async {
+        final last = await (_db.select(_db.pregnancies)
+              ..orderBy([(t) => OrderingTerm.desc(t.startDate)])
+              ..limit(1))
+            .getSingleOrNull();
+        if (last != null && last.endDate == null) {
+          throw StateError('ya hay un embarazo activo');
+        }
+        if (last != null && last.endDate!.compareTo(startDate) >= 0) {
+          throw ArgumentError.value(startDate, 'startDate',
+              'antes del fin del embarazo anterior');
+        }
+        await _db
+            .into(_db.pregnancies)
+            .insert(PregnanciesCompanion.insert(startDate: startDate));
+      });
+
+  /// Termina el embarazo activo. Lanza [StateError] si no hay uno activo;
+  /// un [endDate] anterior al inicio lo rechaza el CHECK de la tabla.
+  Future<void> endPregnancy(String endDate, PregnancyOutcome outcome) async {
+    final updated = await (_db.update(_db.pregnancies)
+          ..where((t) => t.endDate.isNull()))
+        .write(PregnanciesCompanion(
+            endDate: Value(endDate), outcome: Value(outcome)));
+    if (updated == 0) throw StateError('no hay un embarazo activo');
+  }
+
+  Future<void> deletePregnancy(String startDate) =>
+      (_db.delete(_db.pregnancies)
+            ..where((t) => t.startDate.equals(startDate)))
+          .go();
+
   /// Borra TODAS las tablas (daily_logs, daily_log_symptoms,
-  /// app_settings), incluidos los ajustes: al recrearse la fila, cada
+  /// app_settings, pregnancies), incluidos los ajustes: al recrearse la fila, cada
   /// ajuste vuelve al valor por defecto de su columna (ej.
   /// show_fertile_window vuelve a activado). Usado por
   /// BackupService.deleteAllData() (que ademas borra los archivos de
@@ -806,6 +867,7 @@ class CycleRepository {
       await _db.delete(_db.dailyLogSymptoms).go();
       await _db.delete(_db.dailyLogs).go();
       await _db.delete(_db.appSettings).go();
+      await _db.delete(_db.pregnancies).go();
     });
     try {
       await _db.customStatement('VACUUM');
