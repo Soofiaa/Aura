@@ -7,6 +7,7 @@ import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../widgets/symptom_selector.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 
 /// Largo maximo de las notas de un dia.
 const int maxNoteLength = 2000;
@@ -121,17 +122,18 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
     final descartar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("¿Descartar los cambios?"),
-        content: const Text(
-            "No guardaste los cambios de este día. Si sales ahora, se pierden."),
+        title: Text(tr("¿Descartar los cambios?", "Discard changes?")),
+        content: Text(tr(
+            "No guardaste los cambios de este día. Si sales ahora, se pierden.",
+            "You haven't saved your changes for this day. If you leave now, they'll be lost.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Seguir editando"),
+            child: Text(tr("Seguir editando", "Keep editing")),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Descartar"),
+            child: Text(tr("Descartar", "Discard")),
           ),
         ],
       ),
@@ -183,7 +185,8 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
     if (_registroVacio) {
       // No se crea una fila vacia: Estadisticas seguiria mostrando datos
       // y el respaldo contaria un "dia con registro" que no lo es.
-      showAppSnackBar(context, "No había nada para guardar.");
+      showAppSnackBar(
+          context, tr("No había nada para guardar.", "There was nothing to save."));
       Navigator.pop(context);
       return;
     }
@@ -206,12 +209,15 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
         if (!mounted) return;
         setState(() => _guardando = false);
         showAppSnackBar(
-            context, "No se pudo guardar el registro. Inténtalo de nuevo.");
+            context,
+            tr("No se pudo guardar el registro. Inténtalo de nuevo.",
+                "Couldn't save the entry. Please try again."));
         return;
       }
 
       if (!mounted) return;
-      showAppSnackBar(context, "Registro guardado correctamente.");
+      showAppSnackBar(context,
+          tr("Registro guardado correctamente.", "Entry saved."));
 
       // HU-09: un registro guardado es buen momento para el respaldo
       // automatico del dia; si ya salio hoy, no hace nada.
@@ -228,7 +234,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
       onPopInvokedWithResult: _alIntentarSalir,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Registrar día"),
+          title: Text(tr("Registrar día", "Log day")),
           backgroundColor: const Color(0xFFA8D8EA),
           centerTitle: true,
         ),
@@ -239,16 +245,20 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
         body: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
+              // En horizontal, la camara y las barras quedan a los lados.
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Fecha del registro",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      Text(
+                        tr("Fecha del registro", "Date"),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 5),
                       GestureDetector(
@@ -279,9 +289,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                       const SizedBox(height: 25),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          "Día de sangrado",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        title: Text(
+                          tr("Día de sangrado", "Bleeding day"),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                         value: _esDiaDeSangrado,
                         onChanged: (v) => setState(() => _esDiaDeSangrado = v),
@@ -289,9 +299,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
                       if (_esDiaDeSangrado) ...[
                         const SizedBox(height: 10),
-                        const Text(
-                          "Flujo menstrual",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        Text(
+                          tr("Flujo menstrual", "Flow"),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 5),
                         DropdownButtonFormField<FlowIntensity?>(
@@ -299,10 +309,11 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                           // isExpanded: el texto elegido se ajusta al ancho (con
                           // "..." si no entra) en vez de desbordar.
                           isExpanded: true,
-                          hint: const Text("Sin especificar"),
+                          hint: Text(tr("Sin especificar", "Not specified")),
                           items: [
-                            const DropdownMenuItem(
-                                value: null, child: Text("Sin especificar")),
+                            DropdownMenuItem(
+                                value: null,
+                                child: Text(tr("Sin especificar", "Not specified"))),
                             ...FlowIntensity.values.map((f) =>
                                 DropdownMenuItem(value: f, child: Text(f.label))),
                           ],
@@ -316,18 +327,19 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                       ],
 
                       const SizedBox(height: 25),
-                      const Text(
-                        "Estado de ánimo",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      Text(
+                        tr("Estado de ánimo", "Mood"),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 5),
                       DropdownButtonFormField<Mood?>(
                         initialValue: _estadoAnimo,
                         isExpanded: true,
-                        hint: const Text("Sin registrar"),
+                        hint: Text(tr("Sin registrar", "Not logged")),
                         items: [
-                          const DropdownMenuItem(
-                              value: null, child: Text("Sin registrar")),
+                          DropdownMenuItem(
+                              value: null,
+                              child: Text(tr("Sin registrar", "Not logged"))),
                           ...Mood.values.map((a) =>
                               DropdownMenuItem(value: a, child: Text(a.label))),
                         ],
@@ -341,9 +353,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
 
                       // 🔹 Sección de selección de síntomas
                       const SizedBox(height: 25),
-                      const Text(
-                        "Síntomas",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      Text(
+                        tr("Síntomas", "Symptoms"),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 8),
                       SymptomSelector(
@@ -354,9 +366,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                       ),
 
                       const SizedBox(height: 25),
-                      const Text(
-                        "Notas adicionales",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      Text(
+                        tr("Notas adicionales", "Notes"),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 5),
                       TextFormField(
@@ -365,15 +377,17 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                         // Tope: sin el, notas muy largas podian pasar el tope
                         // de tamano del respaldo y dejar de poder exportarse.
                         maxLength: maxNoteLength,
-                        decoration: const InputDecoration(
-                          hintText: "Ej: Dolor abdominal fuerte, cansancio, antojos...",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          hintText: tr("Ej: Dolor abdominal fuerte, cansancio, antojos...",
+                              "E.g. Strong cramps, fatigue, cravings..."),
+                          border: const OutlineInputBorder(),
                           filled: true,
                           fillColor: Colors.white,
                         ),
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
             ),
@@ -384,7 +398,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _guardando ? null : _guardarRegistro,
                   icon: const Icon(Icons.save),
-                  label: const Text("Guardar registro"),
+                  label: Text(tr("Guardar registro", "Save entry")),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFA8D8EA),
                     foregroundColor: Colors.black,

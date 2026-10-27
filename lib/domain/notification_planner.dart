@@ -1,3 +1,4 @@
+import '../utils/aura_localizations.dart';
 import '../utils/day_key.dart';
 import 'cycle_predictor.dart';
 import 'fertile_marks.dart';
@@ -188,10 +189,14 @@ PlannedNotification _periodReminder(
     date: date,
     hour: s.reminderHour,
     minute: s.reminderMinute,
-    title: detailed ? 'Tu período podría estar por comenzar' : 'Aura: recordatorio',
+    title: detailed
+        ? tr('Tu período podría estar por comenzar',
+            'Your period may be about to start')
+        : tr('Aura: recordatorio', 'Aura: reminder'),
     body: detailed
-        ? 'Según la estimación de tu ciclo, tu período podría empezar pronto.'
-        : 'Abre la app para ver el detalle.',
+        ? tr('Según la estimación de tu ciclo, tu período podría empezar pronto.',
+            'Based on your cycle estimate, your period may start soon.')
+        : tr('Abre la app para ver el detalle.', 'Open the app to see the details.'),
     due: due,
   );
 }
@@ -205,11 +210,17 @@ PlannedNotification _fertileWindowReminder(
     date: date,
     hour: s.reminderHour,
     minute: s.reminderMinute,
-    title: detailed ? 'Ventana de mayor fertilidad (estimación)' : 'Aura: recordatorio',
+    title: detailed
+        ? tr('Ventana de mayor fertilidad (estimación)',
+            'Fertile window (estimate)')
+        : tr('Aura: recordatorio', 'Aura: reminder'),
     body: detailed
-        ? 'Según la estimación de tu ciclo, hoy comienza tu ventana de mayor '
-            'probabilidad de fertilidad. No es un método anticonceptivo.'
-        : 'Abre la app para ver el detalle.',
+        ? tr(
+            'Según la estimación de tu ciclo, hoy comienza tu ventana de mayor '
+                'probabilidad de fertilidad. No es un método anticonceptivo.',
+            'Based on your cycle estimate, your fertile window starts today. '
+                'This is not a method of birth control.')
+        : tr('Abre la app para ver el detalle.', 'Open the app to see the details.'),
     due: due,
   );
 }
@@ -223,11 +234,16 @@ PlannedNotification _latePeriodReminder(
     date: date,
     hour: s.reminderHour,
     minute: s.reminderMinute,
-    title: detailed ? '¿Te llegó el período?' : 'Aura: recordatorio',
+    title: detailed
+        ? tr('¿Te llegó el período?', 'Did your period start?')
+        : tr('Aura: recordatorio', 'Aura: reminder'),
     body: detailed
-        ? 'Según la estimación de tu ciclo, tu período podría estar '
-            'atrasado. Si ya empezó, puedes registrarlo en Aura.'
-        : 'Abre la app para ver el detalle.',
+        ? tr(
+            'Según la estimación de tu ciclo, tu período podría estar '
+                'atrasado. Si ya empezó, puedes registrarlo en Aura.',
+            'Based on your cycle estimate, your period may be late. '
+                'If it already started, you can log it in Aura.')
+        : tr('Abre la app para ver el detalle.', 'Open the app to see the details.'),
     due: due,
   );
 }

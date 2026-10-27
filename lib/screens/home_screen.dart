@@ -21,6 +21,7 @@ import '../widgets/single_day_period_dialog.dart';
 import 'add_cycle_screen.dart';
 import 'backup_create_flow.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   /// Permite inyectar un repositorio (ej. con base en memoria) en tests.
@@ -150,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context,
       message,
       action: SnackBarAction(
-        label: 'Deshacer',
+        label: tr('Deshacer', 'Undo'),
         onPressed: () async {
           try {
             await _repository.restoreDaysSnapshot(snapshot);
@@ -163,8 +164,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  static const _errorAlGuardar =
-      'No se pudo guardar el cambio. Inténtalo de nuevo.';
+  static String get _errorAlGuardar => tr(
+      'No se pudo guardar el cambio. Inténtalo de nuevo.',
+      "Couldn't save the change. Please try again.");
 
   /// "Sigue": marca hoy como dia de sangrado. La tarjeta vuelve a
   /// preguntar manana.
@@ -179,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
     if (!mounted || !result.changedAnything) return;
-    _showUndo('Día marcado como sangrado.', result.snapshot);
+    _showUndo(tr('Día marcado como sangrado.', 'Day marked as bleeding.'),
+        result.snapshot);
   }
 
   /// "Termino hoy" y "Ya termino antes" (HU-03): cierra el periodo en
@@ -264,9 +267,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const SizedBox(height: 10),
-                      const Text(
-                        "Tu ciclo actual",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                      Text(
+                        tr("Tu ciclo actual", "Your current cycle"),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 20),
                       _buildPredictionCard(prediction,
@@ -312,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           onPressed: () => showPeriodStartSheet(context,
                               repository: _repository, today: _today),
                           icon: const Icon(Icons.water_drop_outlined),
-                          label: const Text('Me llegó hoy'),
+                          label: Text(tr('Me llegó hoy', 'My period started today')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.accent,
                             foregroundColor: AppColors.textPrimary,
@@ -332,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           );
                         },
                         icon: const Icon(Icons.add),
-                        label: const Text("Registrar día"),
+                        label: Text(tr("Registrar día", "Log day")),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFAD4D8),
                           foregroundColor: Colors.black,
@@ -408,8 +411,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _reminderStore.postpone();
     } catch (_) {
       if (!mounted) return;
-      showAppSnackBar(
-          context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+      showAppSnackBar(context, _errorAlGuardar);
     }
   }
 
@@ -418,12 +420,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _reminderStore.setEnabled(false);
     } catch (_) {
       if (!mounted) return;
-      showAppSnackBar(
-          context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+      showAppSnackBar(context, _errorAlGuardar);
       return;
     }
     if (!mounted) return;
-    showAppSnackBar(context, 'Puedes volver a activarlo en Ajustes.');
+    showAppSnackBar(context, tr('Puedes volver a activarlo en Ajustes.',
+        'You can turn it back on in Settings.'));
   }
 
   Widget _buildCardShell({required List<Widget> children}) {
@@ -467,16 +469,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return _buildCardShell(children: [
         const Icon(Icons.favorite_border, color: AppColors.textSecondary, size: 50),
         const SizedBox(height: 10),
-        const Text(
-          "Aún no hay datos suficientes",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          tr("Aún no hay datos suficientes", "Not enough data yet"),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
-        const Text(
-          "Registra tu primer día para ver una predicción de tu ciclo.",
+        Text(
+          tr("Registra tu primer día para ver una predicción de tu ciclo.",
+              "Log your first day to see a prediction of your cycle."),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
       ]);
     }
@@ -517,14 +520,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (yaRespondida) return null;
 
     final dias = estimatedPeriodLength == 1
-        ? '1 día'
-        : '$estimatedPeriodLength días';
+        ? tr('1 día', '1 day')
+        : tr('$estimatedPeriodLength días', '$estimatedPeriodLength days');
     const minimo = Size(48, 48);
 
     return _buildCardShell(children: [
-      const Text(
-        "¿Sigue tu período hoy?",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      Text(
+        tr("¿Sigue tu período hoy?", "Is your period still going today?"),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 4),
@@ -532,10 +535,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Si el dia ya supera la duracion estimada, no se presenta como si
         // el periodo durara menos que el dia actual.
         current.dayNumber > estimatedPeriodLength
-            ? 'Día ${current.dayNumber} de tu período · ya superó tu '
-                'duración estimada ($dias)'
-            : 'Día ${current.dayNumber} de tu período · duración estimada: '
-                '$dias',
+            ? tr(
+                'Día ${current.dayNumber} de tu período · ya superó tu '
+                    'duración estimada ($dias)',
+                'Day ${current.dayNumber} of your period · longer than your '
+                    'estimated length ($dias)')
+            : tr(
+                'Día ${current.dayNumber} de tu período · duración estimada: '
+                    '$dias',
+                'Day ${current.dayNumber} of your period · estimated length: '
+                    '$dias'),
         style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         textAlign: TextAlign.center,
       ),
@@ -555,7 +564,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               foregroundColor: AppColors.textPrimary,
               minimumSize: minimo,
             ),
-            child: const Text("Sigue"),
+            child: Text(tr("Sigue", "Still going")),
           ),
           OutlinedButton(
             onPressed: () => _terminar(current, _today),
@@ -563,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               foregroundColor: AppColors.textPrimary,
               minimumSize: minimo,
             ),
-            child: const Text("Terminó hoy"),
+            child: Text(tr("Terminó hoy", "Ended today")),
           ),
         ],
       ),
@@ -574,9 +583,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           foregroundColor: AppColors.textPrimary,
           minimumSize: minimo,
         ),
-        child: const Text(
-          "Ya terminó antes",
-          style: TextStyle(decoration: TextDecoration.underline),
+        child: Text(
+          tr("Ya terminó antes", "It ended earlier"),
+          style: const TextStyle(decoration: TextDecoration.underline),
         ),
       ),
     ]);
@@ -586,16 +595,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return _buildCardShell(children: [
       const Icon(Icons.history, color: AppColors.textSecondary, size: 50),
       const SizedBox(height: 10),
-      const Text(
-        "Hace tiempo que no registras...",
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      Text(
+        tr("Hace tiempo que no registras...",
+            "It's been a while since you logged..."),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 8),
       Text(
-        "Tu último período empezó el ${_formatDate(p.lastPeriodStartDate)} "
-        "(hace ${p.daysSinceLastPeriodStart} días). "
-        "Registra un nuevo día para volver a ver una predicción.",
+        tr(
+            "Tu último período empezó el ${_formatDate(p.lastPeriodStartDate)} "
+            "(hace ${p.daysSinceLastPeriodStart} días). "
+            "Registra un nuevo día para volver a ver una predicción.",
+            "Your last period started on ${_formatDate(p.lastPeriodStartDate)} "
+            "(${p.daysSinceLastPeriodStart} days ago). "
+            "Log a new day to see a prediction again."),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
       ),
@@ -641,38 +655,52 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
       const SizedBox(height: 15),
       Text(
-        "Próximo período: ${_formatDate(p.nextPeriodEarliestDate)} - "
-        "${_formatDate(p.nextPeriodLatestDate)}",
+        tr(
+            "Próximo período: ${_formatDate(p.nextPeriodEarliestDate)} - "
+            "${_formatDate(p.nextPeriodLatestDate)}",
+            "Next period: ${_formatDate(p.nextPeriodEarliestDate)} - "
+            "${_formatDate(p.nextPeriodLatestDate)}"),
         style: const TextStyle(fontSize: 16),
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 4),
       Text(
-        "Estimado: ${_formatDate(p.nextPeriodExpectedDate)}"
-        "${valorPorDefecto ? ' (valor por defecto)' : ''}",
+        tr(
+            "Estimado: ${_formatDate(p.nextPeriodExpectedDate)}"
+            "${valorPorDefecto ? ' (valor por defecto)' : ''}",
+            "Estimated: ${_formatDate(p.nextPeriodExpectedDate)}"
+            "${valorPorDefecto ? ' (default value)' : ''}"),
         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
       ),
       const SizedBox(height: 15),
       if (mostrarFertilidad && confianzaBaja)
         Text(
           valorPorDefecto
-              ? "Con más ciclos registrados podremos estimar tu ventana "
-                  "fértil."
-              : "Tus ciclos varían mucho, así que no mostramos tu ventana "
-                  "fértil.",
+              ? tr(
+                  "Con más ciclos registrados podremos estimar tu ventana "
+                      "fértil.",
+                  "Once you log more cycles, we can estimate your fertile "
+                      "window.")
+              : tr(
+                  "Tus ciclos varían mucho, así que no mostramos tu ventana "
+                      "fértil.",
+                  "Your cycles vary a lot, so we don't show your fertile "
+                      "window."),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: Colors.grey[700]),
         )
       else if (marcas != null) ...[
         Text(
-          "Ovulación estimada: ${_formatDate(marcas.ovulationDate)}",
+          tr("Ovulación estimada: ${_formatDate(marcas.ovulationDate)}",
+              "Estimated ovulation: ${_formatDate(marcas.ovulationDate)}"),
           style: const TextStyle(fontSize: 15),
         ),
         const SizedBox(height: 10),
         _buildFertileWindow(marcas),
         const SizedBox(height: 4),
         Text(
-          "Estimación; no es un método anticonceptivo.",
+          tr("Estimación; no es un método anticonceptivo.",
+              "Estimate only; not a method of birth control."),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,
@@ -696,7 +724,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
-        "Período atrasado por ${p.daysLate} día${p.daysLate == 1 ? '' : 's'}",
+        tr("Período atrasado por ${p.daysLate} día${p.daysLate == 1 ? '' : 's'}",
+            "Period late by ${p.daysLate} day${p.daysLate == 1 ? '' : 's'}"),
         textAlign: TextAlign.center,
         style: const TextStyle(
             color: AppColors.lateText, fontWeight: FontWeight.bold),
@@ -707,8 +736,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Solo si visibleFertileMarks la deja ver (ver _buildActiveCard).
   Widget _buildFertileWindow(FertileMarks marcas) {
     return Text(
-      "Días de mayor probabilidad de fertilidad (estimación):\n"
-      "${_formatDate(marcas.windowStartDate)} - ${_formatDate(marcas.windowEndDate)}",
+      tr(
+          "Días de mayor probabilidad de fertilidad (estimación):\n"
+          "${_formatDate(marcas.windowStartDate)} - ${_formatDate(marcas.windowEndDate)}",
+          "Most likely fertile days (estimate):\n"
+          "${_formatDate(marcas.windowStartDate)} - ${_formatDate(marcas.windowEndDate)}"),
       textAlign: TextAlign.center,
       style: const TextStyle(fontSize: 14),
     );
@@ -734,7 +766,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            "Confianza: ${p.confidence.label}",
+            tr("Confianza: ${p.confidence.label}",
+                "Confidence: ${p.confidence.label}"),
             style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
           ),
         ),
@@ -755,7 +788,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Text(
-        "Esta es una estimación, no un método anticonceptivo.",
+        tr("Esta es una estimación, no un método anticonceptivo.",
+            "This is an estimate, not a method of birth control."),
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 12,

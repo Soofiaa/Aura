@@ -1,3 +1,5 @@
+import '../../utils/aura_localizations.dart';
+
 /// Enums compartidos entre el esquema drift y la UI. Los nombres de los
 /// valores (`.name`) son los que drift persiste como texto en la base de
 /// datos via textEnum(), por lo que renombrar un valor es una migracion.
@@ -7,9 +9,9 @@ enum FlowIntensity { ligero, moderado, abundante }
 
 extension FlowIntensityLabel on FlowIntensity {
   String get label => switch (this) {
-        FlowIntensity.ligero => 'Ligero',
-        FlowIntensity.moderado => 'Moderado',
-        FlowIntensity.abundante => 'Abundante',
+        FlowIntensity.ligero => tr('Ligero', 'Light'),
+        FlowIntensity.moderado => tr('Moderado', 'Moderate'),
+        FlowIntensity.abundante => tr('Abundante', 'Heavy'),
       };
 
   /// Peso usado para calcular el flujo promedio (coincide con la escala
@@ -25,11 +27,11 @@ enum Mood { feliz, triste, irritable, cansada, normal }
 
 extension MoodLabel on Mood {
   String get label => switch (this) {
-        Mood.feliz => 'Feliz',
-        Mood.triste => 'Triste',
-        Mood.irritable => 'Irritable',
-        Mood.cansada => 'Cansada',
-        Mood.normal => 'Normal',
+        Mood.feliz => tr('Feliz', 'Happy'),
+        Mood.triste => tr('Triste', 'Sad'),
+        Mood.irritable => tr('Irritable', 'Irritable'),
+        Mood.cansada => tr('Cansada', 'Tired'),
+        Mood.normal => tr('Normal', 'Okay'),
       };
 }
 
@@ -46,14 +48,14 @@ enum Symptom {
 
 extension SymptomLabel on Symptom {
   String get label => switch (this) {
-        Symptom.dolorAbdominal => 'Dolor abdominal',
-        Symptom.dolorDeCabeza => 'Dolor de cabeza',
-        Symptom.cansancio => 'Cansancio',
-        Symptom.antojos => 'Antojos',
-        Symptom.cambiosDeHumor => 'Cambios de humor',
-        Symptom.hinchazon => 'Hinchazón',
-        Symptom.acne => 'Acné',
-        Symptom.dolorDeEspalda => 'Dolor de espalda',
+        Symptom.dolorAbdominal => tr('Dolor abdominal', 'Cramps'),
+        Symptom.dolorDeCabeza => tr('Dolor de cabeza', 'Headache'),
+        Symptom.cansancio => tr('Cansancio', 'Fatigue'),
+        Symptom.antojos => tr('Antojos', 'Cravings'),
+        Symptom.cambiosDeHumor => tr('Cambios de humor', 'Mood swings'),
+        Symptom.hinchazon => tr('Hinchazón', 'Bloating'),
+        Symptom.acne => tr('Acné', 'Acne'),
+        Symptom.dolorDeEspalda => tr('Dolor de espalda', 'Back pain'),
       };
 }
 

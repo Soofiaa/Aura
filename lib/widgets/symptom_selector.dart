@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/models/day_enums.dart';
 import '../utils/colors.dart';
 
 /// Chips de sintomas. Es un widget controlado: muestra siempre
@@ -18,16 +19,10 @@ class SymptomSelector extends StatelessWidget {
     required this.onSelectionChanged,
   });
 
-  static const List<String> _allSymptoms = [
-    'Dolor abdominal',
-    'Dolor de cabeza',
-    'Cansancio',
-    'Antojos',
-    'Cambios de humor',
-    'Hinchazón',
-    'Acné',
-    'Dolor de espalda',
-  ];
+  // Las mismas etiquetas que Symptom.label: AddCycleScreen las convierte
+  // de vuelta al enum comparando con ellas.
+  static List<String> get _allSymptoms =>
+      [for (final s in Symptom.values) s.label];
 
   // Lista nueva en cada cambio: nunca se modifica la que llego.
   void _toggleSymptom(String symptom) {

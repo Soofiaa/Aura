@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../utils/aura_localizations.dart';
 import 'main_navigation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -18,33 +19,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, Object>> _pages = [
+  List<Map<String, Object>> get _pages => [
     {
-      "titulo": "Bienvenida a Aura",
-      "descripcion":
+      "titulo": tr("Bienvenida a Aura", "Welcome to Aura"),
+      "descripcion": tr(
       "Tu espacio personal para entender, registrar y cuidar tu ciclo menstrual.",
+      "Your personal space to understand, track, and care for your menstrual cycle."),
       "icono": Icons.favorite_rounded,
     },
     {
-      "titulo": "Registra tu bienestar",
-      "descripcion":
+      "titulo": tr("Registra tu bienestar", "Track your well-being"),
+      "descripcion": tr(
       "Anota tus síntomas, emociones y observaciones día a día para conocerte mejor.",
+      "Note your symptoms, feelings, and observations each day to get to know yourself better."),
       "icono": Icons.edit_note_rounded,
     },
     {
-      "titulo": "Conoce tus patrones",
-      "descripcion":
+      "titulo": tr("Conoce tus patrones", "Discover your patterns"),
+      "descripcion": tr(
       "Aura analiza tus ciclos y te ayuda a identificar tendencias en tu salud.",
+      "Aura analyzes your cycles and helps you spot trends in your health."),
       "icono": Icons.insights_rounded,
     },
     // Solo la ven las instalaciones nuevas (el onboarding se muestra una
     // vez): a quien actualiza, se lo recuerda la tarjeta de Inicio.
     {
-      "titulo": "Tus datos son tuyos",
-      "descripcion":
+      "titulo": tr("Tus datos son tuyos", "Your data is yours"),
+      "descripcion": tr(
       "Aura funciona sin internet y guarda todo solo en este teléfono. Para "
           "no perder tus registros si cambias o pierdes el teléfono, crea un "
           "respaldo de vez en cuando desde Ajustes.",
+      "Aura works offline and keeps everything only on this phone. So you "
+          "don't lose your logs if you change or lose your phone, create a "
+          "backup from Settings every now and then."),
       "icono": Icons.lock_rounded,
     },
   ];
@@ -175,8 +182,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 child: Text(
                   _currentPage == _pages.length - 1
-                      ? "Comenzar"
-                      : "Siguiente",
+                      ? tr("Comenzar", "Get started")
+                      : tr("Siguiente", "Next"),
                   style: const TextStyle(fontSize: 16),
                 ),
               ),

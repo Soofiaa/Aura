@@ -12,6 +12,7 @@ import '../domain/range_selection.dart';
 import '../utils/colors.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/period_end_messages.dart';
 import '../widgets/period_day_marks.dart';
 import '../widgets/period_start_sheet.dart';
@@ -163,14 +164,16 @@ class _CalendarScreenState extends State<CalendarScreen>
       context,
       message,
       action: SnackBarAction(
-        label: 'Deshacer',
+        label: tr('Deshacer', 'Undo'),
         onPressed: () async {
           try {
             await _repository.restoreDaysSnapshot(snapshot);
           } catch (_) {
             if (!mounted) return;
             showAppSnackBar(
-                context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+                context,
+                tr('No se pudo guardar el cambio. Inténtalo de nuevo.',
+                    "Couldn't save the change. Please try again."));
           }
         },
       ),
@@ -187,10 +190,12 @@ class _CalendarScreenState extends State<CalendarScreen>
 
     if (!mounted) return;
     if (!result.changedAnything) {
-      showAppSnackBar(context, 'Ese día ya está registrado.');
+      showAppSnackBar(context,
+          tr('Ese día ya está registrado.', 'That day is already logged.'));
       return;
     }
-    _showUndo('Día registrado como menstruación.', result.snapshot);
+    _showUndo(tr('Día registrado como menstruación.', 'Day logged as period.'),
+        result.snapshot);
   }
 
   /// "Quitar marca": guarda un "No" explicito, con foto tomada antes para
@@ -201,7 +206,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     await _repository.setPeriodDayExplicitly(key, isPeriodDay: false);
 
     if (!mounted) return;
-    _showUndo('Marca quitada.', snapshot);
+    _showUndo(tr('Marca quitada.', 'Mark removed.'), snapshot);
   }
 
   /// "Confirmar dias" (HU-04 crit. 4, decision 4A): los estimados pasan a
@@ -243,20 +248,24 @@ class _CalendarScreenState extends State<CalendarScreen>
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('¿Confirmar los días estimados?'),
+        title: Text(
+            tr('¿Confirmar los días estimados?', 'Confirm the estimated days?')),
         content: Text(
-          'Se marcarán ${_dias(aMarcar)} más como período y quedará '
-          'terminado '
-          'el ${dayMonthLabel(end)}.',
+          tr(
+              'Se marcarán ${_dias(aMarcar)} más como período y quedará '
+              'terminado '
+              'el ${dayMonthLabel(end)}.',
+              '${_dias(aMarcar)} more will be marked as period, and it will '
+              'end on ${dayMonthLabel(end)}.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
+            child: Text(tr('Confirmar', 'Confirm')),
           ),
         ],
       ),
@@ -275,10 +284,14 @@ class _CalendarScreenState extends State<CalendarScreen>
     }
     if (!mounted) return;
     final duracion = DayKey.diffInDays(current.startDate, end) + 1;
-    _showUndo('Período confirmado: ${_dias(duracion)} en total.', snapshot);
+    _showUndo(
+        tr('Período confirmado: ${_dias(duracion)} en total.',
+            'Period confirmed: ${_dias(duracion)} in total.'),
+        snapshot);
   }
 
-  static String _dias(int n) => n == 1 ? '1 día' : '$n días';
+  static String _dias(int n) =>
+      n == 1 ? tr('1 día', '1 day') : tr('$n días', '$n days');
 
   /// "Termino este dia" (decision 11B): cierra [periodo] en [dia] con
   /// closePeriod, que completa los dias sin registro hasta [dia] y
@@ -313,18 +326,19 @@ class _CalendarScreenState extends State<CalendarScreen>
     final resultado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar rango largo'),
+        title: Text(tr('Confirmar rango largo', 'Confirm long range')),
         content: Text(
-          'Vas a marcar $cantidadDias días como menstruación. ¿Continuar?',
+          tr('Vas a marcar $cantidadDias días como menstruación. ¿Continuar?',
+              "You're about to mark $cantidadDias days as period. Continue?"),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continuar'),
+            child: Text(tr('Continuar', 'Continue')),
           ),
         ],
       ),
@@ -337,15 +351,15 @@ class _CalendarScreenState extends State<CalendarScreen>
   Future<bool?> _preguntarSiTermino() => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('¿Ya terminó tu período?'),
+          title: Text(tr('¿Ya terminó tu período?', 'Has your period ended?')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Todavía no'),
+              child: Text(tr('Todavía no', 'Not yet')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sí, terminó'),
+              child: Text(tr('Sí, terminó', 'Yes, it ended')),
             ),
           ],
         ),
@@ -404,8 +418,9 @@ class _CalendarScreenState extends State<CalendarScreen>
       showAppSnackBar(
         context,
         dias.length == 1
-            ? 'Ese día ya está registrado.'
-            : 'Esos días ya están registrados.',
+            ? tr('Ese día ya está registrado.', 'That day is already logged.')
+            : tr('Esos días ya están registrados.',
+                'Those days are already logged.'),
       );
       return;
     }
@@ -415,8 +430,10 @@ class _CalendarScreenState extends State<CalendarScreen>
       n == 0
           ? periodEndedMessage(fin, _today)
           : n == 1
-              ? '1 día registrado como menstruación.'
-              : '$n días registrados como menstruación.',
+              ? tr('1 día registrado como menstruación.',
+                  '1 day logged as period.')
+              : tr('$n días registrados como menstruación.',
+                  '$n days logged as period.'),
       result.snapshot,
     );
   }
@@ -453,8 +470,9 @@ class _CalendarScreenState extends State<CalendarScreen>
   Widget? _stateSemantics(DateTime day, Set<String> registrados) {
     final clave = DayKey.fromDate(day);
     final estado = [
-      if (registrados.contains(clave)) 'período registrado',
-      if (clave == _today) 'hoy',
+      if (registrados.contains(clave))
+        tr('período registrado', 'logged period'),
+      if (clave == _today) tr('hoy', 'today'),
     ];
     if (estado.isEmpty) return null;
     return Positioned.fill(
@@ -481,7 +499,7 @@ class _CalendarScreenState extends State<CalendarScreen>
           padding: const EdgeInsets.all(6),
           child: Semantics(
             container: true,
-            label: 'estimado',
+            label: tr('estimado', 'estimated'),
             child: const CustomPaint(painter: DashedBorderPainter()),
           ),
         ),
@@ -494,7 +512,9 @@ class _CalendarScreenState extends State<CalendarScreen>
     return SizedBox.expand(
       child: Semantics(
         container: true,
-        label: ovulacion ? 'ovulación estimada' : 'ventana fértil estimada',
+        label: ovulacion
+            ? tr('ovulación estimada', 'estimated ovulation')
+            : tr('ventana fértil estimada', 'estimated fertile window'),
         child: FertileDayMark(ovulation: ovulacion),
       ),
     );
@@ -516,12 +536,12 @@ class _CalendarScreenState extends State<CalendarScreen>
     final esInicio = clave == inicio;
     final esFin = clave == fin && seleccion.isComplete;
     final etiqueta = esInicio && esFin
-        ? 'inicio y fin del rango'
+        ? tr('inicio y fin del rango', 'start and end of range')
         : esInicio
-            ? 'inicio del rango'
+            ? tr('inicio del rango', 'start of range')
             : esFin
-                ? 'fin del rango'
-                : 'dentro del rango';
+                ? tr('fin del rango', 'end of range')
+                : tr('dentro del rango', 'within range');
     final extremo = esInicio || esFin;
     return SizedBox.expand(
       child: Semantics(
@@ -575,14 +595,14 @@ class _CalendarScreenState extends State<CalendarScreen>
     final hoy = _clock();
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Calendario menstrual",
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(tr("Calendario menstrual", "Period calendar"),
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
-            tooltip: 'Ir a hoy',
+            tooltip: tr('Ir a hoy', 'Go to today'),
             onPressed: () => setState(() => _focusedDay = _clock()),
           ),
         ],
@@ -603,7 +623,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                       onPressed: () => showPeriodStartSheet(context,
                           repository: _repository, today: _today),
                       icon: const Icon(Icons.water_drop_outlined),
-                      label: const Text('Me llegó hoy'),
+                      label: Text(tr('Me llegó hoy', 'My period started today')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         foregroundColor: AppColors.textPrimary,
@@ -623,9 +643,10 @@ class _CalendarScreenState extends State<CalendarScreen>
                       // seleccion": semanticsLabel reemplaza al texto en el
                       // mismo nodo del boton.
                       label: _rangeMode
-                          ? const Text('Cancelar',
-                              semanticsLabel: 'Cancelar selección')
-                          : const Text('Elegir varios días'),
+                          ? Text(tr('Cancelar', 'Cancel'),
+                              semanticsLabel:
+                                  tr('Cancelar selección', 'Cancel selection'))
+                          : Text(tr('Elegir varios días', 'Select multiple days')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         minimumSize: const Size(48, 48),
@@ -641,7 +662,7 @@ class _CalendarScreenState extends State<CalendarScreen>
             // <dynamic> explicito: con markerBuilder se inferiria otro tipo
             // y cambiaria el tipo del widget (antes era dynamic).
             TableCalendar<dynamic>(
-              locale: 'es_ES',
+              locale: auraLanguage,
               firstDay: DateTime.utc(2020, 1, 1),
               // Un ano hacia adelante desde hoy (los estimados y la
               // ventana fertil caen en los meses siguientes). Antes era
@@ -659,17 +680,17 @@ class _CalendarScreenState extends State<CalendarScreen>
               rangeSelectionMode: RangeSelectionMode.disabled,
               calendarFormat: CalendarFormat.month,
               startingDayOfWeek: StartingDayOfWeek.monday,
-              headerStyle: const HeaderStyle(
+              headerStyle: HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
-                titleTextStyle: TextStyle(
+                titleTextStyle: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
-                leftChevronIcon:
-                    Icon(Icons.chevron_left, semanticLabel: 'Mes anterior'),
-                rightChevronIcon:
-                    Icon(Icons.chevron_right, semanticLabel: 'Mes siguiente'),
+                leftChevronIcon: Icon(Icons.chevron_left,
+                    semanticLabel: tr('Mes anterior', 'Previous month')),
+                rightChevronIcon: Icon(Icons.chevron_right,
+                    semanticLabel: tr('Mes siguiente', 'Next month')),
               ),
               calendarStyle: CalendarStyle(
                 // Los dias del mes anterior/siguiente que rellenan la
@@ -732,7 +753,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                 headerTitleBuilder: (context, month) => Semantics(
                   header: true,
                   child: Text(
-                    DateFormat.yMMMM('es_ES').format(month),
+                    DateFormat.yMMMM(auraLanguage).format(month),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -792,7 +813,8 @@ class _CalendarScreenState extends State<CalendarScreen>
     final ofrecerTermino = periodo != null && !esUltimoEstimado;
     return [
       Text(
-        "Día seleccionado: ${DateFormat('d MMMM yyyy', 'es').format(seleccionado)}",
+        tr("Día seleccionado: ${DateFormat('d MMMM yyyy', 'es').format(seleccionado)}",
+            "Selected day: ${DateFormat('MMMM d, yyyy', 'en').format(seleccionado)}"),
         style: const TextStyle(fontSize: 16),
       ),
       const SizedBox(height: 20),
@@ -800,7 +822,7 @@ class _CalendarScreenState extends State<CalendarScreen>
         ElevatedButton.icon(
           onPressed: _confirmarDias,
           icon: const Icon(Icons.check),
-          label: const Text('Confirmar días'),
+          label: Text(tr('Confirmar días', 'Confirm days')),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.textPrimary,
@@ -811,13 +833,13 @@ class _CalendarScreenState extends State<CalendarScreen>
         OutlinedButton.icon(
           onPressed: () => _quitarMarca(seleccionado),
           icon: const Icon(Icons.remove_circle_outline),
-          label: const Text("Quitar marca"),
+          label: Text(tr("Quitar marca", "Remove mark")),
         )
       else
         ElevatedButton.icon(
           onPressed: () => registrarDia(seleccionado),
           icon: const Icon(Icons.favorite),
-          label: const Text("Marcar período"),
+          label: Text(tr("Marcar período", "Mark period")),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.textPrimary,
@@ -828,7 +850,7 @@ class _CalendarScreenState extends State<CalendarScreen>
         OutlinedButton.icon(
           onPressed: () => _terminarEsteDia(periodo, clave),
           icon: const Icon(Icons.flag_outlined),
-          label: const Text('Terminó este día'),
+          label: Text(tr('Terminó este día', 'Ended this day')),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.textPrimary,
             minimumSize: const Size(48, 48),
@@ -839,7 +861,8 @@ class _CalendarScreenState extends State<CalendarScreen>
   }
 
   static String _diaCorto(String clave) =>
-      DateFormat('d MMM', 'es').format(DateTime.parse(clave));
+      DateFormat(auraIsEnglish ? 'MMM d' : 'd MMM', auraLanguage)
+          .format(DateTime.parse(clave));
 
   /// Panel de "Elegir varios dias" con los textos de la Etapa A (U-1, A).
   /// El resumen es una liveRegion: el lector de pantalla anuncia cada
@@ -852,12 +875,13 @@ class _CalendarScreenState extends State<CalendarScreen>
       return [
         Semantics(
           liveRegion: true,
-          child: const Text('Toca el primer día.', style: estilo),
+          child: Text(tr('Toca el primer día.', 'Tap the first day.'),
+              style: estilo),
         ),
       ];
     }
     final n = seleccion.dayCount;
-    final dias = n == 1 ? '1 día' : '$n días';
+    final dias = _dias(n);
     final inicio = _diaCorto(seleccion.start!);
     final resumen = seleccion.isComplete
         ? '$inicio → ${_diaCorto(seleccion.end!)} · $dias'
@@ -870,23 +894,27 @@ class _CalendarScreenState extends State<CalendarScreen>
       const SizedBox(height: 6),
       Text(
         seleccion.isComplete
-            ? 'Toca otro día para cambiar el final.'
-            : 'Ahora toca el último día.',
+            ? tr('Toca otro día para cambiar el final.',
+                'Tap another day to change the end.')
+            : tr('Ahora toca el último día.', 'Now tap the last day.'),
         style: ayuda,
       ),
       if (seleccion.isLong) ...[
         const SizedBox(height: 6),
-        const Text(
-          'Son más de $longRangeConfirmationThreshold días: revisa que sea '
-          'correcto.',
-          style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+        Text(
+          tr(
+              'Son más de $longRangeConfirmationThreshold días: revisa que sea '
+              'correcto.',
+              "That's more than $longRangeConfirmationThreshold days: check "
+              "that it's correct."),
+          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
         ),
       ],
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: _confirmarRango,
         icon: const Icon(Icons.favorite),
-        label: const Text("Marcar período"),
+        label: Text(tr("Marcar período", "Mark period")),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.textPrimary,

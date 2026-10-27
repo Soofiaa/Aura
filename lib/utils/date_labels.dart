@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import 'aura_localizations.dart';
 import 'period_end_messages.dart';
 
 /// "4 de octubre" (el de dayMonthLabel) si [dayKey] es del mismo ano que
@@ -15,4 +16,5 @@ String dayMonthLabelWithYear(String dayKey, {required String today}) {
 /// "4 de octubre de 2025", siempre con el ano (la fecha del formulario
 /// "Registrar dia"). TalkBack la lee bien, a diferencia de "4/10/2025".
 String fullDateLabel(String dayKey) =>
-    DateFormat("d 'de' MMMM 'de' y", 'es').format(DateTime.parse(dayKey));
+    DateFormat(auraIsEnglish ? 'MMMM d, y' : "d 'de' MMMM 'de' y", auraLanguage)
+        .format(DateTime.parse(dayKey));

@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// La orientacion vertical se fija en el manifest (no con SystemChrome):
-/// este test evita que el atributo se pierda en un cambio futuro.
+/// Android 16 ignora el bloqueo de orientacion en pantallas grandes y Play
+/// Console pide quitarlo: este test evita que vuelva en un cambio futuro.
 void main() {
   final manifest =
       File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
 
-  test('MainActivity declara screenOrientation="portrait"', () {
+  test('MainActivity no fija la orientacion', () {
     // [^>]* abarca saltos de linea (\r\n incluido): toma la etiqueta de
     // apertura completa de cada <activity>.
     final activities = RegExp(r'<activity\b[^>]*>')
@@ -20,11 +20,10 @@ void main() {
 
     expect(activities, hasLength(1),
         reason: 'el manifest debe tener una sola MainActivity');
-    expect(
-        RegExp(r'android:screenOrientation\s*=\s*"portrait"')
-            .hasMatch(activities.single),
-        isTrue,
-        reason: 'MainActivity sin android:screenOrientation="portrait"');
+    expect(activities.single, isNot(contains('android:screenOrientation')),
+        reason: 'MainActivity no debe bloquear la orientacion');
+    expect(activities.single, isNot(contains('android:resizeableActivity')),
+        reason: 'MainActivity no debe impedir el cambio de tamano');
   });
 
   test('sin respaldo en la nube ni transferencia entre telefonos (RR-6)', () {

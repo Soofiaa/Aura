@@ -5,6 +5,7 @@ import '../data/backup/backup_reminder_store.dart';
 import '../data/backup/backup_service.dart';
 import '../domain/backup_codec.dart';
 import '../domain/backup_reminder.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/app_snackbar.dart';
@@ -101,7 +102,8 @@ class _BackupSectionState extends State<BackupSection> {
     try {
       await _store.setEnabled(value);
     } catch (_) {
-      _aviso('No se pudo guardar el cambio. Inténtalo de nuevo.');
+      _aviso(tr('No se pudo guardar el cambio. Inténtalo de nuevo.',
+          "Couldn't save the change. Please try again."));
     }
   }
 
@@ -115,7 +117,8 @@ class _BackupSectionState extends State<BackupSection> {
       try {
         path = await _gateway.pickBackupFile();
       } catch (_) {
-        _aviso('No se pudo abrir el selector de archivos.');
+        _aviso(tr('No se pudo abrir el selector de archivos.',
+            "Couldn't open the file picker."));
         return;
       }
       if (path == null || !mounted) return;
@@ -123,7 +126,8 @@ class _BackupSectionState extends State<BackupSection> {
       ImportPreview? preview;
       BackupNeedsPassword? protegido;
       try {
-        final result = await _conProgreso('Revisando el archivo…', () async {
+        final result = await _conProgreso(
+            tr('Revisando el archivo…', 'Checking the file…'), () async {
           final parsed = await widget.service.readBackupFile(path!);
           return switch (parsed) {
             BackupParseSuccess(:final data) => (
@@ -143,7 +147,8 @@ class _BackupSectionState extends State<BackupSection> {
         preview = result.$2;
         protegido = result.$3;
       } catch (_) {
-        _aviso('No se pudo revisar el archivo. No se cambió nada.');
+        _aviso(tr('No se pudo revisar el archivo. No se cambió nada.',
+            "Couldn't check the file. Nothing was changed."));
         return;
       }
       if (!mounted) return;
@@ -163,20 +168,25 @@ class _BackupSectionState extends State<BackupSection> {
       ScaffoldMessenger.of(context).clearSnackBars();
       try {
         await _conProgreso(
-          'Importando tu respaldo…',
+          tr('Importando tu respaldo…', 'Importing your backup…'),
           () => widget.service.importBackup(vista.data),
         );
       } on BackupWriteException catch (e) {
         _aviso(
           e.cause == BackupWriteCause.dateOutOfRange
-              ? 'No se pudo importar: en tus datos actuales hay un día con una '
+              ? tr('No se pudo importar: en tus datos actuales hay un día con una '
                     'fecha fuera de rango (${backupDayLabel(e.outOfRangeDate)}). '
-                    'Tus datos no cambiaron.'
-              : 'No se pudo importar. Tus datos no cambiaron.',
+                    'Tus datos no cambiaron.',
+                  "Couldn't import: your current data has a day with an "
+                    'out-of-range date (${backupDayLabel(e.outOfRangeDate)}). '
+                    "Your data wasn't changed.")
+              : tr('No se pudo importar. Tus datos no cambiaron.',
+                  "Couldn't import. Your data wasn't changed."),
         );
         return;
       } catch (_) {
-        _aviso('No se pudo importar. Tus datos no cambiaron.');
+        _aviso(tr('No se pudo importar. Tus datos no cambiaron.',
+            "Couldn't import. Your data wasn't changed."));
         return;
       }
       _mostrarExito(vista.incomingDayCount);
@@ -195,20 +205,24 @@ class _BackupSectionState extends State<BackupSection> {
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('¿Deshacer la última importación?'),
+        title: Text(tr('¿Deshacer la última importación?',
+            'Undo the last import?')),
         content: Text(
-          'Tus datos vuelven a como estaban antes de importar, el '
+          tr('Tus datos vuelven a como estaban antes de importar, el '
           '${dayMonthLabelWithYear(DayKey.fromDate(fecha), today: _store.today())}. '
           'Lo que registraste después de esa fecha se perderá.',
+          'Your data goes back to how it was before the import, on '
+          '${dayMonthLabelWithYear(DayKey.fromDate(fecha), today: _store.today())}. '
+          'Anything you logged after that date will be lost.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Deshacer'),
+            child: Text(tr('Deshacer', 'Undo')),
           ),
         ],
       ),
@@ -249,12 +263,14 @@ class _BackupSectionState extends State<BackupSection> {
         }
 
         resultado = await _conProgreso(
-          'Abriendo tu respaldo…',
+          tr('Abriendo tu respaldo…', 'Opening your backup…'),
           tarea,
-          detalle: 'Esto puede tardar unos segundos.',
+          detalle: tr('Esto puede tardar unos segundos.',
+              'This may take a few seconds.'),
         );
       } catch (_) {
-        _aviso('No se pudo revisar el archivo. No se cambió nada.');
+        _aviso(tr('No se pudo revisar el archivo. No se cambió nada.',
+            "Couldn't check the file. Nothing was changed."));
         return null;
       }
       if (!mounted) return null;
@@ -281,21 +297,31 @@ class _BackupSectionState extends State<BackupSection> {
   String _mensajeArchivoInvalido(BackupError error) {
     switch (error) {
       case BackupError.notABackup:
-        return 'Este archivo no es un respaldo de Aura. No se cambió nada.';
+        return tr('Este archivo no es un respaldo de Aura. No se cambió nada.',
+            "This file isn't an Aura backup. Nothing was changed.");
       case BackupError.damaged:
-        return 'El respaldo está dañado o incompleto. No se cambió nada.';
+        return tr('El respaldo está dañado o incompleto. No se cambió nada.',
+            'The backup is damaged or incomplete. Nothing was changed.');
       case BackupError.newerVersion:
-        return 'Este respaldo es de una versión más nueva de Aura. Actualiza '
-            'la app y vuelve a intentarlo. No se cambió nada.';
+        return tr('Este respaldo es de una versión más nueva de Aura. Actualiza '
+            'la app y vuelve a intentarlo. No se cambió nada.',
+            'This backup is from a newer version of Aura. Update the app '
+            'and try again. Nothing was changed.');
       case BackupError.tooLarge:
-        return 'El archivo es demasiado grande para ser un respaldo de Aura. '
-            'No se cambió nada.';
+        return tr('El archivo es demasiado grande para ser un respaldo de Aura. '
+            'No se cambió nada.',
+            'The file is too large to be an Aura backup. Nothing was '
+            'changed.');
       case BackupError.unreadable:
-        return 'No se pudo leer el archivo. No se cambió nada.';
+        return tr('No se pudo leer el archivo. No se cambió nada.',
+            "Couldn't read the file. Nothing was changed.");
       case BackupError.insufficientMemory:
-        return 'Este teléfono no tiene memoria suficiente para abrir este '
+        return tr('Este teléfono no tiene memoria suficiente para abrir este '
             'respaldo ahora. Cierra otras apps y vuelve a intentarlo. No se '
-            'cambió nada.';
+            'cambió nada.',
+            "This phone doesn't have enough memory to open this backup "
+            'right now. Close other apps and try again. Nothing was '
+            'changed.');
     }
   }
 
@@ -310,15 +336,18 @@ class _BackupSectionState extends State<BackupSection> {
   void _mostrarExito(int dias) {
     if (!mounted) return;
     final texto = dias == 1
-        ? 'Listo: se importó 1 día.'
-        : 'Listo: se importaron $dias días.';
+        ? tr('Listo: se importó 1 día.', 'Done: 1 day imported.')
+        : tr('Listo: se importaron $dias días.',
+            'Done: $dias days imported.');
     showAppSnackBar(
       context,
-      '$texto\nSi te equivocaste, toca Deshacer.',
+      tr('$texto\nSi te equivocaste, toca Deshacer.',
+          '$texto\nIf you made a mistake, tap Undo.'),
       // No se cierra sola: "Deshacer" debe seguir disponible hasta que
       // la usuaria lo use o cierre el mensaje con la "x".
       persistent: true,
-      action: SnackBarAction(label: 'Deshacer', onPressed: _deshacer),
+      action:
+          SnackBarAction(label: tr('Deshacer', 'Undo'), onPressed: _deshacer),
     );
   }
 
@@ -327,12 +356,15 @@ class _BackupSectionState extends State<BackupSection> {
     _busy.value = true;
     try {
       await _conProgreso(
-        'Restaurando tus datos anteriores…',
+        tr('Restaurando tus datos anteriores…',
+            'Restoring your previous data…'),
         widget.service.undoLastImport,
       );
-      _aviso('Se restauraron tus datos anteriores.');
+      _aviso(tr('Se restauraron tus datos anteriores.',
+          'Your previous data was restored.'));
     } catch (_) {
-      _aviso('No se pudo deshacer la importación. Tus datos no cambiaron.');
+      _aviso(tr('No se pudo deshacer la importación. Tus datos no cambiaron.',
+          "Couldn't undo the import. Your data wasn't changed."));
     } finally {
       _busy.value = false;
     }
@@ -369,10 +401,13 @@ class _BackupSectionState extends State<BackupSection> {
           children: [
             _crearRespaldoTile(estado),
             SwitchListTile(
-              title: const Text('Recordarme crear un respaldo'),
-              subtitle: const Text(
-                'Un aviso en Inicio si pasan $diasUmbralRecordatorioRespaldo '
+              title: Text(tr('Recordarme crear un respaldo',
+                  'Remind me to create a backup')),
+              subtitle: Text(
+                tr('Un aviso en Inicio si pasan $diasUmbralRecordatorioRespaldo '
                 'días sin respaldo',
+                'A reminder on Home after $diasUmbralRecordatorioRespaldo '
+                'days without a backup'),
               ),
               value: estado?.activado ?? true,
               onChanged: estado == null ? null : _cambiarRecordatorio,
@@ -381,9 +416,10 @@ class _BackupSectionState extends State<BackupSection> {
             if (_copiaPrevia != null)
               ListTile(
                 leading: const Icon(Icons.undo),
-                title: const Text('Deshacer la última importación'),
-                subtitle: const Text(
-                    'Vuelve a tus datos de antes de importar'),
+                title: Text(tr('Deshacer la última importación',
+                    'Undo the last import')),
+                subtitle: Text(tr('Vuelve a tus datos de antes de importar',
+                    'Go back to your data from before the import')),
                 enabled: !_ocupada,
                 onTap: _deshacerDesdeAjustes,
               ),
@@ -398,18 +434,23 @@ class _BackupSectionState extends State<BackupSection> {
     final segundaLinea = estado == null
         ? null
         : ultimo == null
-            ? 'Todavía no has creado un respaldo en este teléfono'
-            : 'Último respaldo: '
-                '${dayMonthLabelWithYear(ultimo, today: _store.today())}';
+            ? tr('Todavía no has creado un respaldo en este teléfono',
+                "You haven't created a backup on this phone yet")
+            : tr('Último respaldo: '
+                '${dayMonthLabelWithYear(ultimo, today: _store.today())}',
+                'Last backup: '
+                '${dayMonthLabelWithYear(ultimo, today: _store.today())}');
     return ListTile(
       leading: const Icon(Icons.upload_file),
-      title: const Text('Crear respaldo'),
+      title: Text(tr('Crear respaldo', 'Create backup')),
       subtitle: segundaLinea == null
-          ? const Text('Guarda tus registros en un archivo')
+          ? Text(tr('Guarda tus registros en un archivo',
+              'Save your logs to a file'))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Guarda tus registros en un archivo'),
+                Text(tr('Guarda tus registros en un archivo',
+                    'Save your logs to a file')),
                 Text(segundaLinea),
               ],
             ),
@@ -421,8 +462,9 @@ class _BackupSectionState extends State<BackupSection> {
   Widget _restaurarTile() {
     return ListTile(
       leading: const Icon(Icons.restore),
-      title: const Text('Restaurar un respaldo'),
-      subtitle: const Text('Reemplaza tus datos por los de un archivo'),
+      title: Text(tr('Restaurar un respaldo', 'Restore a backup')),
+      subtitle: Text(tr('Reemplaza tus datos por los de un archivo',
+          'Replace your data with the data in a file')),
       enabled: !_ocupada,
       onTap: _restaurar,
     );
@@ -462,17 +504,21 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
     final enTelefono = _diasConRegistro(
         preview.currentDayCount, preview.currentPeriodDayCount);
     return AlertDialog(
-      title: const Text('¿Reemplazar tus datos?'),
+      title: Text(tr('¿Reemplazar tus datos?', 'Replace your data?')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'El respaldo es del $fecha y tiene $enRespaldo. En este '
+              tr('El respaldo es del $fecha y tiene $enRespaldo. En este '
               'teléfono tienes $enTelefono, que se reemplazarán por los '
               'del respaldo. Antes, Aura guardará una copia de tus datos '
               'actuales.',
+              'The backup is from $fecha and has $enRespaldo. On this '
+              'phone you have $enTelefono, which will be replaced by the '
+              "backup's. First, Aura will save a copy of your current "
+              'data.'),
             ),
             if (perdidos > 0) ...[
               const SizedBox(height: 16),
@@ -493,10 +539,14 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
                     Expanded(
                       child: Text(
                         perdidos == 1
-                            ? 'El respaldo tiene 1 día menos que los que '
-                                  'tienes ahora; se perderá.'
-                            : 'El respaldo tiene $perdidos días menos que los '
+                            ? tr('El respaldo tiene 1 día menos que los que '
+                                  'tienes ahora; se perderá.',
+                                'The backup has 1 day fewer than you have '
+                                  'now; it will be lost.')
+                            : tr('El respaldo tiene $perdidos días menos que los '
                                   'que tienes ahora; se perderán.',
+                                'The backup has $perdidos days fewer than you '
+                                  'have now; they will be lost.'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onErrorContainer,
@@ -513,11 +563,12 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
       actions: [
         TextButton(
           onPressed: () => _responder(false),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar', 'Cancel')),
         ),
         TextButton(
           onPressed: () => _responder(true),
-          child: const Text('Reemplazar', style: TextStyle(color: Colors.red)),
+          child: Text(tr('Reemplazar', 'Replace'),
+              style: const TextStyle(color: Colors.red)),
         ),
       ],
     );
@@ -526,9 +577,11 @@ class _ConfirmarReemplazoDialogState extends State<_ConfirmarReemplazoDialog> {
 
 /// "7 días con registro (5 de período)". [total] cuenta tambien los dias
 /// de "no hubo sangrado", que el calendario no marca.
-String _diasConRegistro(int total, int periodo) =>
+String _diasConRegistro(int total, int periodo) => tr(
     '${total == 1 ? '1 día' : '$total días'} con registro '
-    '($periodo de período)';
+    '($periodo de período)',
+    '${total == 1 ? '1 logged day' : '$total logged days'} '
+    '($periodo period ${periodo == 1 ? 'day' : 'days'})');
 
 /// Fecha de exportacion tal como la vio el telefono que la creo (la parte
 /// yyyy-MM-dd de exportedAt, sin convertir de zona).

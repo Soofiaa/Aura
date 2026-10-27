@@ -4,6 +4,7 @@ import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_predictor.dart';
 import '../domain/symptom_ranking.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 
 class StatsScreen extends StatefulWidget {
@@ -28,7 +29,7 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Estadísticas"),
+        title: Text(tr("Estadísticas", "Stats")),
         backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
@@ -36,13 +37,14 @@ class _StatsScreenState extends State<StatsScreen> {
         stream: _statsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Text(
-                  "No se pudieron cargar las estadísticas.",
+                  tr("No se pudieron cargar las estadísticas.",
+                      "Couldn't load your stats."),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 18),
                 ),
               ),
             );
@@ -58,10 +60,10 @@ class _StatsScreenState extends State<StatsScreen> {
           final promedioFlujo = stats.averageFlow;
 
           if (!stats.hasAnyLog) {
-            return const Center(
+            return Center(
               child: Text(
-                "Aún no hay registros guardados",
-                style: TextStyle(fontSize: 18),
+                tr("Aún no hay registros guardados", "No entries saved yet"),
+                style: const TextStyle(fontSize: 18),
               ),
             );
           }
@@ -83,19 +85,19 @@ class _StatsScreenState extends State<StatsScreen> {
                     );
                   },
                 ),
-                const Text(
-                  "Promedio de flujo",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                Text(
+                  tr("Promedio de flujo", "Average flow"),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   promedioFlujo == 0
-                      ? "Sin datos"
+                      ? tr("Sin datos", "No data")
                       : promedioFlujo < 1.5
-                      ? "Ligero"
+                      ? tr("Ligero", "Light")
                       : promedioFlujo < 2.5
-                      ? "Moderado"
-                      : "Abundante",
+                      ? tr("Moderado", "Moderate")
+                      : tr("Abundante", "Heavy"),
                   style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -105,10 +107,10 @@ class _StatsScreenState extends State<StatsScreen> {
 
                 // 🩹 Grafico de sintomas: barras horizontales
                 if (sintomas.isNotEmpty) ...[
-                  const Text(
-                    "Síntomas más frecuentes",
+                  Text(
+                    tr("Síntomas más frecuentes", "Most frequent symptoms"),
                     style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 15),
                   _SymptomBars(ranking: sintomas),
@@ -117,10 +119,10 @@ class _StatsScreenState extends State<StatsScreen> {
 
                 // 😊 Gráfico de estados de ánimo
                 if (estadosAnimo.isNotEmpty) ...[
-                  const Text(
-                    "Estados de ánimo registrados",
+                  Text(
+                    tr("Estados de ánimo registrados", "Logged moods"),
                     style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 15),
                   // El grafico es solo dibujo: el lector de pantalla lee
@@ -189,7 +191,7 @@ class _SymptomBars extends StatelessWidget {
             container: true,
             excludeSemantics: true,
             label: '${entry.key.label}: ${entry.value} '
-                '${entry.value == 1 ? 'día' : 'días'}',
+                '${entry.value == 1 ? tr('día', 'day') : tr('días', 'days')}',
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
@@ -308,9 +310,10 @@ String _moodSummary(Map<Mood, int> moods) {
   final total = moods.values.fold<int>(0, (a, b) => a + b);
   final partes = [
     for (final e in moods.entries)
-      '${e.key.label}: ${_percent(e.value / total)} %',
+      '${e.key.label}: ${_percent(e.value / total)}${tr(' %', '%')}',
   ];
-  return 'Estados de ánimo: ${partes.join('. ')}.';
+  return tr('Estados de ánimo: ${partes.join('. ')}.',
+      'Moods: ${partes.join('. ')}.');
 }
 
 /// "Tus ciclos": duracion tipica del ciclo (el mismo numero que usa la
@@ -321,7 +324,8 @@ class _CyclesSection extends StatelessWidget {
 
   final PredictionInputs inputs;
 
-  static String _dias(int n) => n == 1 ? "1 día" : "$n días";
+  static String _dias(int n) =>
+      n == 1 ? tr("1 día", "1 day") : tr("$n días", "$n days");
 
   @override
   Widget build(BuildContext context) {
@@ -333,35 +337,48 @@ class _CyclesSection extends StatelessWidget {
 
     final filas = <String>[
       if (ciclosCompletos == 0)
-        "Registra al menos dos períodos para ver tus ciclos."
+        tr("Registra al menos dos períodos para ver tus ciclos.",
+            "Log at least two periods to see your cycles.")
       else ...[
         // Con el tope de ciclos alcanzado, aclara que hay mas registrados.
-        "Ciclos considerados: ${ciclo.consideredCount}"
+        tr("Ciclos considerados: ${ciclo.consideredCount}"
             "${ciclo.consideredCount == config.maxCyclesConsidered ? ' (los más recientes)' : ''}",
+            "Cycles considered: ${ciclo.consideredCount}"
+            "${ciclo.consideredCount == config.maxCyclesConsidered ? ' (the most recent)' : ''}"),
         if (regularidad != null) ...[
-          "Duración típica del ciclo: ${_dias(ciclo.days!)}",
+          tr("Duración típica del ciclo: ${_dias(ciclo.days!)}",
+              "Typical cycle length: ${_dias(ciclo.days!)}"),
           ciclo.shortestDays == ciclo.longestDays
-              ? "Más corto y más largo: ${_dias(ciclo.shortestDays!)}"
-              : "Más corto y más largo: ${ciclo.shortestDays} a "
+              ? tr("Más corto y más largo: ${_dias(ciclo.shortestDays!)}",
+                  "Shortest and longest: ${_dias(ciclo.shortestDays!)}")
+              : tr("Más corto y más largo: ${ciclo.shortestDays} a "
                   "${_dias(ciclo.longestDays!)}",
-          "Regularidad: ${regularidad.label}",
+                  "Shortest and longest: ${ciclo.shortestDays} to "
+                  "${_dias(ciclo.longestDays!)}"),
+          tr("Regularidad: ${regularidad.label}",
+              "Regularity: ${regularidad.label}"),
         ] else ...[
           if (ciclo.consideredCount == 1)
-            "Tu único ciclo completo: ${_dias(ciclo.consideredLengthsDays.single)}",
-          "Con dos ciclos o más calculamos tu duración típica y tu "
+            tr("Tu único ciclo completo: ${_dias(ciclo.consideredLengthsDays.single)}",
+                "Your only complete cycle: ${_dias(ciclo.consideredLengthsDays.single)}"),
+          tr("Con dos ciclos o más calculamos tu duración típica y tu "
               "regularidad.",
+              "With two or more cycles we can calculate your typical length "
+              "and regularity."),
         ],
       ],
-      "Duración típica del período: ${_dias(periodo.days)} "
+      tr("Duración típica del período: ${_dias(periodo.days)} "
           "${periodo.source == PeriodLengthSource.ownPeriods ? '(según tus períodos)' : '(según tu ajuste)'}",
+          "Typical period length: ${_dias(periodo.days)} "
+          "${periodo.source == PeriodLengthSource.ownPeriods ? '(based on your periods)' : '(based on your setting)'}"),
     ];
 
     final excluidos = ciclo.excludedCount;
     return Column(
       children: [
-        const Text(
-          "Tus ciclos",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        Text(
+          tr("Tus ciclos", "Your cycles"),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
         for (final fila in filas)
@@ -375,9 +392,12 @@ class _CyclesSection extends StatelessWidget {
           ),
         if (excluidos > 0)
           Text(
-            "${excluidos == 1 ? '1 ciclo no se cuenta' : '$excluidos ciclos no se cuentan'} "
+            tr("${excluidos == 1 ? '1 ciclo no se cuenta' : '$excluidos ciclos no se cuentan'} "
             "por durar menos de ${config.minValidCycleLengthDays} o más de "
             "${config.maxValidCycleLengthDays} días.",
+                "${excluidos == 1 ? "1 cycle isn't counted" : "$excluidos cycles aren't counted"} "
+                "(shorter than ${config.minValidCycleLengthDays} or longer than "
+                "${config.maxValidCycleLengthDays} days)."),
             textAlign: TextAlign.center,
             // grey[700] (#616161): 6,2:1 sobre blanco y 5,9:1 sobre el
             // fondo de la app.

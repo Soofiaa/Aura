@@ -6,6 +6,7 @@ import '../data/backup/auto_drive_backup_service.dart';
 import '../data/backup/drive_api_client.dart';
 import '../data/backup/drive_backup_settings_store.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/drive_client_config.dart';
@@ -84,15 +85,24 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
       children: [
         SwitchListTile(
           key: const Key('respaldo_drive_switch'),
-          title: const Text('Respaldar automáticamente en Google Drive'),
+          title: Text(tr('Respaldar automáticamente en Google Drive',
+              'Back up automatically to Google Drive')),
           subtitle: Text(sinConfigurar
-              ? 'Configuración pendiente: esta compilación no tiene el '
-                  'client ID de Google (ver docs/DRIVE_SETUP.md).'
+              ? tr(
+                  'Configuración pendiente: esta compilación no tiene el '
+                      'client ID de Google (ver docs/DRIVE_SETUP.md).',
+                  'Setup pending: this build has no Google client ID '
+                      '(see docs/DRIVE_SETUP.md).')
               : ajustes.habilitado
-                  ? 'Cuenta: ${ajustes.cuenta}\n${_ultimoTexto(ajustes)}'
-                  : 'Una vez al día sube a tu Google Drive un respaldo '
-                      'cifrado con una contraseña que eliges una sola vez. '
-                      'Los archivos solo los puedes abrir con esa contraseña.'),
+                  ? tr('Cuenta: ${ajustes.cuenta}\n${_ultimoTexto(ajustes)}',
+                      'Account: ${ajustes.cuenta}\n${_ultimoTexto(ajustes)}')
+                  : tr(
+                      'Una vez al día sube a tu Google Drive un respaldo '
+                          'cifrado con una contraseña que eliges una sola vez. '
+                          'Los archivos solo los puedes abrir con esa contraseña.',
+                      'Once a day, Aura uploads an encrypted backup to your '
+                          'Google Drive, protected by a password you choose '
+                          'once. Only that password can open the files.')),
           value: ajustes.habilitado,
           onChanged: (_ocupado || sinConfigurar) ? null : _cambiar,
         ),
@@ -100,7 +110,8 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
             child: Text(
-              'Último intento falló: ${_falloTexto(ajustes.ultimoFallo!)}.',
+              tr('Último intento falló: ${_falloTexto(ajustes.ultimoFallo!)}.',
+                  'Last attempt failed: ${_falloTexto(ajustes.ultimoFallo!)}.'),
               key: const Key('respaldo_drive_fallo'),
               style: TextStyle(color: errorColor),
             ),
@@ -109,7 +120,7 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
           ListTile(
             key: const Key('respaldar_ahora'),
             leading: const Icon(Icons.cloud_upload_outlined),
-            title: const Text('Respaldar ahora'),
+            title: Text(tr('Respaldar ahora', 'Back up now')),
             enabled: !_ocupado,
             onTap: _respaldarAhora,
           ),
@@ -125,35 +136,49 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
   /// "hoy" si fue hoy; si no, "el 4 de octubre" (con ano si toca).
   String _ultimoTexto(DriveBackupSettings ajustes) {
     final ultimo = ajustes.ultimoRespaldo;
-    if (ultimo == null) return 'Aún no se ha hecho un respaldo.';
+    if (ultimo == null) {
+      return tr('Aún no se ha hecho un respaldo.', 'No backup yet.');
+    }
     final hoy = DayKey.fromDate(DateTime.now());
-    if (ultimo == hoy) return 'Último respaldo: hoy.';
-    return 'Último respaldo: el ${dayMonthLabelWithYear(ultimo, today: hoy)}.';
+    if (ultimo == hoy) return tr('Último respaldo: hoy.', 'Last backup: today.');
+    final fecha = dayMonthLabelWithYear(ultimo, today: hoy);
+    return tr('Último respaldo: el $fecha.', 'Last backup: $fecha.');
   }
 
   String _falloTexto(DriveApiFailure fallo) => switch (fallo) {
-        DriveApiFailure.offline =>
-          'sin conexión; el próximo intento automático lo reintentará',
-        DriveApiFailure.unauthorized =>
-          'la sesión de Google caducó; vuelve a entrar en la cuenta',
-        DriveApiFailure.failed =>
-          'Google rechazó el intento; prueba más tarde',
+        DriveApiFailure.offline => tr(
+            'sin conexión; el próximo intento automático lo reintentará',
+            'no connection; the next automatic attempt will retry'),
+        DriveApiFailure.unauthorized => tr(
+            'la sesión de Google caducó; vuelve a entrar en la cuenta',
+            'your Google session expired; sign in to your account again'),
+        DriveApiFailure.failed => tr(
+            'Google rechazó el intento; prueba más tarde',
+            'Google rejected the attempt; try again later'),
       };
 
   String _mensaje(AutoBackupStatus status) => switch (status) {
-        AutoBackupStatus.ok => 'Respaldo subido a Google Drive.',
-        AutoBackupStatus.sinCambios => 'Ya hay un respaldo de hoy.',
-        AutoBackupStatus.deshabilitado =>
-          'El respaldo automático está apagado.',
-        AutoBackupStatus.claveNoDisponible =>
-          'Este teléfono ya no tiene la clave de cifrado; vuelve a '
-          'activar el respaldo con tu contraseña.',
-        AutoBackupStatus.offline =>
-          'Sin conexión: el próximo respaldo automático lo reintentará.',
-        AutoBackupStatus.unauthorized =>
-          'La sesión de Google caducó; vuelve a entrar en la cuenta.',
-        AutoBackupStatus.failed =>
-          'Google rechazó el respaldo; inténtalo más tarde.',
+        AutoBackupStatus.ok =>
+          tr('Respaldo subido a Google Drive.', 'Backup uploaded to Google Drive.'),
+        AutoBackupStatus.sinCambios =>
+          tr('Ya hay un respaldo de hoy.', "There's already a backup from today."),
+        AutoBackupStatus.deshabilitado => tr(
+            'El respaldo automático está apagado.',
+            'Automatic backup is off.'),
+        AutoBackupStatus.claveNoDisponible => tr(
+            'Este teléfono ya no tiene la clave de cifrado; vuelve a '
+                'activar el respaldo con tu contraseña.',
+            'This phone no longer has the encryption key; turn backup '
+                'on again with your password.'),
+        AutoBackupStatus.offline => tr(
+            'Sin conexión: el próximo respaldo automático lo reintentará.',
+            'No connection: the next automatic backup will retry.'),
+        AutoBackupStatus.unauthorized => tr(
+            'La sesión de Google caducó; vuelve a entrar en la cuenta.',
+            'Your Google session expired; sign in to your account again.'),
+        AutoBackupStatus.failed => tr(
+            'Google rechazó el respaldo; inténtalo más tarde.',
+            'Google rejected the backup; try again later.'),
       };
 
   Future<void> _cambiar(bool value) async {
@@ -179,19 +204,23 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
         break;
       case EnableDriveFailed():
         showAppSnackBar(
-            context, 'No se pudo conectar con Google; no se activó el '
-            'respaldo.');
+            context, tr('No se pudo conectar con Google; no se activó el '
+            'respaldo.', "Couldn't connect to Google; backup wasn't turned on."));
       case EnableClaveNoDisponible():
-        showAppSnackBar(context,
+        showAppSnackBar(context, tr(
             'El Keystore de Android no pudo guardar la clave; '
-            'inténtalo de nuevo.');
+            'inténtalo de nuevo.',
+            "The Android Keystore couldn't save the key; please try again."));
       case DriveEnabled(:final primerRespaldo):
         showAppSnackBar(context, switch (primerRespaldo) {
-          null => 'Respaldo automático activado.',
-          AutoBackupStatus.ok =>
-            'Respaldo automático activado: primer respaldo subido a '
-            'Google Drive.',
-          _ => 'Respaldo automático activado. ${_mensaje(primerRespaldo)}',
+          null => tr('Respaldo automático activado.', 'Automatic backup turned on.'),
+          AutoBackupStatus.ok => tr(
+              'Respaldo automático activado: primer respaldo subido a '
+                  'Google Drive.',
+              'Automatic backup turned on: first backup uploaded to '
+                  'Google Drive.'),
+          _ => tr('Respaldo automático activado. ${_mensaje(primerRespaldo)}',
+              'Automatic backup turned on. ${_mensaje(primerRespaldo)}'),
         });
     }
   }
@@ -208,20 +237,24 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('¿Quitar el respaldo automático?'),
-        content: const Text(
+        title: Text(tr('¿Quitar el respaldo automático?',
+            'Turn off automatic backup?')),
+        content: Text(tr(
           'Aura dejará de subir respaldos a Google Drive y cerrará la '
           'sesión de Google en este teléfono. Los archivos que ya subiste '
           'quedan en tu Google Drive y puedes borrarlos desde ahí.',
-        ),
+          'Aura will stop uploading backups to Google Drive and sign out of '
+          'Google on this phone. Files you already uploaded stay in your '
+          'Google Drive, and you can delete them there.',
+        )),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Quitar respaldo'),
+            child: Text(tr('Quitar respaldo', 'Turn off backup')),
           ),
         ],
       ),
@@ -232,6 +265,7 @@ class _DriveBackupSectionState extends State<DriveBackupSection> {
     await widget.service.disable();
     if (!mounted) return;
     setState(() => _ocupado = false);
-    showAppSnackBar(context, 'Respaldo automático desactivado.');
+    showAppSnackBar(context,
+        tr('Respaldo automático desactivado.', 'Automatic backup turned off.'));
   }
 }

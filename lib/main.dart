@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app_startup.dart';
 import 'data/backup/auto_drive_backup_service.dart';
@@ -18,6 +19,11 @@ import 'screens/update_error_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Android 15+ dibuja de borde a borde por defecto; esto lo aplica tambien
+  // en versiones anteriores. Las pantallas deben respetar las inserciones
+  // (SafeArea) para no quedar bajo la barra de estado o de navegacion.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   // calendar_screen.dart, backup_section.dart, period_end_messages.dart
   // y period_start_sheet.dart formatean fechas en español ('es_ES' /

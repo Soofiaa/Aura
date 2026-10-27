@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/aura_localizations.dart';
+
 /// Abre "Respaldo protegido" (HU-06b, CP4). Devuelve la contrasena escrita
 /// o null si se cancela. [initialPassword] y [errorText] sirven para el
 /// reintento: lo escrito vuelve seleccionado, para corregirlo o
@@ -74,14 +76,16 @@ class _UnlockBackupDialogState extends State<UnlockBackupDialog> {
       // scrollable: titulo y contenido se desplazan juntos y las acciones
       // quedan fijas; asi caben con el teclado abierto (360x640).
       scrollable: true,
-      title: const Text('Respaldo protegido'),
+      title: Text(tr('Respaldo protegido', 'Protected backup')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Este respaldo está protegido con contraseña. Escríbela para '
+          Text(
+            tr('Este respaldo está protegido con contraseña. Escríbela para '
             'abrirlo.',
+            'This backup is password-protected. Enter the password to open '
+            'it.'),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -96,7 +100,7 @@ class _UnlockBackupDialogState extends State<UnlockBackupDialog> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _open(),
             decoration: InputDecoration(
-              labelText: 'Contraseña',
+              labelText: tr('Contraseña', 'Password'),
               border: const OutlineInputBorder(),
               errorText: widget.errorText,
               // El de memoria es largo: con letra al 200 % en 360 dp ocupa
@@ -105,7 +109,9 @@ class _UnlockBackupDialogState extends State<UnlockBackupDialog> {
               // desplaza.
               errorMaxLines: 20,
               suffixIcon: IconButton(
-                tooltip: _visible ? 'Ocultar contraseña' : 'Mostrar contraseña',
+                tooltip: _visible
+                    ? tr('Ocultar contraseña', 'Hide password')
+                    : tr('Mostrar contraseña', 'Show password'),
                 icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
                 onPressed: () => setState(() => _visible = !_visible),
               ),
@@ -116,11 +122,11 @@ class _UnlockBackupDialogState extends State<UnlockBackupDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar', 'Cancel')),
         ),
         FilledButton(
           onPressed: _canOpen ? _open : null,
-          child: const Text('Abrir respaldo'),
+          child: Text(tr('Abrir respaldo', 'Open backup')),
         ),
       ],
     );

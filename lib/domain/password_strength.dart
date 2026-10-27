@@ -5,6 +5,8 @@
 /// No se normaliza el texto (HU6b-11).
 library;
 
+import '../utils/aura_localizations.dart';
+
 /// Largo minimo de la contrasena (HU6b-3).
 const int minPasswordLength = 10;
 
@@ -19,9 +21,9 @@ enum PasswordStrength { weak, acceptable, strong }
 
 extension PasswordStrengthLabel on PasswordStrength {
   String get label => switch (this) {
-    PasswordStrength.weak => 'Débil',
-    PasswordStrength.acceptable => 'Aceptable',
-    PasswordStrength.strong => 'Fuerte',
+    PasswordStrength.weak => tr('Débil', 'Weak'),
+    PasswordStrength.acceptable => tr('Aceptable', 'Fair'),
+    PasswordStrength.strong => tr('Fuerte', 'Strong'),
   };
 }
 

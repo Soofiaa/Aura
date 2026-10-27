@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import '../domain/notification_planner.dart';
+import 'aura_localizations.dart';
 
 /// Unica capa que toca el plugin de notificaciones y el reloj de
 /// plataforma. planNotifications (dominio, puro) decide QUE avisos
@@ -36,19 +37,22 @@ abstract class NotificationScheduler {
 }
 
 const _periodChannelId = 'aura_period_reminder';
-const _periodChannelName = 'Recordatorio de período';
-const _periodChannelDescription =
-    'Aviso antes del inicio estimado de tu período.';
+String get _periodChannelName => tr('Recordatorio de período', 'Period reminder');
+String get _periodChannelDescription =>
+    tr('Aviso antes del inicio estimado de tu período.',
+        'A heads-up before your period is estimated to start.');
 
 const _fertileChannelId = 'aura_fertile_window_reminder';
-const _fertileChannelName = 'Ventana fértil';
-const _fertileChannelDescription =
-    'Aviso al comenzar tu ventana de mayor fertilidad estimada.';
+String get _fertileChannelName => tr('Ventana fértil', 'Fertile window');
+String get _fertileChannelDescription =>
+    tr('Aviso al comenzar tu ventana de mayor fertilidad estimada.',
+        'A heads-up when your estimated fertile window begins.');
 
 const _lateChannelId = 'aura_late_period_reminder';
-const _lateChannelName = 'Período atrasado';
-const _lateChannelDescription =
-    'Aviso el primer día de atraso de tu período estimado.';
+String get _lateChannelName => tr('Período atrasado', 'Late period');
+String get _lateChannelDescription =>
+    tr('Aviso el primer día de atraso de tu período estimado.',
+        'A heads-up on the first day your estimated period is late.');
 
 /// Avisos propios pendientes que ya no corresponden: todo id de
 /// [ownedIds] que no este en [plan]. Uno [PlannedNotification.due] del plan

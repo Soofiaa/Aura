@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 
 /// Radio de las marcas de dia del calendario (igual al relleno de los
@@ -162,7 +163,9 @@ class CalendarLegend extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Flexible(child: Text('Período registrado', style: style)),
+            Flexible(
+                child: Text(tr('Período registrado', 'Logged period'),
+                    style: style)),
           ],
         ),
         if (showEstimated)
@@ -180,15 +183,17 @@ class CalendarLegend extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Flexible(
-                  child: Text('Estimado sin confirmar', style: style)),
+              Flexible(
+                  child: Text(
+                      tr('Estimado sin confirmar', 'Estimated, not confirmed'),
+                      style: style)),
             ],
           ),
         if (showFertile) ...[
-          const Row(
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ExcludeSemantics(
+              const ExcludeSemantics(
                 child: SizedBox(
                   width: 20,
                   height: 20,
@@ -196,14 +201,17 @@ class CalendarLegend extends StatelessWidget {
                       ovulation: false, inset: 2, barWidth: 16),
                 ),
               ),
-              SizedBox(width: 8),
-              Flexible(child: Text('Ventana fértil estimada', style: style)),
+              const SizedBox(width: 8),
+              Flexible(
+                  child: Text(
+                      tr('Ventana fértil estimada', 'Estimated fertile window'),
+                      style: style)),
             ],
           ),
-          const Row(
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ExcludeSemantics(
+              const ExcludeSemantics(
                 child: SizedBox(
                   width: 20,
                   height: 20,
@@ -211,8 +219,10 @@ class CalendarLegend extends StatelessWidget {
                       ovulation: true, inset: 2, barWidth: 16),
                 ),
               ),
-              SizedBox(width: 8),
-              Flexible(child: Text('Ovulación estimada', style: style)),
+              const SizedBox(width: 8),
+              Flexible(
+                  child: Text(tr('Ovulación estimada', 'Estimated ovulation'),
+                      style: style)),
             ],
           ),
         ],
@@ -224,7 +234,8 @@ class CalendarLegend extends StatelessWidget {
         entradas,
         const SizedBox(height: 8),
         Text(
-          'Estimación; no es un método anticonceptivo.',
+          tr('Estimación; no es un método anticonceptivo.',
+              'Estimate only; not a method of birth control.'),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,

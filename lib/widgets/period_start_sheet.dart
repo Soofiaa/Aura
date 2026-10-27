@@ -5,6 +5,7 @@ import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 import '../utils/day_key.dart';
 
@@ -42,14 +43,15 @@ Future<void> showPeriodStartSheet(
   if (!result.changedAnything) {
     // La hoja ya no deja confirmar un dia marcado; esto cubre que se haya
     // marcado por otro lado mientras estaba abierta.
-    showAppSnackBar(context, 'Ese día ya está registrado.');
+    showAppSnackBar(context,
+        tr('Ese día ya está registrado.', 'That day is already logged.'));
     return;
   }
   showAppSnackBar(
     context,
-    'Inicio del período registrado.',
+    tr('Inicio del período registrado.', 'Period start logged.'),
     action: SnackBarAction(
-      label: 'Deshacer',
+      label: tr('Deshacer', 'Undo'),
       onPressed: () => repo.restoreDaysSnapshot(result.snapshot),
     ),
   );
@@ -95,7 +97,8 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
   static DateTime _toDate(String key) => DateTime.parse(key);
 
   static String _dayMonth(String key) =>
-      DateFormat("d 'de' MMMM", 'es_ES').format(_toDate(key));
+      DateFormat(auraIsEnglish ? 'MMMM d' : "d 'de' MMMM", auraLanguage)
+          .format(_toDate(key));
 
   /// Aviso de la decision 7, hacia atras y hacia adelante: el dia elegido
   /// se sumaria a un periodo anterior, a uno posterior o los uniria.
@@ -104,17 +107,27 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final after =
         laterPeriodThatDayWouldJoin(day: day, periodDays: periodDays);
     if (before != null && after != null) {
-      return 'Ese día está muy cerca de tu período anterior (último día '
+      return tr(
+          'Ese día está muy cerca de tu período anterior (último día '
           'marcado: ${_dayMonth(before)}) y del período que empezó el '
-          '${_dayMonth(after)}, así que los dos se unirán en un solo período.';
+          '${_dayMonth(after)}, así que los dos se unirán en un solo período.',
+          'That day is very close to your previous period (last marked '
+          'day: ${_dayMonth(before)}) and to the period that started on '
+          '${_dayMonth(after)}, so the two will be joined into one period.');
     }
     if (before != null) {
-      return 'Ese día está muy cerca de tu período anterior (último día '
-          'marcado: ${_dayMonth(before)}), así que se sumará a ese período.';
+      return tr(
+          'Ese día está muy cerca de tu período anterior (último día '
+          'marcado: ${_dayMonth(before)}), así que se sumará a ese período.',
+          'That day is very close to your previous period (last marked '
+          'day: ${_dayMonth(before)}), so it will be added to that period.');
     }
     if (after != null) {
-      return 'Ese día está muy cerca de tu período que empezó el '
-          '${_dayMonth(after)}, así que se sumará a ese período.';
+      return tr(
+          'Ese día está muy cerca de tu período que empezó el '
+          '${_dayMonth(after)}, así que se sumará a ese período.',
+          'That day is very close to your period that started on '
+          '${_dayMonth(after)}, so it will be added to that period.');
     }
     return null;
   }
@@ -163,20 +176,20 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final joinWarning =
         alreadyMarked ? null : _joinWarning(day, data.periodDays);
     final n = data.estimate.days;
-    final days = n == 1 ? '1 día' : '$n días';
+    final days = n == 1 ? tr('1 día', '1 day') : tr('$n días', '$n days');
     // La misma duracion estimada que Inicio y el Calendario (P-1).
     final source = data.estimate.source == PeriodLengthSource.setting
-        ? 'puedes cambiarla en Ajustes'
-        : 'según tus últimos períodos';
+        ? tr('puedes cambiarla en Ajustes', 'you can change it in Settings')
+        : tr('según tus últimos períodos', 'based on your recent periods');
     const secondary = TextStyle(fontSize: 14, color: AppColors.textSecondary);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          '¿Cuándo empezó tu período?',
-          style: TextStyle(
+        Text(
+          tr('¿Cuándo empezó tu período?', 'When did your period start?'),
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
@@ -188,23 +201,23 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
           onChanged: _choose,
           child: Column(
             children: [
-              const RadioListTile<PeriodStartOption>(
+              RadioListTile<PeriodStartOption>(
                 value: PeriodStartOption.today,
                 activeColor: AppColors.accent,
                 contentPadding: EdgeInsets.zero,
-                title: Text('Hoy'),
+                title: Text(tr('Hoy', 'Today')),
               ),
-              const RadioListTile<PeriodStartOption>(
+              RadioListTile<PeriodStartOption>(
                 value: PeriodStartOption.yesterday,
                 activeColor: AppColors.accent,
                 contentPadding: EdgeInsets.zero,
-                title: Text('Ayer'),
+                title: Text(tr('Ayer', 'Yesterday')),
               ),
               RadioListTile<PeriodStartOption>(
                 value: PeriodStartOption.otherDay,
                 activeColor: AppColors.accent,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Otro día'),
+                title: Text(tr('Otro día', 'Another day')),
                 subtitle: _option == PeriodStartOption.otherDay
                     ? Text(_dayMonth(day))
                     : null,
@@ -212,9 +225,9 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
                 // grupo: el boton del costado abre el selector de nuevo.
                 secondary: _option == PeriodStartOption.otherDay
                     ? IconButton(
-                        icon: const Icon(Icons.edit_calendar,
+                        icon: Icon(Icons.edit_calendar,
                             color: AppColors.accent,
-                            semanticLabel: 'Cambiar el día'),
+                            semanticLabel: tr('Cambiar el día', 'Change the day')),
                         onPressed: () => _choose(PeriodStartOption.otherDay),
                       )
                     : null,
@@ -224,13 +237,17 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Duración estimada: $days ($source)',
+          tr('Duración estimada: $days ($source)',
+              'Estimated length: $days ($source)'),
           style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Solo se guarda el primer día. Los días siguientes se muestran '
-          'como estimados hasta que los confirmes.',
+        Text(
+          tr(
+              'Solo se guarda el primer día. Los días siguientes se muestran '
+              'como estimados hasta que los confirmes.',
+              'Only the first day is saved. The following days show as '
+              'estimated until you confirm them.'),
           style: secondary,
         ),
         if (joinWarning != null) ...[
@@ -248,9 +265,9 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
           const SizedBox(height: 12),
           Semantics(
             liveRegion: true,
-            child: const Text(
-              'Ese día ya está registrado.',
-              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+            child: Text(
+              tr('Ese día ya está registrado.', 'That day is already logged.'),
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -264,7 +281,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
           ),
           onPressed:
               alreadyMarked ? null : () => Navigator.pop(context, day),
-          child: const Text('Marcar período'),
+          child: Text(tr('Marcar período', 'Mark period')),
         ),
       ],
     );

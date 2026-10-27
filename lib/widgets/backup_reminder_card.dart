@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/backup/backup_reminder_store.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
@@ -32,16 +33,24 @@ class BackupReminderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ultimo = estado.ultimoRespaldo;
     final titulo = ultimo == null
-        ? 'Guarda una copia de tus registros'
-        : 'Hace ${DayKey.diffInDays(ultimo, today)} días que no creas un '
-            'respaldo';
+        ? tr('Guarda una copia de tus registros', 'Save a copy of your logs')
+        : tr('Hace ${DayKey.diffInDays(ultimo, today)} días que no creas un '
+            'respaldo',
+            "It's been ${DayKey.diffInDays(ultimo, today)} days since your "
+            'last backup');
     final texto = ultimo == null
-        ? 'Aura guarda todo solo en este teléfono. Si lo pierdes o se daña, '
+        ? tr('Aura guarda todo solo en este teléfono. Si lo pierdes o se daña, '
             'tus registros no se pueden recuperar. Un respaldo crea una '
-            'copia en el lugar que elijas.'
-        : 'Tu último respaldo es del '
+            'copia en el lugar que elijas.',
+            'Aura keeps everything only on this phone. If you lose it or it '
+            "breaks, your logs can't be recovered. A backup makes a copy "
+            'wherever you choose.')
+        : tr('Tu último respaldo es del '
             '${dayMonthLabelWithYear(ultimo, today: today)}. Lo que '
-            'registraste después está solo en este teléfono.';
+            'registraste después está solo en este teléfono.',
+            'Your last backup is from '
+            '${dayMonthLabelWithYear(ultimo, today: today)}. Anything you '
+            'logged after that is only on this phone.');
     const minimo = Size(48, 48);
 
     return Semantics(
@@ -105,7 +114,7 @@ class BackupReminderCard extends StatelessWidget {
                     foregroundColor: AppColors.textPrimary,
                     minimumSize: minimo,
                   ),
-                  child: const Text('Crear respaldo'),
+                  child: Text(tr('Crear respaldo', 'Create backup')),
                 ),
                 OutlinedButton(
                   onPressed: onAhoraNo,
@@ -113,7 +122,7 @@ class BackupReminderCard extends StatelessWidget {
                     foregroundColor: AppColors.textPrimary,
                     minimumSize: minimo,
                   ),
-                  child: const Text('Ahora no'),
+                  child: Text(tr('Ahora no', 'Not now')),
                 ),
               ],
             ),
@@ -124,10 +133,10 @@ class BackupReminderCard extends StatelessWidget {
                 foregroundColor: AppColors.textPrimary,
                 minimumSize: minimo,
               ),
-              child: const Text(
-                'No recordármelo más',
+              child: Text(
+                tr('No recordármelo más', "Don't remind me again"),
                 textAlign: TextAlign.center,
-                style: TextStyle(decoration: TextDecoration.underline),
+                style: const TextStyle(decoration: TextDecoration.underline),
               ),
             ),
           ],

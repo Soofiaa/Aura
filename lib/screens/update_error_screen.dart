@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 
 /// Pantalla que se muestra si la base no se pudo abrir al arrancar (la
@@ -19,15 +20,22 @@ class UpdateErrorScreen extends StatelessWidget {
 
   /// Neutro: tambien se ve si la base no abre en un arranque sin
   /// actualizacion.
-  static const String title = 'No se pudieron abrir tus datos';
-  static const String safeMessage =
+  static String get title =>
+      tr('No se pudieron abrir tus datos', "Couldn't open your data");
+  static String get safeMessage => tr(
       'Aura no pudo abrir tus datos, pero no borró nada. Cierra la app y '
-      'vuelve a abrirla. Si el problema sigue, no desinstales la app, '
-      'porque se perderían tus datos, y escribe a sofia.menzel.dev@gmail.com';
-  static const String outOfSpaceMessage =
-      'Libera espacio en el teléfono e inténtalo de nuevo';
-  static const String outOfSpaceSafeMessage =
-      'Tus datos están a salvo: no se borró ni se cambió nada.';
+          'vuelve a abrirla. Si el problema sigue, no desinstales la app, '
+          'porque se perderían tus datos, y escribe a sofia.menzel.dev@gmail.com',
+      "Aura couldn't open your data, but nothing was deleted. Close the app "
+          "and open it again. If the problem continues, don't uninstall the "
+          'app, because your data would be lost, and email '
+          'sofia.menzel.dev@gmail.com');
+  static String get outOfSpaceMessage => tr(
+      'Libera espacio en el teléfono e inténtalo de nuevo',
+      'Free up space on your phone and try again');
+  static String get outOfSpaceSafeMessage => tr(
+      'Tus datos están a salvo: no se borró ni se cambió nada.',
+      'Your data is safe: nothing was deleted or changed.');
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +83,7 @@ class UpdateErrorScreen extends StatelessWidget {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Reintentar'),
+                        : Text(tr('Reintentar', 'Try again')),
                   ),
                 ),
               ],

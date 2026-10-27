@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../utils/aura_localizations.dart';
 import '../utils/day_key.dart';
 import 'cycle_deriver.dart';
 
@@ -98,10 +99,10 @@ enum CyclePhase { menstrual, folicular, ovulatoria, lutea }
 
 extension CyclePhaseLabel on CyclePhase {
   String get label => switch (this) {
-        CyclePhase.menstrual => 'Fase menstrual',
-        CyclePhase.folicular => 'Fase folicular',
-        CyclePhase.ovulatoria => 'Fase ovulatoria',
-        CyclePhase.lutea => 'Fase lútea',
+        CyclePhase.menstrual => tr('Fase menstrual', 'Menstrual phase'),
+        CyclePhase.folicular => tr('Fase folicular', 'Follicular phase'),
+        CyclePhase.ovulatoria => tr('Fase ovulatoria', 'Ovulatory phase'),
+        CyclePhase.lutea => tr('Fase lútea', 'Luteal phase'),
       };
 }
 
@@ -109,9 +110,9 @@ enum PredictionConfidence { low, medium, high }
 
 extension PredictionConfidenceLabel on PredictionConfidence {
   String get label => switch (this) {
-        PredictionConfidence.low => 'Baja',
-        PredictionConfidence.medium => 'Media',
-        PredictionConfidence.high => 'Alta',
+        PredictionConfidence.low => tr('Baja', 'Low'),
+        PredictionConfidence.medium => tr('Media', 'Medium'),
+        PredictionConfidence.high => tr('Alta', 'High'),
       };
 }
 
@@ -436,9 +437,9 @@ enum CycleRegularity { regular, somewhatVariable, veryVariable }
 
 extension CycleRegularityLabel on CycleRegularity {
   String get label => switch (this) {
-        CycleRegularity.regular => 'Regular',
-        CycleRegularity.somewhatVariable => 'Algo variable',
-        CycleRegularity.veryVariable => 'Muy variable',
+        CycleRegularity.regular => tr('Regular', 'Regular'),
+        CycleRegularity.somewhatVariable => tr('Algo variable', 'Somewhat variable'),
+        CycleRegularity.veryVariable => tr('Muy variable', 'Very variable'),
       };
 }
 
@@ -479,7 +480,8 @@ CyclePrediction? predictCycle({
   final confidenceReasons = <String>[];
   if (DayKey.isBefore(today, mostRecent.startDate)) {
     confidenceReasons.add(
-      'La fecha de referencia es anterior al último período registrado.',
+      tr('La fecha de referencia es anterior al último período registrado.',
+          'The reference date is before your last logged period.'),
     );
   }
 
@@ -489,8 +491,11 @@ CyclePrediction? predictCycle({
   final excludedCyclesCount = cycleEstimate.excludedCount;
   if (excludedCyclesCount > 0) {
     confidenceReasons.add(
-      'Se excluyeron $excludedCyclesCount ciclo(s) fuera del rango válido '
-      '(${config.minValidCycleLengthDays}-${config.maxValidCycleLengthDays} días).',
+      tr('Se excluyeron $excludedCyclesCount ciclo(s) fuera del rango válido '
+          '(${config.minValidCycleLengthDays}-${config.maxValidCycleLengthDays} días).',
+          '$excludedCyclesCount ${excludedCyclesCount == 1 ? 'cycle was' : 'cycles were'} '
+          'excluded for being outside the valid range '
+          '(${config.minValidCycleLengthDays}-${config.maxValidCycleLengthDays} days).'),
     );
   }
 
@@ -509,9 +514,12 @@ CyclePrediction? predictCycle({
     cycleLengthStdDevDays = 0;
     rangeHalfWidthDays = config.defaultRangeHalfWidthDays.toDouble();
     confidenceReasons.add(
-      'Menos de ${config.minCompleteCyclesForMedium} ciclos completos '
-      'registrados; se usa un promedio por defecto de '
-      '${config.defaultCycleLengthDays} días.',
+      tr('Menos de ${config.minCompleteCyclesForMedium} ciclos completos '
+          'registrados; se usa un promedio por defecto de '
+          '${config.defaultCycleLengthDays} días.',
+          'Fewer than ${config.minCompleteCyclesForMedium} complete cycles '
+          'logged; using a default average of '
+          '${config.defaultCycleLengthDays} days.'),
     );
   } else {
     averageCycleLengthDays = cycleEstimate.averageDays!;
@@ -592,8 +600,10 @@ CyclePrediction? predictCycle({
     if (ratio > config.highStdDevRelativeRatio) {
       confidence = PredictionConfidence.low;
       confidenceReasons.add(
-        'Variabilidad alta entre ciclos (±${(ratio * 100).toStringAsFixed(0)}% '
-        'del promedio).',
+        tr('Variabilidad alta entre ciclos (±${(ratio * 100).toStringAsFixed(0)}% '
+            'del promedio).',
+            'High variability between cycles (±${(ratio * 100).toStringAsFixed(0)}% '
+            'of the average).'),
       );
     } else if (completeCyclesConsidered >= config.minCompleteCyclesForHigh) {
       confidence = PredictionConfidence.high;

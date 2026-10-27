@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../domain/backup_codec.dart';
 import '../../domain/backup_crypto.dart';
 import '../../utils/app_version.dart';
+import '../../utils/aura_localizations.dart';
 import '../../utils/day_key.dart';
 import '../device_settings_store.dart';
 import '../repositories/cycle_repository.dart';
@@ -153,14 +154,19 @@ class BackupEncryptionException implements Exception {
 
   String get message => switch (cause) {
         BackupEncryptionFailure.encryptionFailed =>
-          'No se pudo crear el respaldo protegido. No se guardó ningún '
+          tr('No se pudo crear el respaldo protegido. No se guardó ningún '
               'archivo.',
+              "Couldn't create the protected backup. No file was saved."),
         BackupEncryptionFailure.verificationFailed =>
-          'No se pudo crear el respaldo protegido: la comprobación del '
+          tr('No se pudo crear el respaldo protegido: la comprobación del '
               'archivo falló. No se guardó ningún archivo.',
+              "Couldn't create the protected backup: the file check failed. "
+                  'No file was saved.'),
         BackupEncryptionFailure.tooLarge =>
-          'No se pudo crear el respaldo protegido: el archivo supera el '
+          tr('No se pudo crear el respaldo protegido: el archivo supera el '
               'tamaño máximo. No se guardó ningún archivo.',
+              "Couldn't create the protected backup: the file is larger than "
+                  'the maximum size. No file was saved.'),
       };
 
   @override
@@ -188,7 +194,8 @@ class BackupUnlocked extends BackupUnlockResult {
 class BackupUnlockWrongPasswordOrDamaged extends BackupUnlockResult {
   const BackupUnlockWrongPasswordOrDamaged();
 
-  String get message => wrongPasswordOrDamagedMessage;
+  String get message => tr(wrongPasswordOrDamagedMessage,
+      "The password is incorrect or the file is damaged. Nothing was changed.");
 
   @override
   String toString() => 'BackupUnlockWrongPasswordOrDamaged';

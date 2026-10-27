@@ -4,6 +4,7 @@ import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 
 /// Shell de navegacion: NavigationBar de Material 3 con 4 destinos fijos.
@@ -41,7 +42,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Widget _scaffold() {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      // Edge-to-edge: en horizontal la camara y las barras quedan a los
+      // lados; arriba y abajo ya los cubren cada AppBar y la NavigationBar.
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: IndexedStack(index: _currentIndex, children: _screens),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         // Pildora de la pestaña seleccionada: mismo relleno del tema y un
@@ -53,26 +60,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Inicio',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: tr('Inicio', 'Home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Calendario',
+            icon: const Icon(Icons.calendar_month_outlined),
+            selectedIcon: const Icon(Icons.calendar_month),
+            label: tr('Calendario', 'Calendar'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: 'Estadísticas',
+            icon: const Icon(Icons.show_chart_outlined),
+            selectedIcon: const Icon(Icons.show_chart),
+            label: tr('Estadísticas', 'Stats'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Ajustes',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: tr('Ajustes', 'Settings'),
           ),
         ],
       ),

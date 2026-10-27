@@ -13,6 +13,7 @@ import '../data/repositories/cycle_repository.dart';
 import '../domain/notification_planner.dart';
 import '../utils/android_system.dart';
 import '../utils/app_version.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 import '../utils/notifications.dart';
 import 'backup_section.dart';
@@ -139,8 +140,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     showAppSnackBar(
       context,
-      'El permiso de notificaciones fue revocado desde Ajustes del '
+      tr('El permiso de notificaciones fue revocado desde Ajustes del '
       'sistema; se desactivaron los recordatorios.',
+      'Notification permission was revoked in system settings, so '
+      'reminders were turned off.'),
       action: _accionAbrirAjustes(),
     );
   }
@@ -149,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   /// Si se nego el permiso dos veces, Android ya no vuelve a preguntar y
   /// es el unico camino para activarlo.
   SnackBarAction _accionAbrirAjustes() => SnackBarAction(
-        label: 'Abrir ajustes',
+        label: tr('Abrir ajustes', 'Open settings'),
         onPressed: () => _system.openNotificationSettings(),
       );
 
@@ -162,7 +165,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     } catch (_) {
       if (mounted) {
         showAppSnackBar(
-            context, 'No se pudo guardar el cambio. Inténtalo de nuevo.');
+            context, tr('No se pudo guardar el cambio. Inténtalo de nuevo.',
+                "Couldn't save the change. Please try again."));
       }
       return false;
     }
@@ -190,7 +194,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         setState(() => _notificaciones = false);
         showAppSnackBar(
           context,
-          'No se activaron las notificaciones: permiso denegado.',
+          tr('No se activaron las notificaciones: permiso denegado.',
+              "Notifications weren't turned on: permission denied."),
           action: _accionAbrirAjustes(),
         );
         return;
@@ -273,7 +278,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final duracion = _duracionHabitual;
     final textoDias = duracion == null
         ? ''
-        : (duracion == 1 ? '1 día' : '$duracion días');
+        : (duracion == 1
+            ? tr('1 día', '1 day')
+            : tr('$duracion días', '$duracion days'));
     final puedeBajar =
         duracion != null && duracion > minTypicalPeriodLength;
     final puedeSubir =
@@ -283,14 +290,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Tu ciclo",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          tr("Tu ciclo", "Your cycle"),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        const Text(
-          "Duración habitual del período",
-          style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
+        Text(
+          tr("Duración habitual del período", "Usual period length"),
+          style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 4),
         Row(
@@ -300,8 +307,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               constraints: tamanoMinimo,
               color: AppColors.accentStrong,
               disabledColor: AppColors.textSecondary,
-              icon: const Icon(Icons.remove_circle_outline,
-                  semanticLabel: "Disminuir duración"),
+              icon: Icon(Icons.remove_circle_outline,
+                  semanticLabel: tr("Disminuir duración", "Decrease length")),
               onPressed: puedeBajar ? () => _cambiarDuracion(-1) : null,
             ),
             Expanded(
@@ -309,7 +316,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 container: true,
                 label: duracion == null
                     ? null
-                    : "Duración habitual del período: $textoDias",
+                    : tr("Duración habitual del período: $textoDias",
+                        "Usual period length: $textoDias"),
                 liveRegion: true,
                 excludeSemantics: true,
                 child: Text(
@@ -329,28 +337,35 @@ class _SettingsScreenState extends State<SettingsScreen>
               constraints: tamanoMinimo,
               color: AppColors.accentStrong,
               disabledColor: AppColors.textSecondary,
-              icon: const Icon(Icons.add_circle_outline,
-                  semanticLabel: "Aumentar duración"),
+              icon: Icon(Icons.add_circle_outline,
+                  semanticLabel: tr("Aumentar duración", "Increase length")),
               onPressed: puedeSubir ? () => _cambiarDuracion(1) : null,
             ),
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
+          tr(
           "Aura la usa para estimar cuántos días dura tu período "
           "mientras todavía no tienes períodos terminados registrados; "
           "después usa el promedio de los tuyos. Cambiarla no modifica "
           "tus registros.",
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          "Aura uses this to estimate how many days your period lasts "
+          "until you've logged some complete periods; after that it uses "
+          "your own average. Changing it doesn't affect your logs."),
+          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 10),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text("Mostrar ovulación y ventana fértil"),
-          subtitle: const Text(
+          title: Text(tr("Mostrar ovulación y ventana fértil",
+              "Show ovulation and fertile window")),
+          subtitle: Text(tr(
             "Son estimaciones, no un método anticonceptivo. Si lo apagas, "
             "no se muestran en Inicio ni en el Calendario.",
-          ),
+            "These are estimates, not a method of birth control. If you turn "
+            "this off, they won't appear on Home or in the Calendar.",
+          )),
           value: _mostrarFertil,
           onChanged: _cambiarMostrarFertil,
         ),
@@ -391,8 +406,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (abierto || !mounted) return;
     showAppSnackBar(
       context,
-      'No se pudo abrir el enlace. Puedes abrirlo desde un navegador: '
+      tr('No se pudo abrir el enlace. Puedes abrirlo desde un navegador: '
       '$privacyPolicyUrl',
+      "Couldn't open the link. You can open it in a browser: "
+      '$privacyPolicyUrl'),
     );
   }
 
@@ -400,22 +417,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("¿Borrar todos los datos?"),
-        content: const Text(
+        title: Text(tr("¿Borrar todos los datos?", "Delete all data?")),
+        content: Text(tr(
           "Se eliminarán todos los días registrados, síntomas y ajustes, "
           "y la copia guardada antes de la última importación. "
           "Esta acción no se puede deshacer.",
-        ),
+          "This deletes every logged day, your symptoms and settings, "
+          "and the copy saved before your last import. "
+          "This can't be undone.",
+        )),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancelar"),
+            child: Text(tr("Cancelar", "Cancel")),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Borrar todo",
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              tr("Borrar todo", "Delete all"),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -434,7 +454,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!mounted) return;
       showAppSnackBar(
         context,
-        "No se pudieron borrar todos los datos. Inténtalo de nuevo.",
+        tr("No se pudieron borrar todos los datos. Inténtalo de nuevo.",
+            "Couldn't delete all data. Please try again."),
       );
       return;
     }
@@ -442,7 +463,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     // BackupSection vuelve a leer si hay copia previa (ya no la hay).
     setState(() => _datosBorrados++);
-    showAppSnackBar(context, "Datos borrados correctamente.");
+    showAppSnackBar(context,
+        tr("Datos borrados correctamente.", "Data deleted successfully."));
   }
 
   int _datosBorrados = 0;
@@ -451,7 +473,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Ajustes"),
+        title: Text(tr("Ajustes", "Settings")),
         backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
@@ -464,27 +486,29 @@ class _SettingsScreenState extends State<SettingsScreen>
           const Divider(),
           const SizedBox(height: 20),
 
-          const Text(
-            "Notificaciones",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            tr("Notificaciones", "Notifications"),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
 
           SwitchListTile(
-            title: const Text("Notificaciones"),
-            subtitle: const Text(
+            title: Text(tr("Notificaciones", "Notifications")),
+            subtitle: Text(tr(
               "Interruptor general. Actívalo para habilitar los "
               "recordatorios de abajo.",
-            ),
+              "Main switch. Turn it on to enable the reminders below.",
+            )),
             value: _notificaciones,
             onChanged: (val) => _cambiarNotificacionesGeneral(val),
           ),
 
           SwitchListTile(
-            title: const Text("Recordatorio de período"),
-            subtitle: const Text(
+            title: Text(tr("Recordatorio de período", "Period reminder")),
+            subtitle: Text(tr(
               "Un aviso el día antes del inicio estimado de tu período.",
-            ),
+              "A heads-up the day before your period is estimated to start.",
+            )),
             value: _recordatorioPeriodo,
             onChanged: _notificaciones
                 ? (val) => _cambiarRecordatorioPeriodo(val)
@@ -495,24 +519,31 @@ class _SettingsScreenState extends State<SettingsScreen>
           // ciclo). Si esta apagado, se ve apagado y deshabilitado, pero
           // conserva su valor guardado.
           SwitchListTile(
-            title: const Text("Ventana fértil"),
+            title: Text(tr("Ventana fértil", "Fertile window")),
             subtitle: _mostrarFertil
-                ? const Text(
+                ? Text(tr(
                     "Aviso opcional al comenzar tu ventana de mayor fertilidad "
                     "(estimación, no método anticonceptivo). Solo se envía "
                     "cuando tu estimación es confiable.",
-                  )
+                    "Optional heads-up when your fertile window begins "
+                    "(an estimate, not birth control). Only sent when your "
+                    "estimate is reliable.",
+                  ))
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(tr(
                         "Aviso opcional al comenzar tu ventana de mayor "
                         "fertilidad (estimación, no método anticonceptivo).",
-                      ),
+                        "Optional heads-up when your fertile window begins "
+                        "(an estimate, not birth control).",
+                      )),
                       const SizedBox(height: 4),
                       Text(
-                        "Para usarlo, activa la opción Mostrar ovulación y "
+                        tr("Para usarlo, activa la opción Mostrar ovulación y "
                         "ventana fértil en Tu ciclo.",
+                        "To use it, turn on Show ovulation and fertile window "
+                        "in Your cycle."),
                         style:
                             TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
@@ -525,11 +556,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
 
           SwitchListTile(
-            title: const Text("Aviso si tu período se atrasa"),
-            subtitle: const Text(
+            title: Text(tr("Aviso si tu período se atrasa",
+                "Heads-up if your period is late")),
+            subtitle: Text(tr(
               "Un aviso el primer día de atraso, por si te llegó y no lo "
               "registraste.",
-            ),
+              "A heads-up on the first late day, in case it started and you "
+              "didn't log it.",
+            )),
             value: _ajustesTelefono?.avisoAtraso ?? false,
             onChanged: _notificaciones && _ajustesTelefono != null
                 ? _cambiarAvisoAtraso
@@ -537,19 +571,23 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
 
           SwitchListTile(
-            title: const Text("Mostrar detalles en la notificación"),
-            subtitle: const Text(
+            title: Text(tr("Mostrar detalles en la notificación",
+                "Show details in notifications")),
+            subtitle: Text(tr(
               "Sin esto, la notificación solo dice que es un recordatorio "
               "de Aura. El detalle puede verse en relojes u otros "
               "dispositivos conectados.",
-            ),
+              "Without this, the notification only says it's a reminder "
+              "from Aura. Details may be visible on watches or other "
+              "connected devices.",
+            )),
             value: _mostrarDetalles,
             onChanged:
                 _notificaciones ? (val) => _cambiarMostrarDetalles(val) : null,
           ),
 
           ListTile(
-            title: const Text("Hora del recordatorio"),
+            title: Text(tr("Hora del recordatorio", "Reminder time")),
             subtitle: Text(
               '${_horaRecordatorio.toString().padLeft(2, '0')}:'
               '${_minutoRecordatorio.toString().padLeft(2, '0')}',
@@ -563,17 +601,19 @@ class _SettingsScreenState extends State<SettingsScreen>
           const Divider(),
           const SizedBox(height: 20),
 
-          const Text(
-            "Privacidad",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            tr("Privacidad", "Privacy"),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           SwitchListTile(
-            title: const Text("Ocultar Aura en Recientes"),
-            subtitle: const Text(
+            title: Text(tr("Ocultar Aura en Recientes", "Hide Aura in Recents")),
+            subtitle: Text(tr(
               "La vista previa de Aura en Recientes sale en blanco y no se "
               "pueden hacer capturas de pantalla de la app.",
-            ),
+              "Aura's preview in Recents is blank, and screenshots of the "
+              "app are blocked.",
+            )),
             value: _ajustesTelefono?.ocultarEnRecientes ?? true,
             onChanged:
                 _ajustesTelefono != null ? _cambiarOcultarEnRecientes : null,
@@ -583,9 +623,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           const Divider(),
           const SizedBox(height: 20),
 
-          const Text(
-            "Tus datos",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            tr("Tus datos", "Your data"),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           BackupSection(
@@ -605,7 +645,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               key: const Key('borrar_todos_los_datos'),
               onPressed: _confirmarYBorrarDatos,
               icon: const Icon(Icons.delete_forever),
-              label: const Text("Borrar todos los datos"),
+              label: Text(tr("Borrar todos los datos", "Delete all data")),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
@@ -619,15 +659,15 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text("Política de privacidad"),
+            title: Text(tr("Política de privacidad", "Privacy policy")),
             trailing: const Icon(Icons.open_in_new),
             onTap: _abrirPoliticaDePrivacidad,
           ),
           const SizedBox(height: 10),
-          const Text(
-            "Versión $appVersionName • Aura",
+          Text(
+            tr("Versión $appVersionName • Aura", "Version $appVersionName • Aura"),
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),

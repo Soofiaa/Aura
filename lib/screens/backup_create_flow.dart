@@ -9,6 +9,7 @@ import '../data/backup/backup_file_gateway.dart';
 import '../data/backup/backup_reminder_store.dart';
 import '../data/backup/backup_service.dart';
 import '../utils/app_snackbar.dart';
+import '../utils/aura_localizations.dart';
 import '../utils/day_key.dart';
 import '../widgets/protect_backup_dialog.dart';
 
@@ -63,24 +64,28 @@ class CreateBackupFlow {
     final accion = await showDialog<_AccionRespaldo>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Tu respaldo tiene datos de salud'),
-        content: const Text(
-          'Incluye tus días de período, síntomas, ánimo y notas. Guárdalo en '
+        title: Text(tr('Tu respaldo tiene datos de salud',
+            'Your backup contains health data')),
+        content: Text(
+          tr('Incluye tus días de período, síntomas, ánimo y notas. Guárdalo en '
           'un lugar que solo tú uses. Si lo compartes con una app, esa app '
           'tendrá una copia.',
+          'It includes your period days, symptoms, mood and notes. Keep it '
+          'somewhere only you use. If you share it with an app, that app '
+          'will have a copy.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar', 'Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, _AccionRespaldo.guardar),
-            child: const Text('Guardar en el teléfono'),
+            child: Text(tr('Guardar en el teléfono', 'Save to phone')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, _AccionRespaldo.compartir),
-            child: const Text('Compartir'),
+            child: Text(tr('Compartir', 'Share')),
           ),
         ],
       ),
@@ -133,8 +138,10 @@ class CreateBackupFlow {
     } catch (_) {
       avisar(
         accion == _AccionRespaldo.guardar
-            ? 'No se pudo guardar el respaldo.'
-            : 'No se pudo compartir el respaldo.',
+            ? tr('No se pudo guardar el respaldo.',
+                "Couldn't save the backup.")
+            : tr('No se pudo compartir el respaldo.',
+                "Couldn't share the backup."),
       );
     } finally {
       busy.value = false;
@@ -146,15 +153,17 @@ class CreateBackupFlow {
   Future<File> _protegiendo(BuildContext context, String password) =>
       showBlockingProgress(
         context,
-        'Protegiendo tu respaldo…',
+        tr('Protegiendo tu respaldo…', 'Protecting your backup…'),
         () => service.writeExportFile(password: password),
-        detalle: 'Esto puede tardar unos segundos.',
+        detalle: tr('Esto puede tardar unos segundos.',
+            'This may take a few seconds.'),
       );
 
   // Con contrasena, el aviso final recuerda que no hay recuperacion
   // (HU-06b). Sin contrasena, los mensajes de siempre.
-  static const _recuerda =
-      'Recuerda tu contraseña: Aura no puede recuperarla.';
+  static String get _recuerda => tr(
+      'Recuerda tu contraseña: Aura no puede recuperarla.',
+      "Remember your password: Aura can't recover it.");
 
   Future<void> _compartir(File file, void Function(String) avisar,
       {required bool protegido}) async {
@@ -166,8 +175,10 @@ class CreateBackupFlow {
     // exito real.
     if (resultado == BackupShareResult.success) await _anotarRespaldo();
     avisar(protegido
-        ? 'Respaldo protegido listo. $_recuerda'
-        : 'Respaldo listo. Guárdalo en un lugar seguro.');
+        ? tr('Respaldo protegido listo. $_recuerda',
+            'Protected backup ready. $_recuerda')
+        : tr('Respaldo listo. Guárdalo en un lugar seguro.',
+            'Backup ready. Keep it somewhere safe.'));
   }
 
   Future<void> _despuesDeGuardar(bool guardado, void Function(String) avisar,
@@ -176,8 +187,9 @@ class CreateBackupFlow {
     if (!guardado) return;
     await _anotarRespaldo();
     avisar(protegido
-        ? 'Respaldo protegido guardado. $_recuerda'
-        : 'Respaldo guardado.');
+        ? tr('Respaldo protegido guardado. $_recuerda',
+            'Protected backup saved. $_recuerda')
+        : tr('Respaldo guardado.', 'Backup saved.'));
     // Ya hay una copia completa fuera de la app: la copia previa a la
     // migracion v4 deja de hacer falta. Si no se puede borrar, se
     // reintenta a los 30 dias o al borrar los datos.
@@ -251,20 +263,25 @@ Future<T> showBlockingProgress<T>(
 String backupNotCreatedMessage(BackupWriteException e) {
   switch (e.cause) {
     case BackupWriteCause.dateOutOfRange:
-      return 'No se pudo crear el respaldo: hay un día con una fecha fuera '
-          'de rango (${backupDayLabel(e.outOfRangeDate)}).';
+      return tr('No se pudo crear el respaldo: hay un día con una fecha fuera '
+          'de rango (${backupDayLabel(e.outOfRangeDate)}).',
+          "Couldn't create the backup: one day has an out-of-range date "
+          '(${backupDayLabel(e.outOfRangeDate)}).');
     case BackupWriteCause.invalidData:
-      return 'No se pudo crear el respaldo: hay datos guardados que no son '
-          'válidos.';
+      return tr('No se pudo crear el respaldo: hay datos guardados que no son '
+          'válidos.',
+          "Couldn't create the backup: some saved data isn't valid.");
     case BackupWriteCause.fileSystem:
-      return 'No se pudo crear el respaldo.';
+      return tr('No se pudo crear el respaldo.',
+          "Couldn't create the backup.");
   }
 }
 
 /// Formato de fechas de los mensajes del respaldo: "4 de octubre de 2026".
-final DateFormat backupDateFormat = DateFormat("d 'de' MMMM 'de' y", 'es');
+DateFormat get backupDateFormat => DateFormat(
+    auraIsEnglish ? 'MMMM d, y' : "d 'de' MMMM 'de' y", auraLanguage);
 
 String backupDayLabel(String? dayKey) {
-  if (dayKey == null) return 'fecha desconocida';
+  if (dayKey == null) return tr('fecha desconocida', 'unknown date');
   return backupDateFormat.format(DayKey.toUtcAnchor(dayKey));
 }

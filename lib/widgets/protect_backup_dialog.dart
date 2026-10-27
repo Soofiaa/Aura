@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/password_strength.dart';
+import '../utils/aura_localizations.dart';
 
 /// Lo que eligio la usuaria en "Proteger tu respaldo" (HU-06b, CP3).
 /// null (dialogo cerrado con "Cancelar") = no exportar nada.
@@ -143,19 +144,23 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('¿Continuar sin contraseña?'),
-        content: const Text(
+        title: Text(tr('¿Continuar sin contraseña?',
+            'Continue without a password?')),
+        content: Text(tr(
           'El archivo contendrá tus datos sin cifrar. Cualquiera que lo '
           'obtenga podrá leerlos.',
-        ),
+          'The file will contain your data unencrypted. Anyone who gets '
+          'it will be able to read it.',
+        )),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Volver'),
+            child: Text(tr('Volver', 'Go back')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continuar sin contraseña'),
+            child: Text(tr('Continuar sin contraseña',
+                'Continue without a password')),
           ),
         ],
       ),
@@ -185,19 +190,27 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
       // scrollable: titulo y contenido se desplazan juntos y las acciones
       // quedan fijas; asi caben con el teclado abierto (360x640).
       scrollable: true,
-      title: Text(esDrive ? 'Proteger respaldos en Drive' : 'Proteger tu respaldo'),
+      title: Text(esDrive
+          ? tr('Proteger respaldos en Drive', 'Protect Google Drive backups')
+          : tr('Proteger tu respaldo', 'Protect your backup')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             esDrive
-                ? 'Elige la contraseña con la que Aura cifrará tus respaldos '
+                ? tr('Elige la contraseña con la que Aura cifrará tus respaldos '
                     'en Google Drive. Se te pedirá solo una vez: en este '
                     'teléfono quedará guardada en el Keystore de Android y '
-                    'no se vuelve a preguntar.'
-                : 'Elige una contraseña para cifrar el archivo. Sin ella, '
+                    'no se vuelve a preguntar.',
+                    'Choose the password Aura will use to encrypt your backups '
+                    'on Google Drive. You\'ll only be asked once: it will be '
+                    'stored in the Android Keystore on this phone and you '
+                    'won\'t be asked again.')
+                : tr('Elige una contraseña para cifrar el archivo. Sin ella, '
                     'nadie podrá leerlo aunque lo obtenga.',
+                    'Choose a password to encrypt the file. Without it, '
+                    'no one can read it, even if they get it.'),
           ),
           const SizedBox(height: 12),
           Container(
@@ -220,12 +233,19 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
                 Expanded(
                   child: Text(
                     esDrive
-                        ? 'Aura no guarda tu contraseña y no puede '
+                        ? tr('Aura no guarda tu contraseña y no puede '
                             'recuperarla. Si la olvidas, no podrás abrir '
-                            'tus respaldos de Drive ni en otro teléfono.'
-                        : 'Aura no guarda tu contraseña y no puede '
+                            'tus respaldos de Drive ni en otro teléfono.',
+                            'Aura doesn\'t store your password and can\'t '
+                            'recover it. If you forget it, you won\'t be able '
+                            'to open your Google Drive backups, not even on '
+                            'another phone.')
+                        : tr('Aura no guarda tu contraseña y no puede '
                             'recuperarla. Si la olvidas, no podrás abrir '
                             'este respaldo.',
+                            'Aura doesn\'t store your password and can\'t '
+                            'recover it. If you forget it, you won\'t be able '
+                            'to open this backup.'),
                     style: TextStyle(
                       color: theme.colorScheme.onErrorContainer,
                       fontWeight: FontWeight.bold,
@@ -249,16 +269,21 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
             onSubmitted: (_) => _repeatFocus.requestFocus(),
             decoration:
                 _decoration(
-                  'Contraseña',
-                  helper:
+                  tr('Contraseña', 'Password'),
+                  helper: tr(
                       'Mínimo 10 caracteres. Una frase con varias '
                       'palabras es fácil de recordar y difícil de adivinar.',
-                  error: showLengthError ? 'Usa al menos 10 caracteres.' : null,
+                      'At least 10 characters. A phrase with several '
+                      'words is easy to remember and hard to guess.'),
+                  error: showLengthError
+                      ? tr('Usa al menos 10 caracteres.',
+                          'Use at least 10 characters.')
+                      : null,
                 ).copyWith(
                   suffixIcon: IconButton(
                     tooltip: _visible
-                        ? 'Ocultar contraseña'
-                        : 'Mostrar contraseña',
+                        ? tr('Ocultar contraseña', 'Hide password')
+                        : tr('Mostrar contraseña', 'Show password'),
                     icon: Icon(
                       _visible ? Icons.visibility_off : Icons.visibility,
                     ),
@@ -281,26 +306,32 @@ class _ProtectBackupDialogState extends State<ProtectBackupDialog> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _continue(),
             decoration: _decoration(
-              'Repite la contraseña',
-              error: showMatchError ? 'Las contraseñas no coinciden.' : null,
+              tr('Repite la contraseña', 'Repeat the password'),
+              error: showMatchError
+                  ? tr('Las contraseñas no coinciden.',
+                      'The passwords don\'t match.')
+                  : null,
             ),
           ),
           const SizedBox(height: 8),
           if (!esDrive)
             TextButton(
               onPressed: _withoutPassword,
-              child: const Text('Continuar sin contraseña'),
+              child: Text(tr('Continuar sin contraseña',
+                  'Continue without a password')),
             ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar', 'Cancel')),
         ),
         FilledButton(
           onPressed: _valid ? _continue : null,
-          child: Text(esDrive ? 'Activar respaldo' : 'Proteger y continuar'),
+          child: Text(esDrive
+              ? tr('Activar respaldo', 'Turn on backup')
+              : tr('Proteger y continuar', 'Protect and continue')),
         ),
       ],
     );
@@ -329,7 +360,8 @@ class _StrengthIndicator extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: 'Fortaleza: ${strength.label}. Es solo una orientación.',
+      label: tr('Fortaleza: ${strength.label}. Es solo una orientación.',
+          'Strength: ${strength.label}. This is only a guide.'),
       child: ExcludeSemantics(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,12 +375,13 @@ class _StrengthIndicator extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Fortaleza: ${strength.label}',
+              tr('Fortaleza: ${strength.label}',
+                  'Strength: ${strength.label}'),
               key: const ValueKey('protect-strength'),
               style: TextStyle(color: scheme.onSurface),
             ),
             Text(
-              'Es solo una orientación.',
+              tr('Es solo una orientación.', 'This is only a guide.'),
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
