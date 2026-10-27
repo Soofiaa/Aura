@@ -75,6 +75,10 @@ class PredictionConfig {
   /// ventana ni un periodo actual cerrado (P-1).
   final int typicalPeriodLengthDays;
 
+  /// Embarazos registrados (modo embarazo): los ciclos que se cruzan con
+  /// uno no entran en los promedios.
+  final List<PregnancySpan> pregnancies;
+
   const PredictionConfig({
     this.maxCyclesConsidered = 6,
     this.minValidCycleLengthDays = 15,
@@ -92,7 +96,32 @@ class PredictionConfig {
     this.highStdDevRelativeRatio = 0.18,
     this.regularStdDevRelativeRatio = 0.10,
     this.typicalPeriodLengthDays = 5,
+    this.pregnancies = const [],
   });
+}
+
+/// Un embarazo: inicio (ultima regla) y fin, null si sigue activo. Las
+/// listas van ordenadas por inicio.
+typedef PregnancySpan = ({String start, String? end});
+
+bool _overlapsPregnancy(CycleSummary c, List<PregnancySpan> pregnancies) {
+  final cycleEnd = DayKey.addDays(c.startDate, c.cycleLengthDays! - 1);
+  return pregnancies.any((p) =>
+      !DayKey.isBefore(cycleEnd, p.start) &&
+      (p.end == null || !DayKey.isBefore(p.end!, c.startDate)));
+}
+
+/// Sin prediccion, ventana fertil ni avisos del ciclo: hay un embarazo
+/// activo, o el ultimo termino y todavia no se registra un periodo
+/// despues de su fin.
+bool predictionsPausedByPregnancy({
+  required List<CycleSummary> cycles,
+  required List<PregnancySpan> pregnancies,
+}) {
+  if (pregnancies.isEmpty) return false;
+  final end = pregnancies.last.end;
+  if (end == null) return true;
+  return !cycles.any((c) => DayKey.isBefore(end, c.startDate));
 }
 
 enum CyclePhase { menstrual, folicular, ovulatoria, lutea }
@@ -299,7 +328,12 @@ _WeightedStats _weightedMeanAndStdDev(List<int> values) {
   List<CycleSummary> sorted,
   PredictionConfig config,
 ) {
-  final completeCycles = sorted.where((c) => c.cycleLengthDays != null).toList();
+  // Un ciclo con embarazo no es ni valido ni "excluido": no es un ciclo.
+  final completeCycles = sorted
+      .where((c) =>
+          c.cycleLengthDays != null &&
+          !_overlapsPregnancy(c, config.pregnancies))
+      .toList();
   final validCycles = completeCycles
       .where((c) =>
           c.cycleLengthDays! >= config.minValidCycleLengthDays &&

@@ -1114,4 +1114,46 @@ void main() {
       expect(CycleRegularity.veryVariable.label, 'Muy variable');
     });
   });
+
+  group('modo embarazo', () {
+    // 28, 28, 40 (con una perdida temprana adentro), 28.
+    final cycles = [
+      _cycle('2025-01-01', 5, 28),
+      _cycle('2025-01-29', 5, 28),
+      _cycle('2025-02-26', 5, 40),
+      _cycle('2025-04-07', 5, 28),
+      _cycle('2025-05-05', 5, null),
+    ];
+
+    test('el ciclo que se cruza con un embarazo no entra en el promedio ni '
+        'cuenta como excluido', () {
+      const config = PredictionConfig(
+          pregnancies: [(start: '2025-02-26', end: '2025-03-20')]);
+      final e = estimateCycleLength(cycles: cycles, config: config);
+      expect(e.consideredLengthsDays, [28, 28, 28]);
+      expect(e.excludedCount, 0);
+      expect(
+          estimateCycleLength(cycles: cycles).consideredLengthsDays, hasLength(4));
+    });
+
+    test('pausa con uno activo, o terminado sin un periodo despues del fin',
+        () {
+      expect(predictionsPausedByPregnancy(cycles: cycles, pregnancies: []),
+          isFalse);
+      expect(
+          predictionsPausedByPregnancy(
+              cycles: cycles, pregnancies: [(start: '2025-05-05', end: null)]),
+          isTrue);
+      expect(
+          predictionsPausedByPregnancy(cycles: cycles, pregnancies: [
+            (start: '2025-04-07', end: '2025-05-05'),
+          ]),
+          isTrue);
+      expect(
+          predictionsPausedByPregnancy(cycles: cycles, pregnancies: [
+            (start: '2025-04-07', end: '2025-05-04'),
+          ]),
+          isFalse);
+    });
+  });
 }

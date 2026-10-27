@@ -170,6 +170,17 @@ void main() {
       );
     }
 
+    testCalendar('modo embarazo activo: sin ventana ni ovulacion',
+        (tester) async {
+      await seedPeriods(altaJulio);
+      await repo.setShowFertileWindow(true);
+      await repo.startPregnancy('2026-07-01');
+      await pumpCalendar(tester, '2026-07-07');
+
+      sinMarcas();
+      sinLeyendaFertil();
+    });
+
     testCalendar(
       'ventana que cruza de julio a agosto: al pasar de mes aparecen '
       'las marcas que caen en agosto',

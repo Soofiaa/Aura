@@ -426,7 +426,7 @@ class CycleRepository {
   Stream<PredictionInputs> watchPredictionInputs() {
     return _db
         .customSelect('SELECT 1',
-            readsFrom: {_db.dailyLogs, _db.appSettings})
+            readsFrom: {_db.dailyLogs, _db.appSettings, _db.pregnancies})
         .watch()
         .asyncMap((_) => getPredictionInputs());
   }
@@ -437,11 +437,17 @@ class CycleRepository {
       final settings = await (_db.select(_db.appSettings)
             ..where((t) => t.id.equals(0)))
           .getSingleOrNull();
+      final pregnancies = await (_db.select(_db.pregnancies)
+            ..orderBy([(t) => OrderingTerm.asc(t.startDate)]))
+          .get();
       return PredictionInputs(
         cycles: _deriveFromRows(rows),
         typicalPeriodLengthDays:
             settings?.typicalPeriodLength ?? defaultTypicalPeriodLength,
         showFertileWindow: settings?.showFertileWindow ?? true,
+        pregnancies: [
+          for (final p in pregnancies) (start: p.startDate, end: p.endDate),
+        ],
       );
     });
   }
@@ -885,14 +891,25 @@ class PredictionInputs {
   /// Calendario (visibleFertileMarks).
   final bool showFertileWindow;
 
+  /// Embarazos ordenados por inicio; el activo, si hay, es el ultimo.
+  final List<PregnancySpan> pregnancies;
+
   const PredictionInputs({
     required this.cycles,
     required this.typicalPeriodLengthDays,
     this.showFertileWindow = true,
+    this.pregnancies = const [],
   });
 
-  PredictionConfig get config =>
-      PredictionConfig(typicalPeriodLengthDays: typicalPeriodLengthDays);
+  PredictionConfig get config => PredictionConfig(
+      typicalPeriodLengthDays: typicalPeriodLengthDays,
+      pregnancies: pregnancies);
+
+  bool get isPregnant => pregnancies.isNotEmpty && pregnancies.last.end == null;
+
+  /// Ver [predictionsPausedByPregnancy].
+  bool get predictionsPaused =>
+      predictionsPausedByPregnancy(cycles: cycles, pregnancies: pregnancies);
 }
 
 /// Foto de varios dias de daily_logs para "Deshacer" (ver

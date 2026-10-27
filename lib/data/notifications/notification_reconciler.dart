@@ -124,11 +124,13 @@ class NotificationReconciler {
     final inputs = _inputs!;
     final today = DayKey.fromDate(_clock());
     _lastPlannedDay = today;
-    final prediction = predictCycle(
-      cycles: inputs.cycles,
-      today: today,
-      config: inputs.config,
-    );
+    final prediction = inputs.predictionsPaused
+        ? null
+        : predictCycle(
+            cycles: inputs.cycles,
+            today: today,
+            config: inputs.config,
+          );
     return planNotifications(
       prediction: prediction,
       settings: _settings!.copyWith(

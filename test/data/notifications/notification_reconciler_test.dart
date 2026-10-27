@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/device_settings_store.dart';
+import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/notifications/notification_reconciler.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/notification_planner.dart';
@@ -59,6 +60,33 @@ void main() {
           .any((n) => n.kind == NotificationKind.periodReminder),
       isTrue,
     );
+
+    await reconciler.dispose();
+    await db.close();
+  });
+
+  test('modo embarazo: el plan queda vacio y vuelve al terminar si hay un '
+      'periodo despues del fin', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
+    final repo = CycleRepository(db);
+    final scheduler = FakeNotificationScheduler();
+    final reconciler = NotificationReconciler(
+      repo,
+      scheduler,
+      clock: () => DateTime(2026, 4, 1, 8),
+    );
+
+    reconciler.start();
+    await repo.setNotificationsEnabled(true);
+    await repo.startPregnancy('2026-03-01');
+    await repo.markPeriodDay('2026-03-20');
+    await Future<void>.delayed(Duration.zero);
+    expect(scheduler.lastReconciledPlan, isEmpty);
+
+    await repo.endPregnancy('2026-03-05', PregnancyOutcome.perdida);
+    await Future<void>.delayed(Duration.zero);
+    await reconciler.idle;
+    expect(scheduler.lastReconciledPlan, isNotEmpty);
 
     await reconciler.dispose();
     await db.close();

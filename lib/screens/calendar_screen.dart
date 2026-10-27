@@ -113,7 +113,9 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// Dias estimados del periodo abierto mas reciente (E-1), con la misma
   /// duracion estimada que Inicio y la hoja (P-1). Vacio si no hay
   /// periodo actual abierto. Se recalculan en cada build: no se guardan.
-  List<String> get _estimatedDays => estimatedPeriodDays(
+  List<String> get _estimatedDays => _inputs?.predictionsPaused ?? false
+      ? const []
+      : estimatedPeriodDays(
         cycles: _cycles,
         typicalPeriodLengthDays: estimatePeriodLength(
           cycles: _cycles,
@@ -128,7 +130,9 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// Se calculan una vez por build, no por celda.
   ({Set<String> ventana, Set<String> ovulacion}) _fertileDays() {
     final inputs = _inputs;
-    if (inputs == null) return (ventana: const {}, ovulacion: const {});
+    if (inputs == null || inputs.predictionsPaused) {
+      return (ventana: const {}, ovulacion: const {});
+    }
     final marks = visibleFertileMarks(
       predictCycle(cycles: inputs.cycles, today: _today, config: inputs.config),
       showFertileWindow: inputs.showFertileWindow,
