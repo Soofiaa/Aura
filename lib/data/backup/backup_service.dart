@@ -13,6 +13,7 @@ import '../../utils/app_version.dart';
 import '../../utils/aura_localizations.dart';
 import '../../utils/day_key.dart';
 import '../device_settings_store.dart';
+import '../doctor_report.dart' show doctorReportDirName;
 import '../repositories/cycle_repository.dart';
 import 'backup_reminder_store.dart';
 import 'pre_migration_copy.dart' as copy;
@@ -368,11 +369,13 @@ class BackupService {
 
   /// Carpetas del directorio temporal que pueden contener una copia de un
   /// respaldo: la nuestra, la que share_plus usa para pasarle el archivo
-  /// a la app de destino (ver su FileProvider) y la de file_picker.
+  /// a la app de destino (ver su FileProvider) y la de file_picker. Mas la
+  /// del resumen en PDF, que tambien tiene datos de salud.
   static const List<String> temporaryDirNames = [
     exportDirName,
     'share_plus',
     pickerDirName,
+    doctorReportDirName,
   ];
 
   /// Respaldo de los datos actuales como JSON. Se valida a si mismo antes

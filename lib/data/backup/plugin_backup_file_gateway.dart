@@ -12,9 +12,10 @@ class PluginBackupFileGateway implements BackupFileGateway {
   const PluginBackupFileGateway();
 
   @override
-  Future<BackupShareResult> shareFile(File file) async {
+  Future<BackupShareResult> shareFile(File file,
+      {String mimeType = 'application/json'}) async {
     final result = await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path, mimeType: 'application/json')],
+      files: [XFile(file.path, mimeType: mimeType)],
     ));
     return switch (result.status) {
       ShareResultStatus.success => BackupShareResult.success,

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../data/backup/backup_file_gateway.dart';
+import '../data/doctor_report.dart';
 import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/cycle_predictor.dart';
 import '../domain/symptom_ranking.dart';
+import '../utils/app_snackbar.dart';
 import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
 
@@ -25,12 +28,37 @@ class _StatsScreenState extends State<StatsScreen> {
   late final Stream<PredictionInputs> _inputsStream =
       cycleRepository.watchPredictionInputs();
 
+  bool _creandoPdf = false;
+
+  Future<void> _compartirResumen() async {
+    setState(() => _creandoPdf = true);
+    try {
+      await backupFileGateway.shareFile(await writeDoctorReport(),
+          mimeType: 'application/pdf');
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(context,
+            tr('No se pudo crear el resumen.', 'Could not create the summary.'));
+      }
+    } finally {
+      if (mounted) setState(() => _creandoPdf = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr("Estadísticas", "Stats")),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: tr('Resumen en PDF para tu consulta',
+                'PDF summary for your doctor'),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: _creandoPdf ? null : _compartirResumen,
+          ),
+        ],
       ),
       body: StreamBuilder<StatsSnapshot>(
         stream: _statsStream,

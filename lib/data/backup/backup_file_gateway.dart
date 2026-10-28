@@ -24,7 +24,8 @@ abstract class BackupFileGateway {
   /// paso (ver [BackupShareResult]). No borra el archivo al volver: la
   /// app de destino puede seguir leyendolo (ver
   /// BackupService.cleanTemporaryFiles).
-  Future<BackupShareResult> shareFile(File file);
+  Future<BackupShareResult> shareFile(File file,
+      {String mimeType = 'application/json'});
 
   /// Abre el "Guardar como" del sistema y escribe [bytes] donde la
   /// usuaria elija. Devuelve false si cancela; lanza si la escritura

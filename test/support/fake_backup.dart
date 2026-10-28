@@ -38,7 +38,8 @@ class FakeBackupFileGateway implements BackupFileGateway {
   }
 
   @override
-  Future<BackupShareResult> shareFile(File file) async {
+  Future<BackupShareResult> shareFile(File file,
+      {String mimeType = 'application/json'}) async {
     if (shareError != null) throw shareError!;
     sharedFiles.add(file);
     return shareResult;

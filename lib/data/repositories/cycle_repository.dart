@@ -822,6 +822,11 @@ class CycleRepository {
             ..orderBy([(t) => OrderingTerm.asc(t.startDate)]))
           .watch();
 
+  /// Lo mismo que [watchPregnancies], una vez.
+  Future<List<PregnancyRow>> getPregnancies() => (_db.select(_db.pregnancies)
+        ..orderBy([(t) => OrderingTerm.asc(t.startDate)]))
+      .get();
+
   /// Activa el modo embarazo desde [startDate] (fecha de la ultima regla).
   /// Lanza [StateError] si ya hay uno activo y [ArgumentError] si empieza
   /// antes de que termine el anterior (mismas reglas que el respaldo).

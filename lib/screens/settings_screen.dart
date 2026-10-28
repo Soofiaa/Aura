@@ -251,22 +251,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         .copyWith(recordatorioDiario: value));
   }
 
-  static String _nombreMetodo(ContraceptiveMethod m) => switch (m) {
-        ContraceptiveMethod.pill =>
-          tr("Pastilla (todos los días)", "Pill (every day)"),
-        ContraceptiveMethod.patch => tr(
-            "Parche (semanal, con semana de descanso)",
-            "Patch (weekly, with a patch-free week)"),
-        ContraceptiveMethod.ring => tr(
-            "Anillo (3 semanas y 1 de descanso)", "Ring (3 weeks in, 1 out)"),
-        ContraceptiveMethod.monthlyInjection => tr(
-            "Inyección mensual (cada 30 días)",
-            "Monthly injection (every 30 days)"),
-        ContraceptiveMethod.quarterlyInjection => tr(
-            "Inyección trimestral (cada 13 semanas)",
-            "3-month injection (every 13 weeks)"),
-      };
-
   /// Metodo, el dia de inicio (salvo la pastilla) y la hora; o apagarlo.
   Future<void> _elegirAnticonceptivo() async {
     final actual = _ajustesTelefono?.anticonceptivo;
@@ -286,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     value: null, title: Text(tr("Apagado", "Off"))),
                 for (final m in ContraceptiveMethod.values)
                   RadioListTile<ContraceptiveMethod?>(
-                      value: m, title: Text(_nombreMetodo(m))),
+                      value: m, title: Text(m.label)),
               ],
             ),
           ),
@@ -907,7 +891,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 "Birth control reminder")),
             subtitle: Text(switch (_ajustesTelefono?.anticonceptivo) {
               null => tr("Apagado", "Off"),
-              final a => '${_nombreMetodo(a.method)} · '
+              final a => '${a.method.label} · '
                   '${a.hour.toString().padLeft(2, '0')}:'
                   '${a.minute.toString().padLeft(2, '0')}',
             }),
