@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="aura_widget_background">#FF23272B</color>
+    <color name="aura_widget_text">#FFE6E6E6</color>
+    <color name="aura_widget_text_secondary">#FFADB3B8</color>
+</resources>

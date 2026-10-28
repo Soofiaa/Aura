@@ -53,6 +53,10 @@ class FakeDeviceSettingsStore extends DeviceSettingsStore {
       _cambiar(_state.copyWith(anticonceptivo: () => value));
 
   @override
+  Future<DeviceSettings> setWidgetDiscreto(bool value) async =>
+      _cambiar(_state.copyWith(widgetDiscreto: value));
+
+  @override
   Future<void> delete() async => _cambiar(const DeviceSettings());
 
   DeviceSettings _cambiar(DeviceSettings nuevo) {
@@ -76,4 +80,7 @@ class FakeAndroidSystem implements AndroidSystem {
     openNotificationSettingsCount++;
     return true;
   }
+
+  @override
+  Future<void> updateHomeWidget(String payload) async {}
 }

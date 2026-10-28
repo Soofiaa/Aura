@@ -9,6 +9,8 @@ import 'data/backup/backup_file_gateway.dart';
 import 'data/backup/backup_service.dart';
 import 'data/backup/plugin_backup_file_gateway.dart';
 import 'data/device_settings_store.dart';
+import 'data/home_widget_sync.dart';
+import 'data/repositories/cycle_repository.dart';
 import 'data/notifications/notification_reconciler.dart';
 import 'utils/android_system.dart';
 import 'utils/aura_localizations.dart';
@@ -55,6 +57,11 @@ Future<void> main() async {
     // Suscripcion viva por el resto de la vida de la app: no se dispose()
     // nunca aca a proposito, igual que cycleRepository.
     notificationReconciler.start();
+    startHomeWidgetSync(
+      inputs: cycleRepository.watchPredictionInputs(),
+      settings: deviceSettingsStore.watch(),
+      system: androidSystem,
+    );
 
     // Las copias temporales de un respaldo exportado se borran al abrir la
     // app (no al volver de la hoja de compartir: la app de destino puede

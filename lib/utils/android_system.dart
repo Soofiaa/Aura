@@ -12,6 +12,10 @@ abstract class AndroidSystem {
   /// Abre los ajustes de notificaciones de Aura en Android. false si no se
   /// pudo.
   Future<bool> openNotificationSettings();
+
+  /// Guarda los textos del widget de la pantalla de inicio (ver
+  /// home_widget_sync.dart) y lo redibuja.
+  Future<void> updateHomeWidget(String payload);
 }
 
 class MethodChannelAndroidSystem implements AndroidSystem {
@@ -39,6 +43,17 @@ class MethodChannelAndroidSystem implements AndroidSystem {
       return false;
     } on PlatformException {
       return false;
+    }
+  }
+
+  @override
+  Future<void> updateHomeWidget(String payload) async {
+    try {
+      await _channel.invokeMethod<void>('updateHomeWidget', payload);
+    } on MissingPluginException {
+      // Fuera de Android: no hay widget.
+    } on PlatformException {
+      // El widget queda con los textos anteriores.
     }
   }
 }

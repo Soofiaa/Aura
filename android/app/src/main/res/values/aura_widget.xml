@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mismos colores que las tarjetas de la app (lib/utils/colors.dart). -->
+    <color name="aura_widget_background">#FFFFFFFF</color>
+    <color name="aura_widget_text">#FF333333</color>
+    <color name="aura_widget_text_secondary">#FF717171</color>
+    <string name="aura_widget_description">Tu próximo período</string>
+</resources>

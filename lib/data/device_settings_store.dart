@@ -18,6 +18,7 @@ class DeviceSettings {
     this.tema = ThemeMode.system,
     this.recordatorioDiario = false,
     this.anticonceptivo,
+    this.widgetDiscreto = false,
   });
 
   /// "Ocultar Aura en Recientes" (FLAG_SECURE): la miniatura de la app en
@@ -39,13 +40,17 @@ class DeviceSettings {
   /// Recordatorio de anticonceptivo; null si esta apagado.
   final ContraceptiveReminder? anticonceptivo;
 
+  /// El widget de la pantalla de inicio no muestra datos, solo "Aura".
+  final bool widgetDiscreto;
+
   DeviceSettings copyWith(
           {bool? ocultarEnRecientes,
           bool? avisoAtraso,
           ThemeMode? tema,
           bool? recordatorioDiario,
           // Funcion para poder apagarlo (null).
-          ContraceptiveReminder? Function()? anticonceptivo}) =>
+          ContraceptiveReminder? Function()? anticonceptivo,
+          bool? widgetDiscreto}) =>
       DeviceSettings(
         ocultarEnRecientes: ocultarEnRecientes ?? this.ocultarEnRecientes,
         avisoAtraso: avisoAtraso ?? this.avisoAtraso,
@@ -53,6 +58,7 @@ class DeviceSettings {
         recordatorioDiario: recordatorioDiario ?? this.recordatorioDiario,
         anticonceptivo:
             anticonceptivo != null ? anticonceptivo() : this.anticonceptivo,
+        widgetDiscreto: widgetDiscreto ?? this.widgetDiscreto,
       );
 
   Map<String, Object?> toJson() => {
@@ -62,6 +68,7 @@ class DeviceSettings {
         'tema': tema.name,
         'recordatorioDiario': recordatorioDiario,
         'anticonceptivo': anticonceptivo?.toJson(),
+        'widgetDiscreto': widgetDiscreto,
       };
 
   /// null si [raw] no es un estado valido de la version actual: quien lo
@@ -84,7 +91,9 @@ class DeviceSettings {
         // Sin el campo (archivos anteriores): apagado.
         recordatorioDiario: raw['recordatorioDiario'] == true,
         // Sin el campo o invalido: apagado.
-        anticonceptivo: ContraceptiveReminder.fromJson(raw['anticonceptivo']));
+        anticonceptivo: ContraceptiveReminder.fromJson(raw['anticonceptivo']),
+        // Sin el campo (archivos anteriores): con datos.
+        widgetDiscreto: raw['widgetDiscreto'] == true);
   }
 
   @override
@@ -94,18 +103,19 @@ class DeviceSettings {
       other.avisoAtraso == avisoAtraso &&
       other.tema == tema &&
       other.recordatorioDiario == recordatorioDiario &&
-      other.anticonceptivo == anticonceptivo;
+      other.anticonceptivo == anticonceptivo &&
+      other.widgetDiscreto == widgetDiscreto;
 
   @override
   int get hashCode => 
       Object.hash(ocultarEnRecientes, avisoAtraso, tema, recordatorioDiario,
-          anticonceptivo);
+          anticonceptivo, widgetDiscreto);
 
   @override
   String toString() => 'DeviceSettings(ocultarEnRecientes: '
       '$ocultarEnRecientes, avisoAtraso: $avisoAtraso, tema: $tema, '
       'recordatorioDiario: $recordatorioDiario, '
-      'anticonceptivo: $anticonceptivo)';
+      'anticonceptivo: $anticonceptivo, widgetDiscreto: $widgetDiscreto)';
 }
 
 /// Guarda [DeviceSettings] en un JSON pequeno en el almacenamiento privado
@@ -152,6 +162,9 @@ class DeviceSettingsStore {
 
   Future<DeviceSettings> setAnticonceptivo(ContraceptiveReminder? value) =>
       _actualizar((s) => s.copyWith(anticonceptivo: () => value));
+
+  Future<DeviceSettings> setWidgetDiscreto(bool value) =>
+      _actualizar((s) => s.copyWith(widgetDiscreto: value));
 
   /// "Borrar todos los datos": vuelve a los valores por defecto.
   Future<void> delete() => _enFila(() async {

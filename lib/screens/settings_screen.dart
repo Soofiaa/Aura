@@ -373,6 +373,16 @@ class _SettingsScreenState extends State<SettingsScreen>
         .copyWith(ocultarEnRecientes: value));
   }
 
+  /// main.dart (startHomeWidgetSync) escucha el mismo almacen.
+  Future<void> _cambiarWidgetDiscreto(bool value) async {
+    if (!await _guardar(() => _deviceSettings.setWidgetDiscreto(value))) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _ajustesTelefono = (_ajustesTelefono ?? const DeviceSettings())
+        .copyWith(widgetDiscreto: value));
+  }
+
   /// Solo guarda el ajuste: el NotificationReconciler (que escucha
   /// app_settings) quita el aviso fertil del plan y el scheduler lo
   /// cancela. No toca "Ventana fertil": al volver a encenderlo, ese
@@ -966,6 +976,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             value: _ajustesTelefono?.ocultarEnRecientes ?? true,
             onChanged:
                 _ajustesTelefono != null ? _cambiarOcultarEnRecientes : null,
+          ),
+          SwitchListTile(
+            title: Text(tr("Widget discreto", "Discreet widget")),
+            subtitle: Text(tr(
+              "El widget de Aura en la pantalla de inicio no muestra datos, "
+              "solo \"Aura\".",
+              "Aura's home screen widget shows no data, just \"Aura\".",
+            )),
+            value: _ajustesTelefono?.widgetDiscreto ?? false,
+            onChanged: _ajustesTelefono != null ? _cambiarWidgetDiscreto : null,
           ),
 
           const SizedBox(height: 20),

@@ -13,6 +13,11 @@ String dayMonthLabelWithYear(String dayKey, {required String today}) {
   return fullDateLabel(dayKey);
 }
 
+/// "4 oct", para donde no cabe la fecha larga (Estadisticas, el widget).
+String shortDayMonthLabel(String dayKey) =>
+    DateFormat(auraIsEnglish ? 'MMM d' : 'd MMM', auraLanguage)
+        .format(DateTime.parse(dayKey));
+
 /// "4 de octubre de 2025", siempre con el ano (la fecha del formulario
 /// "Registrar dia"). TalkBack la lee bien, a diferencia de "4/10/2025".
 String fullDateLabel(String dayKey) =>

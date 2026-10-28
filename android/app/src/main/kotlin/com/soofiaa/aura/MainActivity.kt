@@ -40,6 +40,10 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "openNotificationSettings" -> result.success(openNotificationSettings())
+                    "updateHomeWidget" -> {
+                        AuraWidgetProvider.save(this, call.arguments as String)
+                        result.success(null)
+                    }
                     // HU-09: la clave que protege los respaldos de Drive se
                     // guarda como texto cifrado por el Keystore de Android;
                     // la app nunca la escribe en claro.

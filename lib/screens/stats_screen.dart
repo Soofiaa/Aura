@@ -11,6 +11,7 @@ import '../domain/symptom_ranking.dart';
 import '../utils/app_snackbar.dart';
 import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
+import '../utils/date_labels.dart';
 import '../utils/day_key.dart';
 import '../utils/period_end_messages.dart' show dayMonthLabel;
 
@@ -401,10 +402,6 @@ class _CyclesSection extends StatelessWidget {
   static String _dias(int n) =>
       n == 1 ? tr("1 día", "1 day") : tr("$n días", "$n days");
 
-  static String _corta(String day) =>
-      DateFormat(auraIsEnglish ? 'MMM d' : 'd MMM', auraLanguage)
-          .format(DateTime.parse(day));
-
   @override
   Widget build(BuildContext context) {
     final config = inputs.config;
@@ -487,8 +484,8 @@ class _CyclesSection extends StatelessWidget {
       else if (prediccion case final ActivePrediction p)
         _StatCard(
           label: tr("Próximo período", "Next period"),
-          value: '${_corta(p.nextPeriodEarliestDate)} – '
-              '${_corta(p.nextPeriodLatestDate)}',
+          value: '${shortDayMonthLabel(p.nextPeriodEarliestDate)} – '
+              '${shortDayMonthLabel(p.nextPeriodLatestDate)}',
           note: tr("Estimación", "Estimate"),
           semanticLabel: '${tr("Próximo período", "Next period")}: '
               '${dayMonthLabel(p.nextPeriodEarliestDate)} – '
