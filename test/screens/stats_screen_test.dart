@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:aura/data/database/app_database.dart';
 import 'package:aura/data/models/day_enums.dart';
@@ -17,6 +18,8 @@ import 'package:aura/utils/day_key.dart';
 void main() {
   late AppDatabase db;
   late CycleRepository repo;
+
+  setUpAll(() => initializeDateFormatting('es'));
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory(setup: enableForeignKeys));
@@ -49,7 +52,7 @@ void main() {
     expect(find.text('Promedio de flujo'), findsNothing);
     expect(find.text('Tus ciclos'), findsNothing);
     expect(find.text('Síntomas más frecuentes'), findsNothing);
-    expect(find.byType(PieChart), findsNothing);
+    expect(find.text('Estados de ánimo registrados'), findsNothing);
   });
 
   testStats('con datos: tus ciclos, promedio de flujo, sintomas y animo',
@@ -82,16 +85,16 @@ void main() {
     expect(find.text('Síntomas más frecuentes'), findsOneWidget);
     expect(find.text(Symptom.dolorAbdominal.label), findsOneWidget);
     expect(find.text('Estados de ánimo registrados'), findsOneWidget);
-    expect(find.byType(PieChart), findsOneWidget);
+    expect(find.byKey(const ValueKey('animo-cansada')), findsOneWidget);
 
     // CP4: ahora si hay seccion de ciclos (2 ciclos de 28; periodos
     // abiertos, asi que la duracion del periodo sale del ajuste).
     expect(find.text('Tus ciclos'), findsOneWidget);
-    expect(find.text('Ciclos considerados: 2'), findsOneWidget);
-    expect(find.text('Duración típica del ciclo: 28 días'), findsOneWidget);
-    expect(find.text('Regularidad: Regular'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Duración típica del ciclo: 28 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Regularidad: Regular'), findsOneWidget);
     expect(
-        find.text('Duración típica del período: 5 días (según tu ajuste)'),
+        find.bySemanticsLabel('Duración típica del período: 5 días (según tu ajuste)'),
         findsOneWidget);
   });
 
@@ -105,7 +108,7 @@ void main() {
     expect(find.text('Promedio de flujo'), findsOneWidget);
     expect(find.text('Sin datos'), findsOneWidget);
     expect(find.text('Síntomas más frecuentes'), findsNothing);
-    expect(find.byType(PieChart), findsNothing);
+    expect(find.text('Estados de ánimo registrados'), findsNothing);
     // CP4: un periodo registrado ya muestra "Tus ciclos".
     expect(find.text('Registra al menos dos períodos para ver tus ciclos.'),
         findsOneWidget);
@@ -133,27 +136,31 @@ void main() {
       }
     }
     await pumpStats(tester);
-    await tester.scrollUntilVisible(find.byType(PieChart), 200);
 
-    final nodo = find.bySemanticsLabel(RegExp(r'^Estados de ánimo: '));
-    expect(nodo, findsOneWidget);
-    final etiqueta = tester.getSemantics(nodo).label;
-    for (final parte in [
+    // De mayor a menor; empates por nombre.
+    final filas = [
       'Cansada: 31 %',
-      'Irritable: 23 %',
       'Feliz: 23 %',
+      'Irritable: 23 %',
       'Normal: 23 %',
-    ]) {
-      expect(etiqueta, contains(parte));
+    ];
+    for (final fila in filas) {
+      expect(find.bySemanticsLabel(fila), findsOneWidget, reason: fila);
     }
-    // Los mismos numeros que se dibujan en el grafico.
-    final secciones = tester
-        .widget<PieChart>(find.byType(PieChart))
-        .data
-        .sections
-        .map((s) => s.title.replaceAll('\n', ': '))
-        .toList();
-    expect(secciones, contains('Cansada: 31%'));
+    final ys = [
+      for (final f in filas) tester.getTopLeft(find.bySemanticsLabel(f)).dy
+    ];
+    expect(ys, [...ys]..sort());
+    // El mismo numero que se ve, y la barra en proporcion al total.
+    final cansada = find.byKey(const ValueKey('animo-cansada'));
+    expect(find.descendant(of: cansada, matching: find.text('31 %')),
+        findsOneWidget);
+    expect(
+        tester
+            .widget<FractionallySizedBox>(find.descendant(
+                of: cansada, matching: find.byType(FractionallySizedBox)))
+            .widthFactor,
+        closeTo(4 / 13, 1e-9));
     semantics.dispose();
   });
 
@@ -311,7 +318,7 @@ void main() {
     expect(find.text('Tus ciclos'), findsOneWidget);
     expect(find.text(registra), findsOneWidget);
     expect(
-        find.text('Duración típica del período: 5 días (según tu ajuste)'),
+        find.bySemanticsLabel('Duración típica del período: 5 días (según tu ajuste)'),
         findsOneWidget);
     expect(find.textContaining('Ciclos considerados'), findsNothing);
     expect(find.textContaining('Regularidad'), findsNothing);
@@ -324,11 +331,11 @@ void main() {
     await repo.setTypicalPeriodLength(7);
     await periodsEvery('2026-03-01', [29]);
     await pumpStats(tester);
-    expect(find.text('Ciclos considerados: 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 1'), findsOneWidget);
     expect(find.text('Tu único ciclo completo: 29 días'), findsOneWidget);
     expect(find.text(conDos), findsOneWidget);
     expect(
-        find.text('Duración típica del período: 7 días (según tu ajuste)'),
+        find.bySemanticsLabel('Duración típica del período: 7 días (según tu ajuste)'),
         findsOneWidget);
     expect(find.text(registra), findsNothing);
     expect(find.textContaining('Duración típica del ciclo'), findsNothing);
@@ -348,12 +355,11 @@ void main() {
       'Duración típica del período: 4 días (según tus períodos)',
     ];
     for (final fila in filas) {
-      expect(find.text(fila), findsOneWidget, reason: fila);
-      // Cada fila es una sola frase para el lector de pantalla.
+      // Cada tarjeta es una sola frase para el lector de pantalla.
       expect(find.bySemanticsLabel(fila), findsOneWidget, reason: fila);
     }
     // En ese orden.
-    final ys = [for (final f in filas) tester.getTopLeft(find.text(f)).dy];
+    final ys = [for (final f in filas) tester.getTopLeft(find.bySemanticsLabel(f)).dy];
     expect(ys, [...ys]..sort());
     expect(find.text(registra), findsNothing);
     expect(find.text(conDos), findsNothing);
@@ -361,16 +367,40 @@ void main() {
     expect(find.textContaining('no se cuenta'), findsNothing);
   });
 
+  testStats('2+ ciclos: grafico de los ultimos ciclos y explicacion de '
+      'regularidad', (tester) async {
+    await periodsEvery('2026-01-01', [26, 30, 28]);
+    await pumpStats(tester);
+    expect(find.byType(BarChart), findsOneWidget);
+    expect(
+        find.bySemanticsLabel('Duración de tus últimos ciclos: 26, 30, 28 '
+            'días. Duración típica: 28 días.'),
+        findsOneWidget);
+
+    await tester.tap(find.byTooltip('Qué significa "Regularidad"'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Compara cuánto cambia'), findsOneWidget);
+    await tester.tap(find.text('Entendido'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Compara cuánto cambia'), findsNothing);
+  });
+
+  testStats('1 ciclo: sin grafico', (tester) async {
+    await periodsEvery('2026-03-01', [29]);
+    await pumpStats(tester);
+    expect(find.byType(BarChart), findsNothing);
+  });
+
   testStats('2+ ciclos iguales: "Más corto y más largo: N días"; muy '
       'variable', (tester) async {
     await periodsEvery('2026-01-01', [28, 28]);
     await pumpStats(tester);
-    expect(find.text('Más corto y más largo: 28 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Más corto y más largo: 28 días'), findsOneWidget);
     await repo.deleteAllData();
     await periodsEvery('2025-06-01', [22, 34, 22, 34, 22, 34]);
     await tester.pumpAndSettle();
-    expect(find.text('Más corto y más largo: 22 a 34 días'), findsOneWidget);
-    expect(find.text('Regularidad: Muy variable'), findsOneWidget);
+    expect(find.bySemanticsLabel('Más corto y más largo: 22 a 34 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Regularidad: Muy variable'), findsOneWidget);
   });
 
   testStats('con excluidos: linea gris en plural y en singular',
@@ -380,8 +410,8 @@ void main() {
     const plural =
         '2 ciclos no se cuentan por durar menos de 15 o más de 60 días.';
     expect(find.text(plural), findsOneWidget);
-    expect(find.text('Ciclos considerados: 2'), findsOneWidget);
-    expect(find.text('Más corto y más largo: 28 a 30 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Más corto y más largo: 28 a 30 días'), findsOneWidget);
     expect(tester.widget<Text>(find.text(plural)).style!.color,
         AppColors.textSecondary);
 
@@ -392,14 +422,14 @@ void main() {
         find.text(
             '1 ciclo no se cuenta por durar menos de 15 o más de 60 días.'),
         findsOneWidget);
-    expect(find.text('Ciclos considerados: 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 2'), findsOneWidget);
   });
 
   testStats('todos los ciclos excluidos: 0 considerados, sin pedir dos '
       'periodos', (tester) async {
     await periodsEvery('2026-01-01', [14]);
     await pumpStats(tester);
-    expect(find.text('Ciclos considerados: 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 0'), findsOneWidget);
     expect(find.text(conDos), findsOneWidget);
     expect(
         find.text(
@@ -420,10 +450,10 @@ void main() {
 
     await period('2026-02-28', closed: true);
     await tester.pumpAndSettle();
-    expect(find.text('Ciclos considerados: 2'), findsOneWidget);
-    expect(find.text('Duración típica del ciclo: 29 días'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Duración típica del ciclo: 29 días'), findsOneWidget);
     expect(
-        find.text('Duración típica del período: 3 días (según tus períodos)'),
+        find.bySemanticsLabel('Duración típica del período: 3 días (según tus períodos)'),
         findsOneWidget);
   });
 
@@ -450,7 +480,7 @@ void main() {
         config: inputs.config,
       ) as ActivePrediction;
       expect(
-          find.text('Duración típica del ciclo: '
+          find.bySemanticsLabel('Duración típica del ciclo: '
               '${p.averageCycleLengthDays.round()} días'),
           findsOneWidget,
           reason: '$lengths');
@@ -459,7 +489,7 @@ void main() {
           ? ' (los más recientes)'
           : '';
       expect(
-          find.text(
+          find.bySemanticsLabel(
               'Ciclos considerados: ${p.completeCyclesConsidered}$tope'),
           findsOneWidget,
           reason: '$lengths');
@@ -470,20 +500,20 @@ void main() {
       'con 8', (tester) async {
     await periodsEvery('2025-06-01', [28, 28, 28, 28, 28, 28]);
     await pumpStats(tester);
-    expect(find.text('Ciclos considerados: 6 (los más recientes)'),
+    expect(find.bySemanticsLabel('Ciclos considerados: 6 (los más recientes)'),
         findsOneWidget);
 
     await repo.deleteAllData();
     await periodsEvery('2025-06-01', [28, 28, 28, 28, 28, 28, 28, 28]);
     await tester.pumpAndSettle();
-    expect(find.text('Ciclos considerados: 6 (los más recientes)'),
+    expect(find.bySemanticsLabel('Ciclos considerados: 6 (los más recientes)'),
         findsOneWidget);
 
     // Por debajo del tope, sin la aclaracion.
     await repo.deleteAllData();
     await periodsEvery('2025-06-01', [28, 28, 28, 28, 28]);
     await tester.pumpAndSettle();
-    expect(find.text('Ciclos considerados: 5'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ciclos considerados: 5'), findsOneWidget);
     expect(find.textContaining('(los más recientes)'), findsNothing);
   });
 }
