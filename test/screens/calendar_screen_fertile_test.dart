@@ -179,6 +179,7 @@ void main() {
 
       sinMarcas();
       sinLeyendaFertil();
+      expect(find.text('Me llegó hoy'), findsNothing);
     });
 
     testCalendar(

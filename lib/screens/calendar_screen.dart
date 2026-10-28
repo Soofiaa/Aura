@@ -622,6 +622,8 @@ class _CalendarScreenState extends State<CalendarScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Con un embarazo activo, solo "Elegir varios dias".
+                  if (!(_inputs?.isPregnant ?? false)) ...[
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () => showPeriodStartSheet(context,
@@ -638,6 +640,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _alternarModoRango,
