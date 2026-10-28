@@ -9,6 +9,9 @@ enum NotificationKind {
 
   /// "Te llego?": el primer dia de atraso del periodo.
   latePeriodReminder,
+
+  /// Registrar el dia: se repite cada dia a la misma hora.
+  dailyLogReminder,
 }
 
 extension NotificationKindId on NotificationKind {
@@ -18,6 +21,7 @@ extension NotificationKindId on NotificationKind {
         NotificationKind.periodReminder => 100,
         NotificationKind.fertileWindowReminder => 101,
         NotificationKind.latePeriodReminder => 102,
+        NotificationKind.dailyLogReminder => 103,
       };
 }
 
@@ -42,6 +46,9 @@ class NotificationSettings {
   /// periodo, si para entonces no se registro.
   final bool latePeriodReminderEnabled;
 
+  /// Recordatorio diario de registro (ajuste de este telefono).
+  final bool dailyLogReminderEnabled;
+
   const NotificationSettings({
     required this.notificationsEnabled,
     required this.periodReminderEnabled,
@@ -51,9 +58,11 @@ class NotificationSettings {
     required this.reminderMinute,
     this.showFertileWindow = true,
     this.latePeriodReminderEnabled = false,
+    this.dailyLogReminderEnabled = false,
   });
 
-  NotificationSettings copyWith({bool? latePeriodReminderEnabled}) =>
+  NotificationSettings copyWith(
+          {bool? latePeriodReminderEnabled, bool? dailyLogReminderEnabled}) =>
       NotificationSettings(
         notificationsEnabled: notificationsEnabled,
         periodReminderEnabled: periodReminderEnabled,
@@ -64,6 +73,8 @@ class NotificationSettings {
         showFertileWindow: showFertileWindow,
         latePeriodReminderEnabled:
             latePeriodReminderEnabled ?? this.latePeriodReminderEnabled,
+        dailyLogReminderEnabled:
+            dailyLogReminderEnabled ?? this.dailyLogReminderEnabled,
       );
 }
 
@@ -125,17 +136,33 @@ class PlannedNotification {
 /// [keepDueToday]: un aviso de hoy cuya hora ya paso vuelve con
 /// [PlannedNotification.due] en vez de omitirse (ver ese campo). Lo usa el
 /// reconciliador; sin el, el plan es solo lo que falta programar.
+///
+/// [loggedToday]: hoy ya tiene registro, asi que el recordatorio diario
+/// empieza manana.
 List<PlannedNotification> planNotifications({
   required CyclePrediction? prediction,
   required NotificationSettings settings,
   required String today,
   required int nowMinutesOfDay,
   bool keepDueToday = false,
+  bool loggedToday = false,
 }) {
   if (!settings.notificationsEnabled) return const [];
-  if (prediction is! ActivePrediction) return const [];
-
   final planned = <PlannedNotification>[];
+
+  // Sin prediccion tambien (sin datos o en embarazo). Se repite solo cada
+  // dia; la fecha es solo la primera vez: hoy si aun no se registro ni
+  // paso la hora, si no manana. Nunca "due": a la hora ya pasada se
+  // programa el de manana, que sigue repitiendose.
+  if (settings.dailyLogReminderEnabled) {
+    final passed = settings.reminderHour * 60 + settings.reminderMinute <=
+        nowMinutesOfDay;
+    planned.add(_dailyLogReminder(
+        loggedToday || passed ? DayKey.addDays(today, 1) : today, settings));
+  }
+
+  if (prediction is! ActivePrediction) return planned;
+
   void add(String date,
       PlannedNotification Function(String date, bool due) build) {
     final cmp = DayKey.compare(date, today);
@@ -224,6 +251,23 @@ PlannedNotification _fertileWindowReminder(
     due: due,
   );
 }
+
+PlannedNotification _dailyLogReminder(String date, NotificationSettings s) =>
+    PlannedNotification(
+      kind: NotificationKind.dailyLogReminder,
+      id: NotificationKind.dailyLogReminder.notificationId,
+      date: date,
+      hour: s.reminderHour,
+      minute: s.reminderMinute,
+      title: s.showDetailsEnabled
+          ? tr('¿Cómo estuvo tu día?', 'How was your day?')
+          : tr('Aura: recordatorio', 'Aura: reminder'),
+      body: s.showDetailsEnabled
+          ? tr('Registra cómo te sientes en Aura.',
+              'Log how you feel in Aura.')
+          : tr('Abre la app para ver el detalle.',
+              'Open the app to see the details.'),
+    );
 
 PlannedNotification _latePeriodReminder(
     String date, NotificationSettings s, bool due) {

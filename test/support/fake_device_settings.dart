@@ -44,6 +44,10 @@ class FakeDeviceSettingsStore extends DeviceSettingsStore {
       _cambiar(_state.copyWith(tema: value));
 
   @override
+  Future<DeviceSettings> setRecordatorioDiario(bool value) async =>
+      _cambiar(_state.copyWith(recordatorioDiario: value));
+
+  @override
   Future<void> delete() async => _cambiar(const DeviceSettings());
 
   DeviceSettings _cambiar(DeviceSettings nuevo) {

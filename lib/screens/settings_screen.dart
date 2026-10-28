@@ -240,6 +240,16 @@ class _SettingsScreenState extends State<SettingsScreen>
         (_ajustesTelefono ?? const DeviceSettings()).copyWith(avisoAtraso: value));
   }
 
+  Future<void> _cambiarRecordatorioDiario(bool value) async {
+    if (!await _guardar(() => _deviceSettings.setRecordatorioDiario(value))) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _ajustesTelefono = (_ajustesTelefono ??
+            const DeviceSettings())
+        .copyWith(recordatorioDiario: value));
+  }
+
   static String _nombreTema(ThemeMode tema) => switch (tema) {
         ThemeMode.system => tr("Según el teléfono", "System default"),
         ThemeMode.light => tr("Claro", "Light"),
@@ -781,6 +791,20 @@ class _SettingsScreenState extends State<SettingsScreen>
             value: _ajustesTelefono?.avisoAtraso ?? false,
             onChanged: _notificaciones && _ajustesTelefono != null
                 ? _cambiarAvisoAtraso
+                : null,
+          ),
+
+          SwitchListTile(
+            title: Text(tr("Recordatorio diario", "Daily reminder")),
+            subtitle: Text(tr(
+              "Un aviso cada día a la hora del recordatorio, si todavía no "
+              "registraste ese día.",
+              "A heads-up every day at the reminder time, if you haven't "
+              "logged that day yet.",
+            )),
+            value: _ajustesTelefono?.recordatorioDiario ?? false,
+            onChanged: _notificaciones && _ajustesTelefono != null
+                ? _cambiarRecordatorioDiario
                 : null,
           ),
 

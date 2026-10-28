@@ -31,12 +31,16 @@ void main() {
     await store.setOcultarEnRecientes(false);
     await store.setAvisoAtraso(true);
     await store.setTema(ThemeMode.dark);
+    await store.setRecordatorioDiario(true);
 
     final otra = DeviceSettingsStore(supportDirectory: () async => support);
     expect(
         await otra.read(),
         const DeviceSettings(
-            ocultarEnRecientes: false, avisoAtraso: true, tema: ThemeMode.dark));
+            ocultarEnRecientes: false,
+            avisoAtraso: true,
+            tema: ThemeMode.dark,
+            recordatorioDiario: true));
     expect(File('${archivo().path}.tmp').existsSync(), isFalse);
   });
 

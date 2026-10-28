@@ -40,6 +40,89 @@ const _settingsBase = NotificationSettings(
 );
 
 void main() {
+  group('planNotifications - recordatorio diario (103)', () {
+    const diario = NotificationSettings(
+      notificationsEnabled: true,
+      periodReminderEnabled: false,
+      fertileWindowRemindersEnabled: false,
+      showDetailsEnabled: true,
+      reminderHour: 21,
+      reminderMinute: 30,
+      dailyLogReminderEnabled: true,
+    );
+
+    List<PlannedNotification> plan(
+            {int now = 8 * 60,
+            bool logged = false,
+            NotificationSettings settings = diario}) =>
+        planNotifications(
+          prediction: null,
+          settings: settings,
+          today: '2026-04-01',
+          nowMinutesOfDay: now,
+          loggedToday: logged,
+        );
+
+    test('hoy si no se registro ni paso la hora, aun sin prediccion', () {
+      final aviso = plan().single;
+      expect(aviso.kind, NotificationKind.dailyLogReminder);
+      expect(aviso.id, 103);
+      expect(aviso.date, '2026-04-01');
+      expect((aviso.hour, aviso.minute), (21, 30));
+      expect(aviso.due, isFalse);
+      expect(aviso.title, '¿Cómo estuvo tu día?');
+    });
+
+    test('manana si hoy ya se registro o ya paso la hora', () {
+      expect(plan(logged: true).single.date, '2026-04-02');
+      expect(plan(now: 21 * 60 + 30).single.date, '2026-04-02');
+    });
+
+    test('sin detalles: texto generico; apagado: nada', () {
+      expect(
+          plan(settings: const NotificationSettings(
+            notificationsEnabled: true,
+            periodReminderEnabled: false,
+            fertileWindowRemindersEnabled: false,
+            showDetailsEnabled: false,
+            reminderHour: 21,
+            reminderMinute: 30,
+            dailyLogReminderEnabled: true,
+          )).single.title,
+          'Aura: recordatorio');
+      expect(plan(settings: diario.copyWith(dailyLogReminderEnabled: false)),
+          isEmpty);
+      expect(_settingsBase.dailyLogReminderEnabled, isFalse);
+    });
+
+    test('con el interruptor general apagado: nada', () {
+      expect(
+          plan(settings: const NotificationSettings(
+            notificationsEnabled: false,
+            periodReminderEnabled: false,
+            fertileWindowRemindersEnabled: false,
+            showDetailsEnabled: true,
+            reminderHour: 21,
+            reminderMinute: 30,
+            dailyLogReminderEnabled: true,
+          )),
+          isEmpty);
+    });
+
+    test('junto a los avisos de la prediccion', () {
+      final kinds = planNotifications(
+        prediction: _prediction(),
+        settings: diario.copyWith(latePeriodReminderEnabled: true),
+        today: '2026-04-01',
+        nowMinutesOfDay: 8 * 60,
+      ).map((p) => p.kind);
+      expect(kinds, containsAll([
+        NotificationKind.dailyLogReminder,
+        NotificationKind.latePeriodReminder,
+      ]));
+    });
+  });
+
   group('planNotifications - aviso de atraso (102)', () {
     const conAtraso = NotificationSettings(
       notificationsEnabled: true,

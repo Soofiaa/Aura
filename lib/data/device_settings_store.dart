@@ -14,6 +14,7 @@ class DeviceSettings {
     this.ocultarEnRecientes = true,
     this.avisoAtraso = false,
     this.tema = ThemeMode.system,
+    this.recordatorioDiario = false,
   });
 
   /// "Ocultar Aura en Recientes" (FLAG_SECURE): la miniatura de la app en
@@ -28,12 +29,20 @@ class DeviceSettings {
   /// Tema claro, oscuro o el del telefono (por defecto).
   final ThemeMode tema;
 
+  /// Un aviso diario a la hora del recordatorio para registrar el dia,
+  /// salvo que ese dia ya este registrado. Opt-in.
+  final bool recordatorioDiario;
+
   DeviceSettings copyWith(
-          {bool? ocultarEnRecientes, bool? avisoAtraso, ThemeMode? tema}) =>
+          {bool? ocultarEnRecientes,
+          bool? avisoAtraso,
+          ThemeMode? tema,
+          bool? recordatorioDiario}) =>
       DeviceSettings(
         ocultarEnRecientes: ocultarEnRecientes ?? this.ocultarEnRecientes,
         avisoAtraso: avisoAtraso ?? this.avisoAtraso,
         tema: tema ?? this.tema,
+        recordatorioDiario: recordatorioDiario ?? this.recordatorioDiario,
       );
 
   Map<String, Object?> toJson() => {
@@ -41,6 +50,7 @@ class DeviceSettings {
         'ocultarEnRecientes': ocultarEnRecientes,
         'avisoAtraso': avisoAtraso,
         'tema': tema.name,
+        'recordatorioDiario': recordatorioDiario,
       };
 
   /// null si [raw] no es un estado valido de la version actual: quien lo
@@ -57,7 +67,11 @@ class DeviceSettings {
         .where((m) => m.name == raw['tema'])
         .firstOrNull ?? ThemeMode.system;
     return DeviceSettings(
-        ocultarEnRecientes: ocultar, avisoAtraso: aviso, tema: tema);
+        ocultarEnRecientes: ocultar,
+        avisoAtraso: aviso,
+        tema: tema,
+        // Sin el campo (archivos anteriores): apagado.
+        recordatorioDiario: raw['recordatorioDiario'] == true);
   }
 
   @override
@@ -65,14 +79,17 @@ class DeviceSettings {
       other is DeviceSettings &&
       other.ocultarEnRecientes == ocultarEnRecientes &&
       other.avisoAtraso == avisoAtraso &&
-      other.tema == tema;
+      other.tema == tema &&
+      other.recordatorioDiario == recordatorioDiario;
 
   @override
-  int get hashCode => Object.hash(ocultarEnRecientes, avisoAtraso, tema);
+  int get hashCode => 
+      Object.hash(ocultarEnRecientes, avisoAtraso, tema, recordatorioDiario);
 
   @override
   String toString() => 'DeviceSettings(ocultarEnRecientes: '
-      '$ocultarEnRecientes, avisoAtraso: $avisoAtraso, tema: $tema)';
+      '$ocultarEnRecientes, avisoAtraso: $avisoAtraso, tema: $tema, '
+      'recordatorioDiario: $recordatorioDiario)';
 }
 
 /// Guarda [DeviceSettings] en un JSON pequeno en el almacenamiento privado
@@ -113,6 +130,9 @@ class DeviceSettingsStore {
 
   Future<DeviceSettings> setTema(ThemeMode value) =>
       _actualizar((s) => s.copyWith(tema: value));
+
+  Future<DeviceSettings> setRecordatorioDiario(bool value) =>
+      _actualizar((s) => s.copyWith(recordatorioDiario: value));
 
   /// "Borrar todos los datos": vuelve a los valores por defecto.
   Future<void> delete() => _enFila(() async {

@@ -303,6 +303,36 @@ void main() {
     await db.close();
   });
 
+  test('recordatorio diario: hoy sin registro; al registrar hoy pasa a '
+      'manana', () async {
+    final db = AppDatabase.forTesting(
+        NativeDatabase.memory(setup: enableForeignKeys));
+    final repo = CycleRepository(db);
+    final scheduler = FakeNotificationScheduler();
+    final ajustes = StreamController<DeviceSettings>();
+    final reconciler = NotificationReconciler(repo, scheduler,
+        clock: () => DateTime(2026, 4, 1, 8), deviceSettings: ajustes.stream);
+    await repo.setNotificationsEnabled(true);
+
+    reconciler.start();
+    ajustes.add(const DeviceSettings(recordatorioDiario: true));
+    await Future<void>.delayed(Duration.zero);
+    await reconciler.idle;
+    PlannedNotification diario() => scheduler.lastReconciledPlan
+        .where((p) => p.kind == NotificationKind.dailyLogReminder)
+        .single;
+    expect(diario().date, '2026-04-01');
+
+    await repo.markPeriodDays(['2026-04-01']);
+    await Future<void>.delayed(Duration.zero);
+    await reconciler.idle;
+    expect(diario().date, '2026-04-02');
+
+    await reconciler.dispose();
+    await ajustes.close();
+    await db.close();
+  });
+
   test('onAppResumed otro dia vuelve a planificar aunque no cambie la zona',
       () async {
     final db = AppDatabase.forTesting(

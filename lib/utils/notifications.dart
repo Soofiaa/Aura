@@ -54,6 +54,12 @@ String get _lateChannelDescription =>
     tr('Aviso el primer día de atraso de tu período estimado.',
         'A heads-up on the first day your estimated period is late.');
 
+const _dailyChannelId = 'aura_daily_log_reminder';
+String get _dailyChannelName => tr('Recordatorio diario', 'Daily reminder');
+String get _dailyChannelDescription =>
+    tr('Aviso diario para registrar cómo estuvo tu día.',
+        'A daily reminder to log how your day went.');
+
 /// Avisos propios pendientes que ya no corresponden: todo id de
 /// [ownedIds] que no este en [plan]. Uno [PlannedNotification.due] del plan
 /// no se cancela (ni se vuelve a programar): Android puede no haberlo
@@ -191,6 +197,9 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
       scheduled,
       _detailsFor(item.kind),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: item.kind == NotificationKind.dailyLogReminder
+          ? DateTimeComponents.time
+          : null,
     );
   }
 
@@ -210,6 +219,11 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
           _lateChannelId,
           _lateChannelName,
           _lateChannelDescription,
+        ),
+      NotificationKind.dailyLogReminder => (
+          _dailyChannelId,
+          _dailyChannelName,
+          _dailyChannelDescription,
         ),
     };
 

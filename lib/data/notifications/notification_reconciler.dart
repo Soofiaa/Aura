@@ -112,7 +112,10 @@ class NotificationReconciler {
     do {
       _pending = false;
       try {
-        await _scheduler.reconcile(_plan());
+        // Solo se lee la base con el recordatorio diario activado.
+        final loggedToday = (_deviceSettings?.recordatorioDiario ?? false) &&
+            await _repository.getDay(DayKey.fromDate(_clock())) != null;
+        await _scheduler.reconcile(_plan(loggedToday));
       } catch (_) {
         // Se reintenta con el proximo cambio de datos o al volver a la app.
         _lastPlannedDay = null;
@@ -120,7 +123,7 @@ class NotificationReconciler {
     } while (_pending);
   }
 
-  List<PlannedNotification> _plan() {
+  List<PlannedNotification> _plan(bool loggedToday) {
     final inputs = _inputs!;
     final today = DayKey.fromDate(_clock());
     _lastPlannedDay = today;
@@ -134,10 +137,13 @@ class NotificationReconciler {
     return planNotifications(
       prediction: prediction,
       settings: _settings!.copyWith(
-          latePeriodReminderEnabled: _deviceSettings?.avisoAtraso ?? false),
+          latePeriodReminderEnabled: _deviceSettings?.avisoAtraso ?? false,
+          dailyLogReminderEnabled:
+              _deviceSettings?.recordatorioDiario ?? false),
       today: today,
       nowMinutesOfDay: _nowMinutesOfDay(),
       keepDueToday: true,
+      loggedToday: loggedToday,
     );
   }
 

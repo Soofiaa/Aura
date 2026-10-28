@@ -740,6 +740,27 @@ void main() {
       await db.close();
     });
 
+    testWidgets('recordatorio diario: deshabilitado sin el general; con el '
+        'general, se guarda', (tester) async {
+      final diario = find.widgetWithText(SwitchListTile, 'Recordatorio diario');
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(diario, 200);
+      expect(tester.widget<SwitchListTile>(diario).value, isFalse);
+      expect(tester.widget<SwitchListTile>(diario).onChanged, isNull);
+
+      await tester.scrollUntilVisible(
+          find.widgetWithText(SwitchListTile, 'Notificaciones'), -200);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notificaciones'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(diario, 200);
+      await tester.tap(diario);
+      await tester.pumpAndSettle();
+
+      expect(ajustesTelefono.current.recordatorioDiario, isTrue);
+      expect(tester.widget<SwitchListTile>(diario).value, isTrue);
+      await db.close();
+    });
+
     testWidgets('ocultar en Recientes: activado por defecto; apagarlo se '
         'guarda', (tester) async {
       await pumpScreen(tester);
