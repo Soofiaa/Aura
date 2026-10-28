@@ -4,6 +4,8 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:aura/utils/colors.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import 'package:aura/data/database/app_database.dart';
@@ -586,7 +588,7 @@ void main() {
       expect(find.text(ventanaEncendido), findsNothing);
       final estilo = tester.widget<Text>(find.text(ayuda)).style!;
       expect(estilo.fontSize, 13);
-      expect(estilo.color, Colors.grey[700]);
+      expect(estilo.color, AppColors.textSecondary);
       // El valor guardado de "Ventana fertil" no cambia.
       expect((await repo.getNotificationSettings())
           .fertileWindowRemindersEnabled, isTrue);
@@ -767,6 +769,25 @@ void main() {
       expect(find.text('No se pudo guardar el cambio. Inténtalo de nuevo.'),
           findsOneWidget);
       expect(tester.widget<SwitchListTile>(recientes).value, isTrue);
+      await db.close();
+    });
+
+    testWidgets('tema: por defecto el del telefono; elegir Oscuro se guarda',
+        (tester) async {
+      final tema = find.widgetWithText(ListTile, 'Tema');
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(tema, 200);
+      await tester.ensureVisible(tema);
+      await tester.pumpAndSettle();
+      expect(find.text('Según el teléfono'), findsOneWidget);
+
+      await tester.tap(tema);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Oscuro'));
+      await tester.pumpAndSettle();
+
+      expect(ajustesTelefono.current.tema, ThemeMode.dark);
+      expect(find.text('Oscuro'), findsOneWidget);
       await db.close();
     });
   });

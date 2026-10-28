@@ -299,7 +299,7 @@ void main() {
     final estilo = tester.widget<Text>(find.text(aviso)).style!;
     expect(estilo.fontSize, 12);
     expect(estilo.fontStyle, FontStyle.italic);
-    expect(estilo.color, Colors.grey[700]);
+    expect(estilo.color, AppColors.textSecondary);
   });
 
   testCalendar('leyenda sin datos: solo registrado', (tester) async {

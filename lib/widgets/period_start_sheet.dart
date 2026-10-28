@@ -31,7 +31,7 @@ Future<void> showPeriodStartSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: AppColors.background,
+    backgroundColor: context.aura.background,
     builder: (_) => PeriodStartSheet(repository: repo, today: hoy),
   );
   if (day == null) return;
@@ -181,7 +181,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final source = data.estimate.source == PeriodLengthSource.setting
         ? tr('puedes cambiarla en Ajustes', 'you can change it in Settings')
         : tr('según tus últimos períodos', 'based on your recent periods');
-    const secondary = TextStyle(fontSize: 14, color: AppColors.textSecondary);
+    final secondary = TextStyle(fontSize: 14, color: context.aura.textSecondary);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -189,10 +189,10 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
       children: [
         Text(
           tr('¿Cuándo empezó tu período?', 'When did your period start?'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: context.aura.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -239,7 +239,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
         Text(
           tr('Duración estimada: $days ($source)',
               'Estimated length: $days ($source)'),
-          style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 15, color: context.aura.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
@@ -256,8 +256,8 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
             liveRegion: true,
             child: Text(
               joinWarning,
-              style: const TextStyle(
-                  fontSize: 14, color: AppColors.textPrimary),
+              style: TextStyle(
+                  fontSize: 14, color: context.aura.textPrimary),
             ),
           ),
         ],
@@ -267,7 +267,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
             liveRegion: true,
             child: Text(
               tr('Ese día ya está registrado.', 'That day is already logged.'),
-              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 14, color: context.aura.textPrimary),
             ),
           ),
         ],

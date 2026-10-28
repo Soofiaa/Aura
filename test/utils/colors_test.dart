@@ -91,4 +91,39 @@ void main() {
       expect(AppColors.thinBorderWidth, 1.5);
     });
   });
+
+  group('contraste del tema oscuro', () {
+    const o = AuraColors.dark;
+    final tema = auraTheme(Brightness.dark).colorScheme;
+    Color tinte(Color base, double alfa) =>
+        Color.alphaBlend(base.withValues(alpha: alfa), o.card);
+
+    void minimo(String nombre, Color a, Color b, double razon) {
+      test('$nombre: al menos $razon:1', () {
+        expect(contrastRatio(a, b), greaterThanOrEqualTo(razon));
+      });
+    }
+
+    for (final (nombre, fondo) in [('fondo', o.background), ('tarjeta', o.card)]) {
+      minimo('textPrimary sobre $nombre', o.textPrimary, fondo, 4.5);
+      minimo('textSecondary sobre $nombre', o.textSecondary, fondo, 4.5);
+      minimo('acento fuerte sobre $nombre', AppColors.accentStrong, fondo, 3);
+      minimo('ventana fertil sobre $nombre', AppColors.fertile, fondo, 3);
+    }
+    minimo('textSecondary sobre un chip', o.textSecondary, o.chip, 4.5);
+    minimo('"Confianza: Alta" sobre su tinte', o.confidenceHighText,
+        tinte(Colors.green, 0.15), 4.5);
+    minimo('"Confianza: Media" sobre su tinte', o.confidenceMediumText,
+        tinte(Colors.blueGrey, 0.15), 4.5);
+    minimo('"Confianza: Baja" sobre su tinte', o.confidenceLowText,
+        tinte(Colors.orange, 0.15), 4.5);
+    minimo('"Periodo atrasado" sobre su tinte', o.lateText,
+        tinte(Colors.red, 0.10), 4.5);
+    minimo('"Borrar todos los datos" (error del tema) sobre el fondo',
+        tema.error, o.background, 4.5);
+    minimo('borde de la pildora sobre la barra inferior',
+        AppColors.navIndicatorBorder, tema.surfaceContainer, 3);
+    minimo('ventana fertil sobre la barra inferior', AppColors.fertile,
+        tema.surfaceContainer, 3);
+  });
 }

@@ -240,6 +240,41 @@ class _SettingsScreenState extends State<SettingsScreen>
         (_ajustesTelefono ?? const DeviceSettings()).copyWith(avisoAtraso: value));
   }
 
+  static String _nombreTema(ThemeMode tema) => switch (tema) {
+        ThemeMode.system => tr("Según el teléfono", "System default"),
+        ThemeMode.light => tr("Claro", "Light"),
+        ThemeMode.dark => tr("Oscuro", "Dark"),
+      };
+
+  /// main.dart escucha el mismo almacen y cambia el tema.
+  Future<void> _elegirTema() async {
+    final actual = _ajustesTelefono?.tema ?? ThemeMode.system;
+    final tema = await showDialog<ThemeMode>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr("Tema", "Theme")),
+        children: [
+          RadioGroup<ThemeMode>(
+            groupValue: actual,
+            onChanged: (v) => Navigator.pop(context, v),
+            child: Column(
+              children: [
+                for (final m in ThemeMode.values)
+                  RadioListTile<ThemeMode>(
+                      value: m, title: Text(_nombreTema(m))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (tema == null || tema == actual) return;
+    if (!await _guardar(() => _deviceSettings.setTema(tema))) return;
+    if (!mounted) return;
+    setState(() => _ajustesTelefono =
+        (_ajustesTelefono ?? const DeviceSettings()).copyWith(tema: tema));
+  }
+
   /// main.dart escucha el mismo almacen y aplica FLAG_SECURE.
   Future<void> _cambiarOcultarEnRecientes(bool value) async {
     if (!await _guardar(() => _deviceSettings.setOcultarEnRecientes(value))) {
@@ -311,7 +346,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         const SizedBox(height: 10),
         Text(
           tr("Duración habitual del período", "Usual period length"),
-          style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 16, color: context.aura.textPrimary),
         ),
         const SizedBox(height: 4),
         Row(
@@ -320,7 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               key: const Key('duracion_menos'),
               constraints: tamanoMinimo,
               color: AppColors.accentStrong,
-              disabledColor: AppColors.textSecondary,
+              disabledColor: context.aura.textSecondary,
               icon: Icon(Icons.remove_circle_outline,
                   semanticLabel: tr("Disminuir duración", "Decrease length")),
               onPressed: puedeBajar ? () => _cambiarDuracion(-1) : null,
@@ -338,10 +373,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   textoDias,
                   key: const Key('duracion_valor'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: context.aura.textPrimary,
                   ),
                 ),
               ),
@@ -350,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               key: const Key('duracion_mas'),
               constraints: tamanoMinimo,
               color: AppColors.accentStrong,
-              disabledColor: AppColors.textSecondary,
+              disabledColor: context.aura.textSecondary,
               icon: Icon(Icons.add_circle_outline,
                   semanticLabel: tr("Aumentar duración", "Increase length")),
               onPressed: puedeSubir ? () => _cambiarDuracion(1) : null,
@@ -367,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           "Aura uses this to estimate how many days your period lasts "
           "until you've logged some complete periods; after that it uses "
           "your own average. Changing it doesn't affect your logs."),
-          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 14, color: context.aura.textSecondary),
         ),
         const SizedBox(height: 10),
         SwitchListTile(
@@ -493,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   terminado
                       ? tr("Borrar este embarazo", "Delete this pregnancy")
                       : tr("Lo activé por error", "I turned it on by mistake"),
-                  style: const TextStyle(color: AppColors.textSecondary)),
+                  style: TextStyle(color: context.aura.textSecondary)),
             ),
           ),
         ],
@@ -654,7 +689,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(tr("Ajustes", "Settings")),
-        backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
       body: ListView(
@@ -725,7 +759,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         "To use it, turn on Show ovulation and fertile window "
                         "in Your cycle."),
                         style:
-                            TextStyle(fontSize: 13, color: Colors.grey[700]),
+                            TextStyle(fontSize: 13, color: context.aura.textSecondary),
                       ),
                     ],
                   ),
@@ -775,6 +809,25 @@ class _SettingsScreenState extends State<SettingsScreen>
             trailing: const Icon(Icons.access_time),
             enabled: _notificaciones,
             onTap: _notificaciones ? _elegirHora : null,
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          Text(
+            tr("Apariencia", "Appearance"),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(tr("Tema", "Theme")),
+            subtitle: Text(_nombreTema(
+                _ajustesTelefono?.tema ?? ThemeMode.system)),
+            trailing: const Icon(Icons.brightness_6_outlined),
+            enabled: _ajustesTelefono != null,
+            onTap: _elegirTema,
           ),
 
           const SizedBox(height: 20),
@@ -847,7 +900,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           Text(
             tr("Versión $appVersionName • Aura", "Version $appVersionName • Aura"),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: context.aura.textSecondary, fontSize: 14),
           ),
         ],
       ),

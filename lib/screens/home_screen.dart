@@ -238,9 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           'Aura',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFA8D8EA),
-      ),
+        centerTitle: true,      ),
       body: StreamBuilder<PredictionInputs>(
         stream: _inputsStream,
         builder: (context, snapshot) {
@@ -444,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.aura.card,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -478,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       {required bool mostrarFertilidad, required bool enCurso}) {
     if (prediction == null) {
       return _buildCardShell(children: [
-        const Icon(Icons.favorite_border, color: AppColors.textSecondary, size: 50),
+        Icon(Icons.favorite_border, color: context.aura.textSecondary, size: 50),
         const SizedBox(height: 10),
         Text(
           tr("Aún no hay datos suficientes", "Not enough data yet"),
@@ -490,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           tr("Registra tu primer día para ver una predicción de tu ciclo.",
               "Log your first day to see a prediction of your cycle."),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 14, color: context.aura.textSecondary),
         ),
       ]);
     }
@@ -556,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     '$dias',
                 'Day ${current.dayNumber} of your period · estimated length: '
                     '$dias'),
-        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 14, color: context.aura.textSecondary),
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 12),
@@ -580,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           OutlinedButton(
             onPressed: () => _terminar(current, _today),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
+              foregroundColor: context.aura.textPrimary,
               minimumSize: minimo,
             ),
             child: Text(tr("Terminó hoy", "Ended today")),
@@ -591,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TextButton(
         onPressed: () => _yaTermino(current),
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
+          foregroundColor: context.aura.textPrimary,
           minimumSize: minimo,
         ),
         child: Text(
@@ -606,11 +604,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// parto (+280 dias). Si ya termino y no hay un periodo despues, solo
   /// explica la pausa, sin mencionar como termino.
   Widget _buildPregnancyCard(PregnancySpan embarazo) {
-    const gris = TextStyle(fontSize: 14, color: AppColors.textSecondary);
+    final gris = TextStyle(fontSize: 14, color: context.aura.textSecondary);
     if (embarazo.end != null) {
       return _buildCardShell(children: [
-        const Icon(Icons.pause_circle_outline,
-            color: AppColors.textSecondary, size: 50),
+        Icon(Icons.pause_circle_outline,
+            color: context.aura.textSecondary, size: 50),
         const SizedBox(height: 10),
         Text(
           tr("Predicciones en pausa", "Predictions paused"),
@@ -666,7 +664,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildStaleCard(StaleDataPrediction p) {
     return _buildCardShell(children: [
-      const Icon(Icons.history, color: AppColors.textSecondary, size: 50),
+      Icon(Icons.history, color: context.aura.textSecondary, size: 50),
       const SizedBox(height: 10),
       Text(
         tr("Hace tiempo que no registras...",
@@ -684,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             "(${p.daysSinceLastPeriodStart} days ago). "
             "Log a new day to see a prediction again."),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 14, color: context.aura.textSecondary),
       ),
     ]);
   }
@@ -743,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             "${valorPorDefecto ? ' (valor por defecto)' : ''}",
             "Estimated: ${_formatDate(p.nextPeriodExpectedDate)}"
             "${valorPorDefecto ? ' (default value)' : ''}"),
-        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+        style: TextStyle(fontSize: 13, color: context.aura.textSecondary),
       ),
       const SizedBox(height: 15),
       if (mostrarFertilidad && confianzaBaja)
@@ -760,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   "Your cycles vary a lot, so we don't show your fertile "
                       "window."),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+          style: TextStyle(fontSize: 13, color: context.aura.textSecondary),
         )
       else if (marcas != null) ...[
         Text(
@@ -777,7 +775,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[700],
+            color: context.aura.textSecondary,
             fontStyle: FontStyle.italic,
           ),
         ),
@@ -800,8 +798,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         tr("Período atrasado por ${p.daysLate} día${p.daysLate == 1 ? '' : 's'}",
             "Period late by ${p.daysLate} day${p.daysLate == 1 ? '' : 's'}"),
         textAlign: TextAlign.center,
-        style: const TextStyle(
-            color: AppColors.lateText, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            color: context.aura.lateText, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -826,9 +824,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       PredictionConfidence.high => Colors.green,
     };
     final textColor = switch (p.confidence) {
-      PredictionConfidence.low => AppColors.confidenceLowText,
-      PredictionConfidence.medium => AppColors.confidenceMediumText,
-      PredictionConfidence.high => AppColors.confidenceHighText,
+      PredictionConfidence.low => context.aura.confidenceLowText,
+      PredictionConfidence.medium => context.aura.confidenceMediumText,
+      PredictionConfidence.high => context.aura.confidenceHighText,
     };
     return Column(
       children: [
@@ -850,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Text(
               p.confidenceReasons.join(' '),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 11, color: context.aura.textSecondary),
             ),
           ),
       ],
@@ -866,7 +864,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey[700],
+          color: context.aura.textSecondary,
           fontStyle: FontStyle.italic,
         ),
       ),

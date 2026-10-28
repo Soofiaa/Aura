@@ -30,7 +30,6 @@ class _StatsScreenState extends State<StatsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(tr("Estadísticas", "Stats")),
-        backgroundColor: const Color(0xFFA8D8EA),
         centerTitle: true,
       ),
       body: StreamBuilder<StatsSnapshot>(
@@ -200,8 +199,8 @@ class _SymptomBars extends StatelessWidget {
                     flex: 2,
                     child: Text(
                       entry.key.label,
-                      style: const TextStyle(
-                          fontSize: 14, color: AppColors.textPrimary),
+                      style: TextStyle(
+                          fontSize: 14, color: context.aura.textPrimary),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -231,10 +230,10 @@ class _SymptomBars extends StatelessWidget {
                     child: Text(
                       '${entry.value}',
                       textAlign: TextAlign.end,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary),
+                          color: context.aura.textPrimary),
                     ),
                   ),
                 ],
@@ -294,8 +293,8 @@ class _MoodLegend extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 '${e.key.label} ${_percent(e.value / total)}%',
-                style: const TextStyle(
-                    fontSize: 14, color: AppColors.textPrimary),
+                style: TextStyle(
+                    fontSize: 14, color: context.aura.textPrimary),
               ),
             ],
           ),
@@ -399,9 +398,7 @@ class _CyclesSection extends StatelessWidget {
                 "(shorter than ${config.minValidCycleLengthDays} or longer than "
                 "${config.maxValidCycleLengthDays} days)."),
             textAlign: TextAlign.center,
-            // grey[700] (#616161): 6,2:1 sobre blanco y 5,9:1 sobre el
-            // fondo de la app.
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            style: TextStyle(fontSize: 13, color: context.aura.textSecondary),
           ),
       ],
     );

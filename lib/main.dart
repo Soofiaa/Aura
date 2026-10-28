@@ -78,16 +78,34 @@ Future<void> main() async {
   WidgetsBinding.instance.addObserver(_RespaldoAlReanudar());
 
   final result = await startup.open();
+  // El tema elegido antes del primer cuadro, para no parpadear en claro.
+  final ajustes = await deviceSettingsStore
+      .read()
+      .catchError((Object _) => const DeviceSettings());
 
-  runApp(AuraRoot(startup: startup, initialResult: result));
+  runApp(AuraRoot(
+      startup: startup, initialResult: result, initialTheme: ajustes.tema));
 }
 
 /// Tema de la app (publico para que los tests usen los mismos colores).
-ThemeData auraTheme() => ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-      scaffoldBackgroundColor: AppColors.background,
-      useMaterial3: true,
-    );
+/// En el oscuro, la barra superior va del color de las tarjetas en vez del
+/// celeste pastel.
+ThemeData auraTheme([Brightness brightness = Brightness.light]) {
+  final colores =
+      brightness == Brightness.dark ? AuraColors.dark : AuraColors.light;
+  return ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary, brightness: brightness),
+    scaffoldBackgroundColor: colores.background,
+    appBarTheme: AppBarTheme(
+      backgroundColor: brightness == Brightness.dark
+          ? colores.card
+          : AppColors.primary,
+    ),
+    extensions: [colores],
+    useMaterial3: true,
+  );
+}
 
 /// HU-09: al volver a primer plano se intenta el respaldo automatico del
 /// dia (si ya salio hoy, no hace nada; si falla, lo reintenta el proximo
@@ -106,10 +124,12 @@ class AuraRoot extends StatefulWidget {
     super.key,
     required this.startup,
     required this.initialResult,
+    this.initialTheme = ThemeMode.system,
   });
 
   final AppStartup startup;
   final StartupResult initialResult;
+  final ThemeMode initialTheme;
 
   @override
   State<AuraRoot> createState() => _AuraRootState();
@@ -118,6 +138,24 @@ class AuraRoot extends StatefulWidget {
 class _AuraRootState extends State<AuraRoot> {
   late StartupResult _result = widget.initialResult;
   bool _retrying = false;
+  late ThemeMode _tema = widget.initialTheme;
+  StreamSubscription<DeviceSettings>? _temaSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // El tema sigue a Ajustes en vivo; si no se puede leer, queda el actual.
+    _temaSub = deviceSettingsStore.watch().listen(
+          (ajustes) => setState(() => _tema = ajustes.tema),
+          onError: (Object _) {},
+        );
+  }
+
+  @override
+  void dispose() {
+    _temaSub?.cancel();
+    super.dispose();
+  }
 
   Future<void> _retry() async {
     if (_retrying) return;
@@ -134,11 +172,13 @@ class _AuraRootState extends State<AuraRoot> {
   Widget build(BuildContext context) {
     return switch (_result) {
       StartupReady(:final onboardingSeen) =>
-        AuraApp(onboardingVisto: onboardingSeen),
+        AuraApp(onboardingVisto: onboardingSeen, themeMode: _tema),
       StartupFailed(:final outOfSpace) => MaterialApp(
           title: 'Aura',
           debugShowCheckedModeBanner: false,
           theme: auraTheme(),
+          darkTheme: auraTheme(Brightness.dark),
+          themeMode: _tema,
           localizationsDelegates: auraLocalizationsDelegates,
           supportedLocales: auraSupportedLocales,
           locale: auraLocale,
@@ -154,7 +194,11 @@ class _AuraRootState extends State<AuraRoot> {
 
 class AuraApp extends StatelessWidget {
   final bool onboardingVisto;
-  const AuraApp({super.key, required this.onboardingVisto});
+  final ThemeMode themeMode;
+  const AuraApp(
+      {super.key,
+      required this.onboardingVisto,
+      this.themeMode = ThemeMode.system});
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +206,8 @@ class AuraApp extends StatelessWidget {
       title: 'Aura',
       debugShowCheckedModeBanner: false,
       theme: auraTheme(),
+      darkTheme: auraTheme(Brightness.dark),
+      themeMode: themeMode,
       localizationsDelegates: auraLocalizationsDelegates,
       supportedLocales: auraSupportedLocales,
       locale: auraLocale,

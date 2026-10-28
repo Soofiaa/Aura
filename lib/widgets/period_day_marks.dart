@@ -139,7 +139,7 @@ class CalendarLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: 14, color: AppColors.textPrimary);
+    final style = TextStyle(fontSize: 14, color: context.aura.textPrimary);
     final entradas = Wrap(
       alignment: WrapAlignment.center,
       spacing: 20,
@@ -239,7 +239,7 @@ class CalendarLegend extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[700],
+            color: context.aura.textSecondary,
             fontStyle: FontStyle.italic,
           ),
         ),

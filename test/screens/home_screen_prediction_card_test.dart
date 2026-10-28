@@ -1,6 +1,8 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:aura/utils/colors.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:aura/data/database/app_database.dart';
@@ -101,9 +103,9 @@ void main() {
     final estiloTarjeta = tester.widget<Text>(find.text(avisoTarjeta)).style!;
     expect(estiloTarjeta.fontSize, 12);
     expect(estiloTarjeta.fontStyle, FontStyle.italic);
-    expect(estiloTarjeta.color, Colors.grey[700]);
+    expect(estiloTarjeta.color, AppColors.textSecondary);
     final estiloPie = tester.widget<Text>(find.text(avisoPie)).style!;
-    expect(estiloPie.color, Colors.grey[700]);
+    expect(estiloPie.color, AppColors.textSecondary);
   }
 
   // Cuatro periodos cada 28 dias: 3 ciclos completos (confianza media).

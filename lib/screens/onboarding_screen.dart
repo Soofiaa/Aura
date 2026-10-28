@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../utils/aura_localizations.dart';
+import '../utils/colors.dart';
 import 'main_navigation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -85,7 +86,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
       body: SafeArea(
         child: Column(
           children: [
@@ -129,9 +129,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             Text(
                               page["descripcion"] as String,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.black54,
+                                color: context.aura.textSecondary,
                               ),
                             ),
                           ],
@@ -154,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? const Color(0xFFA8D8EA)
-                        : Colors.grey.shade300,
+                        : context.aura.chipBorder,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

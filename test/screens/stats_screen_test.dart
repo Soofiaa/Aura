@@ -382,9 +382,8 @@ void main() {
     expect(find.text(plural), findsOneWidget);
     expect(find.text('Ciclos considerados: 2'), findsOneWidget);
     expect(find.text('Más corto y más largo: 28 a 30 días'), findsOneWidget);
-    // grey[700]: contraste >= 4,5:1 sobre blanco.
     expect(tester.widget<Text>(find.text(plural)).style!.color,
-        Colors.grey[700]);
+        AppColors.textSecondary);
 
     await repo.deleteAllData();
     await periodsEvery('2026-01-01', [28, 70, 30]);

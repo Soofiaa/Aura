@@ -8,6 +8,7 @@ import '../utils/day_key.dart';
 import '../widgets/symptom_selector.dart';
 import '../utils/app_snackbar.dart';
 import '../utils/aura_localizations.dart';
+import '../utils/colors.dart';
 
 /// Largo maximo de las notas de un dia.
 const int maxNoteLength = 2000;
@@ -235,7 +236,6 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(tr("Registrar día", "Log day")),
-          backgroundColor: const Color(0xFFA8D8EA),
           centerTitle: true,
         ),
         // #10: "Guardar registro" queda fijo abajo, fuera del scroll. El
@@ -267,9 +267,9 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                           padding:
                           const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: context.aura.card,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: context.aura.chipBorder),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -318,10 +318,10 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                                 DropdownMenuItem(value: f, child: Text(f.label))),
                           ],
                           onChanged: (v) => setState(() => _flujo = v),
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: context.aura.card,
                           ),
                         ),
                       ],
@@ -344,10 +344,10 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                               DropdownMenuItem(value: a, child: Text(a.label))),
                         ],
                         onChanged: (v) => setState(() => _estadoAnimo = v),
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: context.aura.card,
                         ),
                       ),
 
@@ -382,7 +382,7 @@ class _AddCycleScreenState extends State<AddCycleScreen> {
                               "E.g. Strong cramps, fatigue, cravings..."),
                           border: const OutlineInputBorder(),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: context.aura.card,
                         ),
                       ),
                     ],

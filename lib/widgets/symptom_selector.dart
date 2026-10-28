@@ -70,12 +70,12 @@ class SymptomSelector extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? const Color(0xFFFAD4D8)
-                          : Colors.grey.shade200,
+                          : context.aura.chip,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected
                             ? AppColors.accentStrong
-                            : Colors.grey.shade300,
+                            : context.aura.chipBorder,
                       ),
                     ),
                     child: Row(
@@ -88,7 +88,7 @@ class SymptomSelector extends StatelessWidget {
                           size: iconSize,
                           color: isSelected
                               ? AppColors.chipCheckIcon
-                              : Colors.grey[600],
+                              : context.aura.textSecondary,
                         ),
                         const SizedBox(width: 6),
                         // Flexible: con letra grande o pantalla angosta el
@@ -100,7 +100,7 @@ class SymptomSelector extends StatelessWidget {
                             symptom,
                             style: TextStyle(
                               color:
-                                  isSelected ? Colors.black : Colors.grey[800],
+                                  isSelected ? Colors.black : context.aura.textPrimary,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,

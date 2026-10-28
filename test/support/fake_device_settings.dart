@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show ThemeMode;
+
 import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/utils/android_system.dart';
 
@@ -36,6 +38,10 @@ class FakeDeviceSettingsStore extends DeviceSettingsStore {
   @override
   Future<DeviceSettings> setAvisoAtraso(bool value) async =>
       _cambiar(_state.copyWith(avisoAtraso: value));
+
+  @override
+  Future<DeviceSettings> setTema(ThemeMode value) async =>
+      _cambiar(_state.copyWith(tema: value));
 
   @override
   Future<void> delete() async => _cambiar(const DeviceSettings());

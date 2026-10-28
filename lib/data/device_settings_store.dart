@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -12,6 +13,7 @@ class DeviceSettings {
   const DeviceSettings({
     this.ocultarEnRecientes = true,
     this.avisoAtraso = false,
+    this.tema = ThemeMode.system,
   });
 
   /// "Ocultar Aura en Recientes" (FLAG_SECURE): la miniatura de la app en
@@ -23,16 +25,22 @@ class DeviceSettings {
   /// los demas recordatorios, y sujeto al interruptor general.
   final bool avisoAtraso;
 
-  DeviceSettings copyWith({bool? ocultarEnRecientes, bool? avisoAtraso}) =>
+  /// Tema claro, oscuro o el del telefono (por defecto).
+  final ThemeMode tema;
+
+  DeviceSettings copyWith(
+          {bool? ocultarEnRecientes, bool? avisoAtraso, ThemeMode? tema}) =>
       DeviceSettings(
         ocultarEnRecientes: ocultarEnRecientes ?? this.ocultarEnRecientes,
         avisoAtraso: avisoAtraso ?? this.avisoAtraso,
+        tema: tema ?? this.tema,
       );
 
   Map<String, Object?> toJson() => {
         'version': DeviceSettingsStore.formatVersion,
         'ocultarEnRecientes': ocultarEnRecientes,
         'avisoAtraso': avisoAtraso,
+        'tema': tema.name,
       };
 
   /// null si [raw] no es un estado valido de la version actual: quien lo
@@ -43,21 +51,28 @@ class DeviceSettings {
     final ocultar = raw['ocultarEnRecientes'];
     final aviso = raw['avisoAtraso'];
     if (ocultar is! bool || aviso is! bool) return null;
-    return DeviceSettings(ocultarEnRecientes: ocultar, avisoAtraso: aviso);
+    // Sin 'tema' (archivos de antes del tema oscuro) o desconocido: el del
+    // telefono.
+    final tema = ThemeMode.values
+        .where((m) => m.name == raw['tema'])
+        .firstOrNull ?? ThemeMode.system;
+    return DeviceSettings(
+        ocultarEnRecientes: ocultar, avisoAtraso: aviso, tema: tema);
   }
 
   @override
   bool operator ==(Object other) =>
       other is DeviceSettings &&
       other.ocultarEnRecientes == ocultarEnRecientes &&
-      other.avisoAtraso == avisoAtraso;
+      other.avisoAtraso == avisoAtraso &&
+      other.tema == tema;
 
   @override
-  int get hashCode => Object.hash(ocultarEnRecientes, avisoAtraso);
+  int get hashCode => Object.hash(ocultarEnRecientes, avisoAtraso, tema);
 
   @override
   String toString() => 'DeviceSettings(ocultarEnRecientes: '
-      '$ocultarEnRecientes, avisoAtraso: $avisoAtraso)';
+      '$ocultarEnRecientes, avisoAtraso: $avisoAtraso, tema: $tema)';
 }
 
 /// Guarda [DeviceSettings] en un JSON pequeno en el almacenamiento privado
@@ -95,6 +110,9 @@ class DeviceSettingsStore {
 
   Future<DeviceSettings> setAvisoAtraso(bool value) =>
       _actualizar((s) => s.copyWith(avisoAtraso: value));
+
+  Future<DeviceSettings> setTema(ThemeMode value) =>
+      _actualizar((s) => s.copyWith(tema: value));
 
   /// "Borrar todos los datos": vuelve a los valores por defecto.
   Future<void> delete() => _enFila(() async {

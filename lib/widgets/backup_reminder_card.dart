@@ -59,7 +59,7 @@ class BackupReminderCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.aura.card,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -94,8 +94,8 @@ class BackupReminderCard extends StatelessWidget {
               container: true,
               child: Text(
                 texto,
-                style: const TextStyle(
-                    fontSize: 14, color: AppColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 14, color: context.aura.textSecondary),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -119,7 +119,7 @@ class BackupReminderCard extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onAhoraNo,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
+                    foregroundColor: context.aura.textPrimary,
                     minimumSize: minimo,
                   ),
                   child: Text(tr('Ahora no', 'Not now')),
@@ -130,7 +130,7 @@ class BackupReminderCard extends StatelessWidget {
             TextButton(
               onPressed: onNoRecordar,
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
+                foregroundColor: context.aura.textPrimary,
                 minimumSize: minimo,
               ),
               child: Text(

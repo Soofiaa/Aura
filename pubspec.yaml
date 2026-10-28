@@ -137,8 +137,10 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#F8FAFB"
+  color_dark: "#15181B"
   image: assets/icon/aura_splash_960.png
 
   android_12:
     color: "#F8FAFB"
+    color_dark: "#15181B"
     image: assets/icon/aura_splash_960.png

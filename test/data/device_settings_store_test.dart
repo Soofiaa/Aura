@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -29,11 +30,24 @@ void main() {
   test('guarda y vuelve a leer desde otra instancia', () async {
     await store.setOcultarEnRecientes(false);
     await store.setAvisoAtraso(true);
+    await store.setTema(ThemeMode.dark);
 
     final otra = DeviceSettingsStore(supportDirectory: () async => support);
-    expect(await otra.read(),
-        const DeviceSettings(ocultarEnRecientes: false, avisoAtraso: true));
+    expect(
+        await otra.read(),
+        const DeviceSettings(
+            ocultarEnRecientes: false, avisoAtraso: true, tema: ThemeMode.dark));
     expect(File('${archivo().path}.tmp').existsSync(), isFalse);
+  });
+
+  test('un archivo de antes del tema (o con uno desconocido) conserva lo '
+      'demas y usa el tema del telefono', () async {
+    for (final tema in ['', ', "tema": "morado"']) {
+      archivo().writeAsStringSync(
+          '{"version": 1, "ocultarEnRecientes": false, "avisoAtraso": true$tema}');
+      expect(await store.read(),
+          const DeviceSettings(ocultarEnRecientes: false, avisoAtraso: true));
+    }
   });
 
   test('archivo danado o de otra version: valores por defecto', () async {

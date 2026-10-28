@@ -602,7 +602,6 @@ class _CalendarScreenState extends State<CalendarScreen>
         title: Text(tr("Calendario menstrual", "Period calendar"),
             style: const TextStyle(fontWeight: FontWeight.w600)),
         centerTitle: true,
-        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -655,7 +654,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                                   tr('Cancelar selección', 'Cancel selection'))
                           : Text(tr('Elegir varios días', 'Select multiple days')),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textPrimary,
+                        foregroundColor: context.aura.textPrimary,
                         minimumSize: const Size(48, 48),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -712,8 +711,8 @@ class _CalendarScreenState extends State<CalendarScreen>
                   border: Border.all(color: AppColors.accentStrong, width: 2),
                   shape: BoxShape.circle,
                 ),
-                todayTextStyle: const TextStyle(
-                  color: AppColors.textPrimary,
+                todayTextStyle: TextStyle(
+                  color: context.aura.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
                 selectedDecoration: const BoxDecoration(
@@ -728,8 +727,13 @@ class _CalendarScreenState extends State<CalendarScreen>
                 // sobre el fondo) en vez del #BFBFBF de la libreria
                 // (1,76:1); ahi caen casi siempre la ventana y la
                 // ovulacion (CP5d-2).
-                disabledTextStyle:
-                    const TextStyle(color: AppColors.textSecondary),
+                disabledTextStyle: TextStyle(color: context.aura.textSecondary),
+                // Los grises fijos de la libreria no se leen en el tema oscuro.
+                weekendTextStyle: TextStyle(color: context.aura.textPrimary),
+              ),
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: TextStyle(color: context.aura.textPrimary),
+                weekendStyle: TextStyle(color: context.aura.textSecondary),
               ),
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
@@ -859,7 +863,7 @@ class _CalendarScreenState extends State<CalendarScreen>
           icon: const Icon(Icons.flag_outlined),
           label: Text(tr('Terminó este día', 'Ended this day')),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textPrimary,
+            foregroundColor: context.aura.textPrimary,
             minimumSize: const Size(48, 48),
           ),
         ),
@@ -876,8 +880,8 @@ class _CalendarScreenState extends State<CalendarScreen>
   /// cambio del rango.
   List<Widget> _buildPanelRango() {
     final seleccion = _selection;
-    const estilo = TextStyle(fontSize: 16, color: AppColors.textPrimary);
-    const ayuda = TextStyle(fontSize: 14, color: AppColors.textSecondary);
+    final estilo = TextStyle(fontSize: 16, color: context.aura.textPrimary);
+    final ayuda = TextStyle(fontSize: 14, color: context.aura.textSecondary);
     if (seleccion.isEmpty) {
       return [
         Semantics(
@@ -914,7 +918,7 @@ class _CalendarScreenState extends State<CalendarScreen>
               'correcto.',
               "That's more than $longRangeConfirmationThreshold days: check "
               "that it's correct."),
-          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 14, color: context.aura.textPrimary),
         ),
       ],
       const SizedBox(height: 20),
