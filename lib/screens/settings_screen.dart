@@ -10,6 +10,7 @@ import '../data/device_settings_store.dart';
 import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/contraceptive.dart';
 import '../domain/cycle_predictor.dart' show PregnancySpan;
 import '../domain/notification_planner.dart';
 import '../utils/android_system.dart';
@@ -248,6 +249,99 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() => _ajustesTelefono = (_ajustesTelefono ??
             const DeviceSettings())
         .copyWith(recordatorioDiario: value));
+  }
+
+  static String _nombreMetodo(ContraceptiveMethod m) => switch (m) {
+        ContraceptiveMethod.pill =>
+          tr("Pastilla (todos los días)", "Pill (every day)"),
+        ContraceptiveMethod.patch => tr(
+            "Parche (semanal, con semana de descanso)",
+            "Patch (weekly, with a patch-free week)"),
+        ContraceptiveMethod.ring => tr(
+            "Anillo (3 semanas y 1 de descanso)", "Ring (3 weeks in, 1 out)"),
+        ContraceptiveMethod.monthlyInjection => tr(
+            "Inyección mensual (cada 30 días)",
+            "Monthly injection (every 30 days)"),
+        ContraceptiveMethod.quarterlyInjection => tr(
+            "Inyección trimestral (cada 13 semanas)",
+            "3-month injection (every 13 weeks)"),
+      };
+
+  /// Metodo, el dia de inicio (salvo la pastilla) y la hora; o apagarlo.
+  Future<void> _elegirAnticonceptivo() async {
+    final actual = _ajustesTelefono?.anticonceptivo;
+    // Un registro para distinguir "Apagado" (null) de cerrar el dialogo.
+    final eleccion = await showDialog<(ContraceptiveMethod?,)>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr("Recordatorio de anticonceptivo",
+            "Birth control reminder")),
+        children: [
+          RadioGroup<ContraceptiveMethod?>(
+            groupValue: actual?.method,
+            onChanged: (v) => Navigator.pop(context, (v,)),
+            child: Column(
+              children: [
+                RadioListTile<ContraceptiveMethod?>(
+                    value: null, title: Text(tr("Apagado", "Off"))),
+                for (final m in ContraceptiveMethod.values)
+                  RadioListTile<ContraceptiveMethod?>(
+                      value: m, title: Text(_nombreMetodo(m))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (eleccion == null || !mounted) return;
+    final metodo = eleccion.$1;
+    ContraceptiveReminder? nuevo;
+    if (metodo != null) {
+      final hoy = DateTime.now();
+      String? inicio;
+      if (metodo != ContraceptiveMethod.pill) {
+        final previo = actual?.method == metodo ? actual?.startDate : null;
+        final dia = await showDatePicker(
+          context: context,
+          helpText: switch (metodo) {
+            ContraceptiveMethod.patch => tr(
+                "Día en que pusiste el primer parche de este ciclo",
+                "Day you put on this cycle's first patch"),
+            ContraceptiveMethod.ring => tr(
+                "Día en que te pusiste el anillo de este ciclo",
+                "Day you inserted this cycle's ring"),
+            _ => tr("Día de tu última inyección", "Day of your last injection"),
+          },
+          initialDate: previo != null ? DateTime.parse(previo) : hoy,
+          firstDate: hoy.subtract(const Duration(days: 365)),
+          lastDate: hoy.add(const Duration(days: 31)),
+          currentDate: hoy,
+        );
+        if (dia == null || !mounted) return;
+        inicio = DayKey.fromDate(dia);
+      }
+      final hora = await showTimePicker(
+        context: context,
+        helpText: tr("Hora del aviso", "Reminder time"),
+        initialTime: actual != null
+            ? TimeOfDay(hour: actual.hour, minute: actual.minute)
+            : TimeOfDay(hour: _horaRecordatorio, minute: _minutoRecordatorio),
+      );
+      if (hora == null || !mounted) return;
+      nuevo = ContraceptiveReminder(
+          method: metodo,
+          startDate: inicio,
+          hour: hora.hour,
+          minute: hora.minute);
+    }
+    if (nuevo == actual) return;
+    if (!await _guardar(() => _deviceSettings.setAnticonceptivo(nuevo))) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _ajustesTelefono = (_ajustesTelefono ??
+            const DeviceSettings())
+        .copyWith(anticonceptivo: () => nuevo));
   }
 
   static String _nombreTema(ThemeMode tema) => switch (tema) {
@@ -806,6 +900,20 @@ class _SettingsScreenState extends State<SettingsScreen>
             onChanged: _notificaciones && _ajustesTelefono != null
                 ? _cambiarRecordatorioDiario
                 : null,
+          ),
+
+          ListTile(
+            title: Text(tr("Recordatorio de anticonceptivo",
+                "Birth control reminder")),
+            subtitle: Text(switch (_ajustesTelefono?.anticonceptivo) {
+              null => tr("Apagado", "Off"),
+              final a => '${_nombreMetodo(a.method)} · '
+                  '${a.hour.toString().padLeft(2, '0')}:'
+                  '${a.minute.toString().padLeft(2, '0')}',
+            }),
+            trailing: const Icon(Icons.medication_outlined),
+            enabled: _notificaciones && _ajustesTelefono != null,
+            onTap: _elegirAnticonceptivo,
           ),
 
           SwitchListTile(

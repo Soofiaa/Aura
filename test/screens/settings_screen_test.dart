@@ -14,6 +14,7 @@ import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/backup/drive_backup_settings_store.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/main.dart';
 import 'package:aura/screens/settings_screen.dart';
 import 'package:aura/utils/app_version.dart';
@@ -758,6 +759,39 @@ void main() {
 
       expect(ajustesTelefono.current.recordatorioDiario, isTrue);
       expect(tester.widget<SwitchListTile>(diario).value, isTrue);
+      await db.close();
+    });
+
+    testWidgets('anticonceptivo: elegir la pastilla y su hora se guarda; '
+        '"Apagado" lo quita', (tester) async {
+      final tile =
+          find.widgetWithText(ListTile, 'Recordatorio de anticonceptivo');
+      await pumpScreen(tester);
+      await tester.scrollUntilVisible(tile, 200);
+      expect(tester.widget<ListTile>(tile).enabled, isFalse);
+
+      await tester.scrollUntilVisible(
+          find.widgetWithText(SwitchListTile, 'Notificaciones'), -200);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Notificaciones'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(tile, 200);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pastilla (todos los días)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      final guardado = ajustesTelefono.current.anticonceptivo!;
+      expect(guardado.method, ContraceptiveMethod.pill);
+      expect(guardado.startDate, isNull);
+      expect(find.textContaining('Pastilla (todos los días) · '), findsOneWidget);
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apagado'));
+      await tester.pumpAndSettle();
+      expect(ajustesTelefono.current.anticonceptivo, isNull);
       await db.close();
     });
 

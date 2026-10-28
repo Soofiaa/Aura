@@ -139,7 +139,8 @@ class NotificationReconciler {
       settings: _settings!.copyWith(
           latePeriodReminderEnabled: _deviceSettings?.avisoAtraso ?? false,
           dailyLogReminderEnabled:
-              _deviceSettings?.recordatorioDiario ?? false),
+              _deviceSettings?.recordatorioDiario ?? false,
+          contraceptive: _deviceSettings?.anticonceptivo),
       today: today,
       nowMinutesOfDay: _nowMinutesOfDay(),
       keepDueToday: true,

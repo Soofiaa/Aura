@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/domain/notification_planner.dart';
@@ -120,6 +121,68 @@ void main() {
         NotificationKind.dailyLogReminder,
         NotificationKind.latePeriodReminder,
       ]));
+    });
+  });
+
+  group('planNotifications - anticonceptivo (104-107)', () {
+    NotificationSettings con(ContraceptiveReminder c, {bool details = true}) =>
+        NotificationSettings(
+          notificationsEnabled: true,
+          periodReminderEnabled: false,
+          fertileWindowRemindersEnabled: false,
+          showDetailsEnabled: details,
+          reminderHour: 9,
+          reminderMinute: 0,
+          contraceptive: c,
+        );
+    const pastilla = ContraceptiveReminder(
+        method: ContraceptiveMethod.pill, hour: 21, minute: 0);
+    const parche = ContraceptiveReminder(
+        method: ContraceptiveMethod.patch,
+        startDate: '2026-04-01',
+        hour: 21,
+        minute: 0);
+
+    test('pastilla: hoy a su hora, o manana si ya paso; sin prediccion', () {
+      List<PlannedNotification> plan(int now) => planNotifications(
+            prediction: null,
+            settings: con(pastilla),
+            today: '2026-04-01',
+            nowMinutesOfDay: now,
+          );
+      final aviso = plan(8 * 60).single;
+      expect(aviso.kind, NotificationKind.pillReminder);
+      expect(aviso.id, 104);
+      expect((aviso.date, aviso.hour), ('2026-04-01', 21));
+      expect(aviso.title, 'Hora de tu pastilla');
+      expect(plan(22 * 60).single.date, '2026-04-02');
+    });
+
+    test('parche: los proximos 3 eventos con ids 105-107; el de hoy ya '
+        'pasado queda "due"', () {
+      final plan = planNotifications(
+        prediction: null,
+        settings: con(parche),
+        today: '2026-04-01',
+        nowMinutesOfDay: 22 * 60,
+        keepDueToday: true,
+      );
+      expect(plan.map((p) => (p.id, p.date, p.due)), [
+        (105, '2026-04-01', true),
+        (106, '2026-04-08', false),
+        (107, '2026-04-15', false),
+      ]);
+      expect(plan.first.title, 'Hoy toca parche nuevo');
+    });
+
+    test('sin detalles: texto generico', () {
+      final plan = planNotifications(
+        prediction: null,
+        settings: con(parche, details: false),
+        today: '2026-04-02',
+        nowMinutesOfDay: 8 * 60,
+      );
+      expect(plan.map((p) => p.title).toSet(), {'Aura: recordatorio'});
     });
   });
 

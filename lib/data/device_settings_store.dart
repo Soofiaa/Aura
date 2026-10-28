@@ -6,6 +6,8 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../domain/contraceptive.dart';
+
 /// Ajustes de ESTE telefono que no son datos del ciclo: como el estado del
 /// recordatorio de respaldo, no van en la base (sin migracion) ni en el
 /// respaldo exportado, y ni importar ni "Deshacer" los tocan.
@@ -15,6 +17,7 @@ class DeviceSettings {
     this.avisoAtraso = false,
     this.tema = ThemeMode.system,
     this.recordatorioDiario = false,
+    this.anticonceptivo,
   });
 
   /// "Ocultar Aura en Recientes" (FLAG_SECURE): la miniatura de la app en
@@ -33,16 +36,23 @@ class DeviceSettings {
   /// salvo que ese dia ya este registrado. Opt-in.
   final bool recordatorioDiario;
 
+  /// Recordatorio de anticonceptivo; null si esta apagado.
+  final ContraceptiveReminder? anticonceptivo;
+
   DeviceSettings copyWith(
           {bool? ocultarEnRecientes,
           bool? avisoAtraso,
           ThemeMode? tema,
-          bool? recordatorioDiario}) =>
+          bool? recordatorioDiario,
+          // Funcion para poder apagarlo (null).
+          ContraceptiveReminder? Function()? anticonceptivo}) =>
       DeviceSettings(
         ocultarEnRecientes: ocultarEnRecientes ?? this.ocultarEnRecientes,
         avisoAtraso: avisoAtraso ?? this.avisoAtraso,
         tema: tema ?? this.tema,
         recordatorioDiario: recordatorioDiario ?? this.recordatorioDiario,
+        anticonceptivo:
+            anticonceptivo != null ? anticonceptivo() : this.anticonceptivo,
       );
 
   Map<String, Object?> toJson() => {
@@ -51,6 +61,7 @@ class DeviceSettings {
         'avisoAtraso': avisoAtraso,
         'tema': tema.name,
         'recordatorioDiario': recordatorioDiario,
+        'anticonceptivo': anticonceptivo?.toJson(),
       };
 
   /// null si [raw] no es un estado valido de la version actual: quien lo
@@ -71,7 +82,9 @@ class DeviceSettings {
         avisoAtraso: aviso,
         tema: tema,
         // Sin el campo (archivos anteriores): apagado.
-        recordatorioDiario: raw['recordatorioDiario'] == true);
+        recordatorioDiario: raw['recordatorioDiario'] == true,
+        // Sin el campo o invalido: apagado.
+        anticonceptivo: ContraceptiveReminder.fromJson(raw['anticonceptivo']));
   }
 
   @override
@@ -80,16 +93,19 @@ class DeviceSettings {
       other.ocultarEnRecientes == ocultarEnRecientes &&
       other.avisoAtraso == avisoAtraso &&
       other.tema == tema &&
-      other.recordatorioDiario == recordatorioDiario;
+      other.recordatorioDiario == recordatorioDiario &&
+      other.anticonceptivo == anticonceptivo;
 
   @override
   int get hashCode => 
-      Object.hash(ocultarEnRecientes, avisoAtraso, tema, recordatorioDiario);
+      Object.hash(ocultarEnRecientes, avisoAtraso, tema, recordatorioDiario,
+          anticonceptivo);
 
   @override
   String toString() => 'DeviceSettings(ocultarEnRecientes: '
       '$ocultarEnRecientes, avisoAtraso: $avisoAtraso, tema: $tema, '
-      'recordatorioDiario: $recordatorioDiario)';
+      'recordatorioDiario: $recordatorioDiario, '
+      'anticonceptivo: $anticonceptivo)';
 }
 
 /// Guarda [DeviceSettings] en un JSON pequeno en el almacenamiento privado
@@ -133,6 +149,9 @@ class DeviceSettingsStore {
 
   Future<DeviceSettings> setRecordatorioDiario(bool value) =>
       _actualizar((s) => s.copyWith(recordatorioDiario: value));
+
+  Future<DeviceSettings> setAnticonceptivo(ContraceptiveReminder? value) =>
+      _actualizar((s) => s.copyWith(anticonceptivo: () => value));
 
   /// "Borrar todos los datos": vuelve a los valores por defecto.
   Future<void> delete() => _enFila(() async {

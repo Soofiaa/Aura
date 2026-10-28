@@ -60,6 +60,12 @@ String get _dailyChannelDescription =>
     tr('Aviso diario para registrar cómo estuvo tu día.',
         'A daily reminder to log how your day went.');
 
+const _contraceptiveChannelId = 'aura_contraceptive_reminder';
+String get _contraceptiveChannelName => tr('Anticonceptivo', 'Birth control');
+String get _contraceptiveChannelDescription =>
+    tr('Aviso para tu pastilla, parche, anillo o inyección.',
+        'A reminder for your pill, patch, ring or injection.');
+
 /// Avisos propios pendientes que ya no corresponden: todo id de
 /// [ownedIds] que no este en [plan]. Uno [PlannedNotification.due] del plan
 /// no se cancela (ni se vuelve a programar): Android puede no haberlo
@@ -105,8 +111,11 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static final List<int> _ownedIds =
-      NotificationKind.values.map((k) => k.notificationId).toList();
+  static final List<int> _ownedIds = [
+    for (final k in NotificationKind.values) k.notificationId,
+    for (var i = 1; i < contraceptiveSlots; i++)
+      NotificationKind.contraceptiveReminder.notificationId + i,
+  ];
 
   @override
   Future<void> init() async {
@@ -197,7 +206,8 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
       scheduled,
       _detailsFor(item.kind),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: item.kind == NotificationKind.dailyLogReminder
+      matchDateTimeComponents: item.kind == NotificationKind.dailyLogReminder ||
+              item.kind == NotificationKind.pillReminder
           ? DateTimeComponents.time
           : null,
     );
@@ -224,6 +234,13 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
           _dailyChannelId,
           _dailyChannelName,
           _dailyChannelDescription,
+        ),
+      NotificationKind.pillReminder ||
+      NotificationKind.contraceptiveReminder =>
+        (
+          _contraceptiveChannelId,
+          _contraceptiveChannelName,
+          _contraceptiveChannelDescription,
         ),
     };
 

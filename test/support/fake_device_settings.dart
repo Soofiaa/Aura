@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:aura/data/device_settings_store.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/utils/android_system.dart';
 
 /// Ajustes de este telefono en memoria para tests de widget (la E/S real
@@ -46,6 +47,10 @@ class FakeDeviceSettingsStore extends DeviceSettingsStore {
   @override
   Future<DeviceSettings> setRecordatorioDiario(bool value) async =>
       _cambiar(_state.copyWith(recordatorioDiario: value));
+
+  @override
+  Future<DeviceSettings> setAnticonceptivo(ContraceptiveReminder? value) async =>
+      _cambiar(_state.copyWith(anticonceptivo: () => value));
 
   @override
   Future<void> delete() async => _cambiar(const DeviceSettings());

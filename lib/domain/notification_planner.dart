@@ -1,5 +1,6 @@
 import '../utils/aura_localizations.dart';
 import '../utils/day_key.dart';
+import 'contraceptive.dart';
 import 'cycle_predictor.dart';
 import 'fertile_marks.dart';
 
@@ -12,7 +13,18 @@ enum NotificationKind {
 
   /// Registrar el dia: se repite cada dia a la misma hora.
   dailyLogReminder,
+
+  /// La pastilla: se repite cada dia a su hora.
+  pillReminder,
+
+  /// Parche, anillo o inyeccion: usa [contraceptiveSlots] ids seguidos.
+  contraceptiveReminder,
 }
+
+/// Los avisos de parche, anillo e inyeccion programan los proximos varios
+/// eventos, por si la app no se abre en semanas: uno por id, desde el de
+/// [NotificationKind.contraceptiveReminder].
+const contraceptiveSlots = 3;
 
 extension NotificationKindId on NotificationKind {
   /// Id estable por tipo: reprogramar reemplaza la notificacion anterior
@@ -22,6 +34,8 @@ extension NotificationKindId on NotificationKind {
         NotificationKind.fertileWindowReminder => 101,
         NotificationKind.latePeriodReminder => 102,
         NotificationKind.dailyLogReminder => 103,
+        NotificationKind.pillReminder => 104,
+        NotificationKind.contraceptiveReminder => 105, // y 106, 107
       };
 }
 
@@ -49,6 +63,9 @@ class NotificationSettings {
   /// Recordatorio diario de registro (ajuste de este telefono).
   final bool dailyLogReminderEnabled;
 
+  /// Recordatorio de anticonceptivo (ajuste de este telefono), con su hora.
+  final ContraceptiveReminder? contraceptive;
+
   const NotificationSettings({
     required this.notificationsEnabled,
     required this.periodReminderEnabled,
@@ -59,10 +76,13 @@ class NotificationSettings {
     this.showFertileWindow = true,
     this.latePeriodReminderEnabled = false,
     this.dailyLogReminderEnabled = false,
+    this.contraceptive,
   });
 
   NotificationSettings copyWith(
-          {bool? latePeriodReminderEnabled, bool? dailyLogReminderEnabled}) =>
+          {bool? latePeriodReminderEnabled,
+          bool? dailyLogReminderEnabled,
+          ContraceptiveReminder? contraceptive}) =>
       NotificationSettings(
         notificationsEnabled: notificationsEnabled,
         periodReminderEnabled: periodReminderEnabled,
@@ -75,6 +95,7 @@ class NotificationSettings {
             latePeriodReminderEnabled ?? this.latePeriodReminderEnabled,
         dailyLogReminderEnabled:
             dailyLogReminderEnabled ?? this.dailyLogReminderEnabled,
+        contraceptive: contraceptive ?? this.contraceptive,
       );
 }
 
@@ -159,6 +180,36 @@ List<PlannedNotification> planNotifications({
         nowMinutesOfDay;
     planned.add(_dailyLogReminder(
         loggedToday || passed ? DayKey.addDays(today, 1) : today, settings));
+  }
+
+  // Tambien sin prediccion, a su propia hora. La pastilla se repite sola
+  // como el recordatorio diario; los demas metodos, en sus fechas.
+  final c = settings.contraceptive;
+  if (c != null) {
+    final passed = c.hour * 60 + c.minute <= nowMinutesOfDay;
+    if (c.method == ContraceptiveMethod.pill) {
+      planned.add(_contraceptiveReminder(
+          NotificationKind.pillReminder.notificationId,
+          passed ? DayKey.addDays(today, 1) : today,
+          ContraceptiveAction.takePill,
+          c,
+          settings,
+          false));
+    } else {
+      var slot = 0;
+      for (final (date, action)
+          in contraceptiveEvents(c, today, contraceptiveSlots)) {
+        final due = date == today && passed;
+        if (due && !keepDueToday) continue;
+        planned.add(_contraceptiveReminder(
+            NotificationKind.contraceptiveReminder.notificationId + slot++,
+            date,
+            action,
+            c,
+            settings,
+            due));
+      }
+    }
   }
 
   if (prediction is! ActivePrediction) return planned;
@@ -268,6 +319,65 @@ PlannedNotification _dailyLogReminder(String date, NotificationSettings s) =>
           : tr('Abre la app para ver el detalle.',
               'Open the app to see the details.'),
     );
+
+PlannedNotification _contraceptiveReminder(
+    int id,
+    String date,
+    ContraceptiveAction action,
+    ContraceptiveReminder c,
+    NotificationSettings s,
+    bool due) {
+  final (title, body) = switch (action) {
+    ContraceptiveAction.takePill => (
+        tr('Hora de tu pastilla', 'Time for your pill'),
+        tr('Recuerda tomar tu anticonceptivo.',
+            'Remember to take your birth control.'),
+      ),
+    ContraceptiveAction.applyPatch => (
+        tr('Hoy toca parche nuevo', 'New patch today'),
+        tr('Empieza un ciclo: ponte un parche nuevo.',
+            'A new cycle starts: put on a new patch.'),
+      ),
+    ContraceptiveAction.changePatch => (
+        tr('Hoy toca cambiar el parche', 'Change your patch today'),
+        tr('Quítate el parche y ponte uno nuevo.',
+            'Take off your patch and put on a new one.'),
+      ),
+    ContraceptiveAction.removePatch => (
+        tr('Hoy toca quitarte el parche', 'Take off your patch today'),
+        tr('Empieza tu semana sin parche.', 'Your patch-free week starts.'),
+      ),
+    ContraceptiveAction.insertRing => (
+        tr('Hoy toca anillo nuevo', 'New ring today'),
+        tr('Ponte un anillo nuevo.', 'Insert a new ring.'),
+      ),
+    ContraceptiveAction.removeRing => (
+        tr('Hoy toca quitarte el anillo', 'Remove your ring today'),
+        tr('Empieza tu semana sin anillo.', 'Your ring-free week starts.'),
+      ),
+    ContraceptiveAction.injection => (
+        tr('Hoy toca tu inyección', 'Injection due today'),
+        tr('Recuerda tu inyección anticonceptiva.',
+            'Remember your birth control injection.'),
+      ),
+  };
+  final detailed = s.showDetailsEnabled;
+  return PlannedNotification(
+    kind: action == ContraceptiveAction.takePill
+        ? NotificationKind.pillReminder
+        : NotificationKind.contraceptiveReminder,
+    id: id,
+    date: date,
+    hour: c.hour,
+    minute: c.minute,
+    title: detailed ? title : tr('Aura: recordatorio', 'Aura: reminder'),
+    body: detailed
+        ? body
+        : tr('Abre la app para ver el detalle.',
+            'Open the app to see the details.'),
+    due: due,
+  );
+}
 
 PlannedNotification _latePeriodReminder(
     String date, NotificationSettings s, bool due) {

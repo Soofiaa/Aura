@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:aura/data/device_settings_store.dart';
+import 'package:aura/domain/contraceptive.dart';
 
 void main() {
   late Directory support;
@@ -32,6 +33,12 @@ void main() {
     await store.setAvisoAtraso(true);
     await store.setTema(ThemeMode.dark);
     await store.setRecordatorioDiario(true);
+    const anillo = ContraceptiveReminder(
+        method: ContraceptiveMethod.ring,
+        startDate: '2026-04-01',
+        hour: 8,
+        minute: 15);
+    await store.setAnticonceptivo(anillo);
 
     final otra = DeviceSettingsStore(supportDirectory: () async => support);
     expect(
@@ -40,7 +47,11 @@ void main() {
             ocultarEnRecientes: false,
             avisoAtraso: true,
             tema: ThemeMode.dark,
-            recordatorioDiario: true));
+            recordatorioDiario: true,
+            anticonceptivo: anillo));
+
+    await otra.setAnticonceptivo(null);
+    expect((await store.read()).anticonceptivo, isNull);
     expect(File('${archivo().path}.tmp').existsSync(), isFalse);
   });
 
