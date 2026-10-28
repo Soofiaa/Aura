@@ -63,7 +63,7 @@ const int homeWidgetDays = 60;
         return (
           title: tr('Día ${actual.dayNumber} de tu período',
               'Day ${actual.dayNumber} of your period'),
-          text: tr('Toca para registrar hoy', 'Tap to log today'),
+          text: tr('Toca para abrir', 'Tap to open'),
         );
       }
       if (p.isPeriodLate) {

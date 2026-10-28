@@ -196,18 +196,20 @@ List<PlannedNotification> planNotifications({
           settings,
           false));
     } else {
+      // Nunca "due": un due no se cancela ni se reprograma, y en su id podia
+      // quedar el aviso de otro metodo. El de hoy ya pasado se salta.
       var slot = 0;
       for (final (date, action)
-          in contraceptiveEvents(c, today, contraceptiveSlots)) {
-        final due = date == today && passed;
-        if (due && !keepDueToday) continue;
+          in contraceptiveEvents(c, today, contraceptiveSlots + 1)) {
+        if (slot == contraceptiveSlots) break;
+        if (date == today && passed) continue;
         planned.add(_contraceptiveReminder(
             NotificationKind.contraceptiveReminder.notificationId + slot++,
             date,
             action,
             c,
             settings,
-            due));
+            false));
       }
     }
   }

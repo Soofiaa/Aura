@@ -284,7 +284,13 @@ class _SettingsScreenState extends State<SettingsScreen>
       final hoy = DateTime.now();
       String? inicio;
       if (metodo != ContraceptiveMethod.pill) {
-        final previo = actual?.method == metodo ? actual?.startDate : null;
+        var previo = actual?.method == metodo ? actual?.startDate : null;
+        final primero = DayKey.addDays(_hoy, -365);
+        // Un inicio de hace mas de un ano: el ultimo inicio de ciclo dentro
+        // del rango, para no correr el calendario de la usuaria.
+        while (previo != null && DayKey.isBefore(previo, primero)) {
+          previo = DayKey.addDays(previo, metodo.cycleDays);
+        }
         final dia = await showDatePicker(
           context: context,
           helpText: switch (metodo) {
@@ -297,7 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             _ => tr("Día de tu última inyección", "Day of your last injection"),
           },
           initialDate: previo != null ? DateTime.parse(previo) : hoy,
-          firstDate: hoy.subtract(const Duration(days: 365)),
+          firstDate: DateTime.parse(primero),
           lastDate: hoy.add(const Duration(days: 31)),
           currentDate: hoy,
         );
@@ -642,7 +648,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     final fin = await showDatePicker(
       context: context,
       helpText: tr("¿Cuándo terminó?", "When did it end?"),
-      initialDate: terminado ? DateTime.parse(embarazo.end!) : hoy,
+      // Un fin futuro (respaldo restaurado) queda fuera del rango.
+      initialDate: terminado && DayKey.isBefore(embarazo.end!, _hoy)
+          ? DateTime.parse(embarazo.end!)
+          : hoy,
       firstDate: DateTime.parse(embarazo.start),
       lastDate: hoy,
       currentDate: hoy,

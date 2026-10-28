@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../domain/contraceptive.dart';
+import '../domain/cycle_deriver.dart' show CycleSummary;
 import '../domain/cycle_predictor.dart';
 import '../domain/symptom_ranking.dart';
 import '../utils/aura_localizations.dart';
@@ -101,9 +102,13 @@ Future<Uint8List> buildDoctorReport({
   final moodTotal = moods.values.fold<int>(0, (a, b) => a + b);
   final recent =
       cycles.length > 12 ? cycles.sublist(cycles.length - 12) : cycles;
+  // Ciclo que abarca un embarazo: su duracion no es la de un ciclo.
+  bool embarazo(CycleSummary c) =>
+      c.cycleLengthDays != null &&
+      cycleOverlapsPregnancy(c, config.pregnancies);
   final chart = [
     for (final c in recent)
-      if (c.cycleLengthDays != null) c,
+      if (c.cycleLengthDays != null && !embarazo(c)) c,
   ];
 
   final small = pw.TextStyle(fontSize: 9, color: _muted);
@@ -333,7 +338,9 @@ Future<Uint8List> buildDoctorReport({
                 _days(c.periodLengthDays),
                 c.cycleLengthDays == null
                     ? tr('En curso', 'Ongoing')
-                    : _days(c.cycleLengthDays!),
+                    : embarazo(c)
+                        ? tr('Embarazo', 'Pregnancy')
+                        : _days(c.cycleLengthDays!),
               ],
           ]),
         ]),

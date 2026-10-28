@@ -43,7 +43,7 @@ void main() {
       _c('2026-10-01', null, ended: false),
     ], typicalPeriodLengthDays: 5);
     expect(texto(abierto, '2026-10-02'),
-        'Día 2 de tu período | Toca para registrar hoy');
+        'Día 2 de tu período | Toca para abrir');
   });
 
   test('sin datos y embarazo (activo o terminado)', () {

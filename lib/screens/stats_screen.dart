@@ -559,7 +559,13 @@ class _CyclesSection extends StatelessWidget {
         if (ciclosCompletos >= 2) ...[
           const SizedBox(height: 24),
           _CycleChart(
-              cycles: inputs.cycles,
+              // Sin los que abarcan un embarazo: aplastarian las demas barras.
+              cycles: [
+                for (final c in inputs.cycles)
+                  if (c.cycleLengthDays == null ||
+                      !cycleOverlapsPregnancy(c, inputs.pregnancies))
+                    c,
+              ],
               typical: regularidad != null ? ciclo.days : null),
         ],
       ],

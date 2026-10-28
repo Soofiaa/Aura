@@ -34,6 +34,14 @@ extension ContraceptiveMethodLabel on ContraceptiveMethod {
             "Inyección trimestral (cada 13 semanas)",
             "3-month injection (every 13 weeks)"),
       };
+
+  /// Dias entre un inicio de ciclo y el siguiente (1 para la pastilla).
+  int get cycleDays => switch (this) {
+        ContraceptiveMethod.pill => 1,
+        ContraceptiveMethod.patch || ContraceptiveMethod.ring => 28,
+        ContraceptiveMethod.monthlyInjection => 30,
+        ContraceptiveMethod.quarterlyInjection => 91,
+      };
 }
 
 enum ContraceptiveAction {
@@ -121,26 +129,22 @@ class ContraceptiveReminder {
 /// es la pastilla, en orden.
 List<(String, ContraceptiveAction)> contraceptiveEvents(
     ContraceptiveReminder r, String from, int count) {
-  final (int cycle, Map<int, ContraceptiveAction> byDay) = switch (r.method) {
+  final cycle = r.method.cycleDays;
+  final Map<int, ContraceptiveAction> byDay = switch (r.method) {
     ContraceptiveMethod.pill => throw ArgumentError('la pastilla es diaria'),
-    ContraceptiveMethod.patch => (28, {
+    ContraceptiveMethod.patch => {
         0: ContraceptiveAction.applyPatch,
         7: ContraceptiveAction.changePatch,
         14: ContraceptiveAction.changePatch,
         21: ContraceptiveAction.removePatch,
-      }),
-    ContraceptiveMethod.ring => (28, {
+      },
+    ContraceptiveMethod.ring => {
         0: ContraceptiveAction.insertRing,
         21: ContraceptiveAction.removeRing,
-      }),
-    ContraceptiveMethod.monthlyInjection => (
-        30,
-        {0: ContraceptiveAction.injection}
-      ),
-    ContraceptiveMethod.quarterlyInjection => (
-        91,
-        {0: ContraceptiveAction.injection}
-      ),
+      },
+    ContraceptiveMethod.monthlyInjection ||
+    ContraceptiveMethod.quarterlyInjection =>
+      {0: ContraceptiveAction.injection},
   };
   final start = r.startDate!;
   final events = <(String, ContraceptiveAction)>[];

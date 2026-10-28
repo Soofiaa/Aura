@@ -104,7 +104,8 @@ class PredictionConfig {
 /// listas van ordenadas por inicio.
 typedef PregnancySpan = ({String start, String? end});
 
-bool _overlapsPregnancy(CycleSummary c, List<PregnancySpan> pregnancies) {
+/// El ciclo completo [c] incluye dias de algun embarazo (dura de mas).
+bool cycleOverlapsPregnancy(CycleSummary c, List<PregnancySpan> pregnancies) {
   final cycleEnd = DayKey.addDays(c.startDate, c.cycleLengthDays! - 1);
   return pregnancies.any((p) =>
       !DayKey.isBefore(cycleEnd, p.start) &&
@@ -332,7 +333,7 @@ _WeightedStats _weightedMeanAndStdDev(List<int> values) {
   final completeCycles = sorted
       .where((c) =>
           c.cycleLengthDays != null &&
-          !_overlapsPregnancy(c, config.pregnancies))
+          !cycleOverlapsPregnancy(c, config.pregnancies))
       .toList();
   final validCycles = completeCycles
       .where((c) =>

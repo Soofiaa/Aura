@@ -68,5 +68,12 @@ void main() {
               PregnancyRow(startDate: '2026-09-24'),
             ]),
         '%PDF-');
+    // Un ciclo de 420 dias que abarca un embarazo terminado.
+    expect(
+        await build(PredictionInputs(
+            cycles: [_c('2025-06-01', 420), ...ciclos],
+            typicalPeriodLengthDays: 5,
+            pregnancies: [(start: '2025-06-01', end: '2026-02-01')])),
+        '%PDF-');
   });
 }

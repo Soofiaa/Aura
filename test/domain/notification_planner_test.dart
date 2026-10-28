@@ -159,20 +159,24 @@ void main() {
     });
 
     test('parche: los proximos 3 eventos con ids 105-107; el de hoy ya '
-        'pasado queda "due"', () {
-      final plan = planNotifications(
-        prediction: null,
-        settings: con(parche),
-        today: '2026-04-01',
-        nowMinutesOfDay: 22 * 60,
-        keepDueToday: true,
-      );
-      expect(plan.map((p) => (p.id, p.date, p.due)), [
-        (105, '2026-04-01', true),
+        'pasado se salta (nunca "due", para no dejar un aviso viejo)', () {
+      List<(int, String, bool)> plan(int now) => planNotifications(
+            prediction: null,
+            settings: con(parche),
+            today: '2026-04-01',
+            nowMinutesOfDay: now,
+            keepDueToday: true,
+          ).map((p) => (p.id, p.date, p.due)).toList();
+      expect(plan(8 * 60), [
+        (105, '2026-04-01', false),
         (106, '2026-04-08', false),
         (107, '2026-04-15', false),
       ]);
-      expect(plan.first.title, 'Hoy toca parche nuevo');
+      expect(plan(22 * 60), [
+        (105, '2026-04-08', false),
+        (106, '2026-04-15', false),
+        (107, '2026-04-22', false),
+      ]);
     });
 
     test('sin detalles: texto generico', () {
