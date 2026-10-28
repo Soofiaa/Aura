@@ -244,7 +244,8 @@ void main() {
             subtitulo,
             'Restaurar un respaldo',
           ]) {
-            await tester.scrollUntilVisible(find.text(texto), 150);
+            await tester.scrollUntilVisible(find.text(texto), 150,
+                maxScrolls: 100);
             await tester.ensureVisible(find.text(texto));
             await tester.pumpAndSettle();
             expect(tester.takeException(), isNull, reason: texto);

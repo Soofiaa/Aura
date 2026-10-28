@@ -117,6 +117,8 @@ void main() {
       'los sub-interruptores estan deshabilitados mientras el general esta '
       'apagado', (tester) async {
     await pumpScreen(tester);
+    await tester.scrollUntilVisible(
+        find.widgetWithText(SwitchListTile, 'Recordatorio de período'), 200);
 
     final periodoSwitch = tester.widget<SwitchListTile>(
         find.widgetWithText(SwitchListTile, 'Recordatorio de período'));
@@ -740,6 +742,8 @@ void main() {
         'guarda', (tester) async {
       await pumpScreen(tester);
       await tester.scrollUntilVisible(recientes, 200);
+      await tester.ensureVisible(recientes);
+      await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(recientes).value, isTrue);
 
       await tester.tap(recientes);
@@ -755,6 +759,8 @@ void main() {
       ajustesTelefono.writeError = const FileSystemException('sin espacio');
       await pumpScreen(tester);
       await tester.scrollUntilVisible(recientes, 200);
+      await tester.ensureVisible(recientes);
+      await tester.pumpAndSettle();
       await tester.tap(recientes);
       await tester.pumpAndSettle();
 

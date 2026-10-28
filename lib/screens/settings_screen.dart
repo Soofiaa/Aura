@@ -10,11 +10,14 @@ import '../data/device_settings_store.dart';
 import '../data/models/day_enums.dart';
 import '../data/notifications/notification_reconciler.dart';
 import '../data/repositories/cycle_repository.dart';
+import '../domain/cycle_predictor.dart' show PregnancySpan;
 import '../domain/notification_planner.dart';
 import '../utils/android_system.dart';
 import '../utils/app_version.dart';
 import '../utils/aura_localizations.dart';
 import '../utils/colors.dart';
+import '../utils/date_labels.dart';
+import '../utils/day_key.dart';
 import '../utils/notifications.dart';
 import 'backup_section.dart';
 import 'drive_backup_section.dart';
@@ -80,6 +83,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   // primera lectura.
   StreamSubscription<PredictionInputs>? _duracionSub;
   int? _duracionHabitual;
+  // Modo embarazo: los mismos datos en vivo (embarazos y ciclos).
+  PredictionInputs? _inputs;
 
   bool _notificaciones = false;
   bool _recordatorioPeriodo = true;
@@ -98,7 +103,10 @@ class _SettingsScreenState extends State<SettingsScreen>
         _repository.watchNotificationSettings().listen(_aplicarPreferencias);
     _duracionSub = _repository.watchPredictionInputs().listen((inputs) {
       if (!mounted) return;
-      setState(() => _duracionHabitual = inputs.typicalPeriodLengthDays);
+      setState(() {
+        _duracionHabitual = inputs.typicalPeriodLengthDays;
+        _inputs = inputs;
+      });
     });
     _deviceSub = _deviceSettings.watch().listen((ajustes) {
       if (!mounted) return;
@@ -286,6 +294,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     final puedeSubir =
         duracion != null && duracion < maxTypicalPeriodLength;
     const tamanoMinimo = BoxConstraints(minWidth: 48, minHeight: 48);
+    final embarazo =
+        _inputs?.isPregnant ?? false ? _inputs!.pregnancies.last : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,8 +379,122 @@ class _SettingsScreenState extends State<SettingsScreen>
           value: _mostrarFertil,
           onChanged: _cambiarMostrarFertil,
         ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(tr("Modo embarazo", "Pregnancy mode")),
+          subtitle: Text(embarazo == null
+              ? tr(
+                  "Muestra las semanas de embarazo y pausa las predicciones "
+                      "y los avisos del ciclo.",
+                  "Shows how far along you are and pauses cycle predictions "
+                      "and reminders.")
+              : tr(
+                  "Desde tu última regla del "
+                      "${dayMonthLabelWithYear(embarazo.start, today: _hoy)}. "
+                      "Las predicciones vuelven cuando registres un período "
+                      "después de terminarlo.",
+                  "Since your last period on "
+                      "${dayMonthLabelWithYear(embarazo.start, today: _hoy)}. "
+                      "Predictions resume when you log a period after "
+                      "ending it.")),
+          value: embarazo != null,
+          onChanged: _inputs == null
+              ? null
+              : (on) => on ? _iniciarEmbarazo() : _terminarEmbarazo(embarazo!),
+        ),
       ],
     );
+  }
+
+  String get _hoy => DayKey.fromDate(DateTime.now());
+
+  /// Pide la fecha de la ultima regla (por defecto, el inicio del ultimo
+  /// periodo registrado). No puede ser antes del fin del embarazo anterior.
+  Future<void> _iniciarEmbarazo() async {
+    final inputs = _inputs!;
+    final hoy = DateTime.parse(_hoy);
+    var primero = hoy.subtract(const Duration(days: 300));
+    final finAnterior =
+        inputs.pregnancies.isEmpty ? null : inputs.pregnancies.last.end;
+    if (finAnterior != null) {
+      final despues = DateTime.parse(DayKey.addDays(finAnterior, 1));
+      if (despues.isAfter(primero)) primero = despues;
+    }
+    if (primero.isAfter(hoy)) {
+      showAppSnackBar(
+          context,
+          tr("Puedes activarlo desde mañana.",
+              "You can turn it on starting tomorrow."));
+      return;
+    }
+    var inicial = inputs.cycles.isEmpty
+        ? hoy
+        : DateTime.parse(inputs.cycles
+            .map((c) => c.startDate)
+            .reduce((a, b) => DayKey.isBefore(a, b) ? b : a));
+    if (inicial.isBefore(primero)) inicial = hoy;
+    final elegido = await showDatePicker(
+      context: context,
+      helpText: tr("Primer día de tu última regla",
+          "First day of your last period"),
+      initialDate: inicial,
+      firstDate: primero,
+      lastDate: hoy,
+      currentDate: hoy,
+    );
+    if (elegido == null || !mounted) return;
+    await _guardar(() => _repository.startPregnancy(DayKey.fromDate(elegido)));
+  }
+
+  /// Como termino (o "lo active por error", que lo borra) y cuando. Sin
+  /// textos de celebracion: el aviso es el mismo para cualquier final.
+  Future<void> _terminarEmbarazo(PregnancySpan embarazo) async {
+    const porError = 'porError';
+    final eleccion = await showDialog<Object>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr("Terminar modo embarazo", "End pregnancy mode")),
+        children: [
+          for (final o in PregnancyOutcome.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, o),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(o.label),
+              ),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, porError),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(tr("Lo activé por error", "I turned it on by mistake"),
+                  style: const TextStyle(color: AppColors.textSecondary)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (eleccion == null || !mounted) return;
+    if (eleccion == porError) {
+      await _guardar(() => _repository.deletePregnancy(embarazo.start));
+      return;
+    }
+    final hoy = DateTime.parse(_hoy);
+    final fin = await showDatePicker(
+      context: context,
+      helpText: tr("¿Cuándo terminó?", "When did it end?"),
+      initialDate: hoy,
+      firstDate: DateTime.parse(embarazo.start),
+      lastDate: hoy,
+      currentDate: hoy,
+    );
+    if (fin == null || !mounted) return;
+    if (await _guardar(() => _repository.endPregnancy(
+            DayKey.fromDate(fin), eleccion as PregnancyOutcome)) &&
+        mounted) {
+      showAppSnackBar(
+          context, tr("Modo embarazo terminado.", "Pregnancy mode ended."));
+    }
   }
 
   Future<void> _elegirHora() async {

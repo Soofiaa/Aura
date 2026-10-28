@@ -248,11 +248,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             return const Center(child: CircularProgressIndicator());
           }
           final inputs = snapshot.data;
-          final prediction = predictCycle(
-            cycles: inputs?.cycles ?? const [],
-            today: _today,
-            config: inputs?.config ?? const PredictionConfig(),
-          );
+          final enPausa = inputs?.predictionsPaused ?? false;
+          final embarazada = inputs?.isPregnant ?? false;
+          final prediction = enPausa
+              ? null
+              : predictCycle(
+                  cycles: inputs?.cycles ?? const [],
+                  today: _today,
+                  config: inputs?.config ?? const PredictionConfig(),
+                );
           final current = findCurrentPeriod(
               cycles: inputs?.cycles ?? const [], today: _today);
           // #17: los botones de accion quedan fijos abajo, fuera del
@@ -268,13 +272,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       const SizedBox(height: 10),
                       Text(
-                        tr("Tu ciclo actual", "Your current cycle"),
+                        embarazada
+                            ? tr("Tu embarazo", "Your pregnancy")
+                            : tr("Tu ciclo actual", "Your current cycle"),
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 20),
-                      _buildPredictionCard(prediction,
-                          mostrarFertilidad: inputs?.showFertileWindow ?? true,
-                          enCurso: _periodoEnCurso(prediction, current)),
+                      if (enPausa)
+                        _buildPregnancyCard(inputs!.pregnancies.last)
+                      else
+                        _buildPredictionCard(prediction,
+                            mostrarFertilidad: inputs?.showFertileWindow ?? true,
+                            enCurso: _periodoEnCurso(prediction, current)),
                       StreamBuilder<DailyLogRow?>(
                         stream: _todayStream,
                         builder: (context, todaySnapshot) {
@@ -295,8 +304,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         },
                       ),
                       _buildBackupReminder(),
-                      const SizedBox(height: 12),
-                      _buildDisclaimer(),
+                      if (!embarazada) ...[
+                        const SizedBox(height: 12),
+                        _buildDisclaimer(),
+                      ],
                     ],
                   ),
                 ),
@@ -309,8 +320,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Decision 1: "Me llego hoy" en Inicio solo cuando no hay
-                      // un periodo abierto en curso.
-                      if (current == null || current.isClosed) ...[
+                      // un periodo abierto en curso. Nunca con un embarazo activo.
+                      if (!embarazada && (current == null || current.isClosed)) ...[
                         ElevatedButton.icon(
                           onPressed: () => showPeriodStartSheet(context,
                               repository: _repository, today: _today),
@@ -587,6 +598,68 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           tr("Ya terminó antes", "It ended earlier"),
           style: const TextStyle(decoration: TextDecoration.underline),
         ),
+      ),
+    ]);
+  }
+
+  /// Modo embarazo: semanas desde la ultima regla y fecha probable de
+  /// parto (+280 dias). Si ya termino y no hay un periodo despues, solo
+  /// explica la pausa, sin mencionar como termino.
+  Widget _buildPregnancyCard(PregnancySpan embarazo) {
+    const gris = TextStyle(fontSize: 14, color: AppColors.textSecondary);
+    if (embarazo.end != null) {
+      return _buildCardShell(children: [
+        const Icon(Icons.pause_circle_outline,
+            color: AppColors.textSecondary, size: 50),
+        const SizedBox(height: 10),
+        Text(
+          tr("Predicciones en pausa", "Predictions paused"),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          tr("Cuando vuelva tu período, regístralo para retomar las "
+                  "predicciones.",
+              "When your period returns, log it to resume predictions."),
+          textAlign: TextAlign.center,
+          style: gris,
+        ),
+      ]);
+    }
+    final dias = DayKey.diffInDays(embarazo.start, _today);
+    final semanas = dias ~/ 7;
+    final resto = dias % 7;
+    return _buildCardShell(children: [
+      const Icon(Icons.pregnant_woman, color: Colors.pinkAccent, size: 50),
+      const SizedBox(height: 10),
+      Text(
+        tr("$semanas ${semanas == 1 ? 'semana' : 'semanas'} y $resto "
+                "${resto == 1 ? 'día' : 'días'}",
+            "$semanas ${semanas == 1 ? 'week' : 'weeks'} and $resto "
+                "${resto == 1 ? 'day' : 'days'}"),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 15),
+      Text(
+        tr("Fecha probable de parto: "
+                "${_formatDate(DayKey.addDays(embarazo.start, 280))}",
+            "Estimated due date: "
+                "${_formatDate(DayKey.addDays(embarazo.start, 280))}"),
+        style: const TextStyle(fontSize: 16),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 15),
+      Text(
+        tr("Estimación desde el primer día de tu última regla "
+                "(${_formatDate(embarazo.start)}). Las predicciones y los "
+                "avisos del ciclo están en pausa.",
+            "Estimated from the first day of your last period "
+                "(${_formatDate(embarazo.start)}). Cycle predictions and "
+                "reminders are paused."),
+        textAlign: TextAlign.center,
+        style: gris,
       ),
     ]);
   }
