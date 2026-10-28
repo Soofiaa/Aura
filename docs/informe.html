@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Informe del proyecto Aura: motivación, funciones, arquitectura, privacidad, calidad y decisiones, con resumen ejecutivo en inglés.">
 <title>Informe de Aura</title>
+<link rel="alternate" hreflang="es" href="https://soofiaa.github.io/Aura/informe.html">
+<link rel="alternate" hreflang="en" href="https://soofiaa.github.io/Aura/en/report.html">
 <!-- Sin recursos externos: solo tipografías del sistema, igual que privacy.html. -->
 <style>
 /* Concepto: el anillo del ciclo (28 días) como firma visual; páginas de lectura limpias sobre la paleta de la app. */
@@ -207,7 +209,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <div class="wrap">
   <header class="top">
     <div class="brand"><i></i>Aura</div>
-    <nav class="sitenav" aria-label="Sitio"><a href="index.html">Inicio</a><a href="guia.html">Guía de uso</a><a href="informe.html" aria-current="page">Informe</a><a href="testers.html">Testers</a><a href="privacy.html">Privacidad</a></nav>
+    <nav class="sitenav" aria-label="Sitio"><a href="index.html">Inicio</a><a href="guia.html">Guía de uso</a><a href="informe.html" aria-current="page">Informe</a><a href="testers.html">Testers</a><a href="privacy.html">Privacidad</a><a href="en/report.html" hreflang="en" lang="en">English</a></nav>
   </header>
 
   <div class="hero">
@@ -219,7 +221,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <span class="chip"><b>Flutter</b> + SQLite (drift)</span>
         <span class="chip"><b>Android 7+</b></span>
         <span class="chip"><b>Prueba cerrada</b> en Google Play</span>
-        <span class="chip"><b>1296</b> pruebas, 0 fallos</span>
+        <span class="chip"><b>1375</b> pruebas, 0 fallos</span>
       </div>
     </div>
     <div class="ringbox">
@@ -247,7 +249,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <div class="eyebrow">En un minuto</div>
       <h2 style="font-size:clamp(26px,3.4vw,34px);margin:8px 0 16px">Registrar, estimar, y no mostrar más de lo que se sabe</h2>
       <p>Aura guarda días de sangrado, flujo, ánimo, síntomas y notas. Con eso estima el próximo período, la fase actual y, cuando hay datos suficientes, la ovulación y la ventana fértil.</p>
-      <p>No tiene cuenta, anuncios ni analítica. La única salida de datos es un respaldo opcional en el Google Drive de la propia usuaria, siempre cifrado.</p>
+      <p>No tiene cuenta, anuncios ni analítica. La única salida automática de datos es un respaldo opcional en el Google Drive de la propia usuaria, siempre cifrado. Fuera de eso, solo sale lo que ella comparte: un archivo de respaldo o un resumen en PDF.</p>
     </div>
     <div class="note warn" style="align-self:start">
       <b>Aviso de salud.</b> Aura ofrece estimaciones informativas. No es un método anticonceptivo ni un dispositivo médico.
@@ -289,8 +291,18 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <div class="card"><span class="tag">Respaldo</span><h3>Automático en Drive</h3><p>Opcional y apagado por defecto. Un archivo cifrado que se reemplaza una vez al día, como el respaldo de WhatsApp.</p></div>
     <div class="card"><span class="tag">Privacidad</span><h3>Oculta en Recientes</h3><p>La vista previa sale en blanco y se bloquean capturas y grabaciones de pantalla. Se puede apagar.</p></div>
   </div>
+  <h3 style="font-size:20px;margin:30px 0 10px">En la próxima actualización de Google Play</h3>
+  <p style="color:var(--text-2)">Ya están en la rama <code>main</code>, pero no en la versión 1.2.0 publicada en prueba cerrada.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag">Embarazo</span><h3>Modo embarazo</h3><p>Semanas, días y fecha probable de parto estimada desde la última regla. Pausa predicciones, ventana fértil y avisos del ciclo. Al terminar se elige el resultado sin textos celebratorios, y el último embarazo se puede corregir o borrar.</p></div>
+    <div class="card"><span class="tag">Estadísticas</span><h3>Resumen en PDF</h3><p>Generado en el teléfono, sin servidor, con los últimos 12 ciclos, síntomas, ánimo, flujo, embarazos y anticonceptivo. Se comparte con la hoja de compartir de Android.</p></div>
+    <div class="card"><span class="tag">Estadísticas</span><h3>Pantalla renovada</h3><p>Tarjetas de resumen, gráfico de barras de los ciclos recientes con la duración típica, explicaciones breves y ánimo en barras.</p></div>
+    <div class="card"><span class="tag">Widget</span><h3>Pantalla de inicio</h3><p>Próximo período, día del período, atraso o semanas de embarazo. Con «Widget discreto» no muestra datos. Cambia de día sin abrir la app.</p></div>
+    <div class="card"><span class="tag">Avisos</span><h3>Anticonceptivo y aviso diario</h3><p>Recordatorio de píldora, parche, anillo o inyección, guardado solo en el teléfono y fuera de los respaldos. Aviso diario si el día no tiene registros. Ambos opcionales.</p></div>
+    <div class="card"><span class="tag">Interfaz</span><h3>Inglés y tema oscuro</h3><p>La interfaz sigue el idioma del teléfono. Tema sistema, claro u oscuro. Pantalla de borde a borde y sin bloqueo de orientación.</p></div>
+  </div>
   <h3 style="font-size:20px;margin:30px 0 10px">Lo que Aura todavía no hace</h3>
-  <p style="color:var(--text-2)">iOS, interfaz en inglés, modo oscuro dentro de la app, cifrado de la base dentro del teléfono, historial de anticonceptivos (diseñado, no construido), cuenta o sincronización propia y exportación a PDF clínico.</p>
+  <p style="color:var(--text-2)">iOS, cifrado de la base dentro del teléfono, historial de anticonceptivos (diseñado, no construido) y cuenta o sincronización propia.</p>
 </div></section>
 
 <section id="calculo"><div class="wrap">
@@ -308,11 +320,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <tr><td>Ovulación</td><td>Próximo período esperado menos <b class="n">14 días</b></td></tr>
       <tr><td>Ventana fértil</td><td>Desde <b class="n">5 días</b> antes de la ovulación hasta la ovulación. Solo con confianza media o alta y sin atraso</td></tr>
       <tr><td>Datos desactualizados</td><td>Más de <b class="n">60 días</b> desde el último inicio: Aura deja de predecir</td></tr>
+      <tr><td>Embarazo</td><td>Pausa la predicción hasta que se registra un período nuevo después del término. Los ciclos que cruzan un embarazo no cuentan para la predicción, el gráfico ni el PDF</td></tr>
     </tbody></table></div>
   <h3 style="font-size:22px;margin:36px 0 10px">El principio que ordena todo</h3>
-  <p>Solo se guarda lo que la usuaria registró: los días de sangrado y sus detalles. Todo lo demás se calcula cada vez, de modo que corregir un solo día recalcula el resto sin contradicciones.</p>
+  <p>Solo se guarda lo que la usuaria registró: los días de sangrado y sus detalles, y los embarazos que indique. Todo lo demás se calcula cada vez, de modo que corregir un solo día recalcula el resto sin contradicciones.</p>
   <div class="flow">
-    <div class="step keep"><small>Se guarda</small><b>Días de sangrado</b><p>Lo único que Aura escribe en la base.</p></div>
+    <div class="step keep"><small>Se guarda</small><b>Días de sangrado</b><p>Junto con los embarazos, lo único que Aura escribe en la base.</p></div>
     <div class="step calc"><small>Se calcula</small><b>Períodos y ciclos</b><p>Brecha de más de 7 días inicia uno nuevo.</p></div>
     <div class="step calc"><small>Se calcula</small><b>Predicción</b><p>Rango, confianza, ovulación y ventana.</p></div>
     <div class="step calc"><small>Se calcula</small><b>Fases y avisos</b><p>Lo que se ve y lo que se programa.</p></div>
@@ -330,7 +343,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <div class="layer core"><b>Dominio puro</b><span>Funciones sin Flutter ni base de datos: derivar ciclos, predecir, decidir qué se muestra, planificar avisos, codificar y cifrar respaldos.</span></div>
     </div>
     <div class="ext"><b>Fuera del código propio</b>
-      <ul><li>Keystore de Android: sella la contraseña del respaldo automático</li><li>API de Google Drive: solo con el respaldo automático activo</li><li>Notificaciones del sistema</li></ul>
+      <ul><li>Keystore de Android: sella la contraseña del respaldo automático</li><li>API de Google Drive: solo con el respaldo automático activo</li><li>Notificaciones del sistema</li><li>Widget de la pantalla de inicio y hoja de compartir de Android</li></ul>
     </div>
   </div>
   <h3 style="font-size:20px;margin:30px 0 10px">Robustez por diseño</h3>
@@ -362,12 +375,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <li><b>Nada</b>, mientras no haya un respaldo.</li>
         <li><b>Respaldo manual:</b> un archivo que ella guarda o comparte, con clave opcional.</li>
         <li><b>Respaldo en Drive:</b> un archivo siempre cifrado, una vez al día, solo si lo activa. Google ve que existe y cuándo cambió, no su contenido.</li>
+        <li><b>Resumen PDF</b> (próxima actualización): se genera en el teléfono y sale solo si ella lo comparte. Contiene datos de salud y no va cifrado.</li>
       </ul>
     </div>
   </div>
   <div class="cols" style="margin-top:18px">
     <div class="note"><b>Cifrado.</b> Argon2id (19 456 KiB, 2 iteraciones) y AES-256-GCM con la biblioteca <code>cryptography</code>. El encabezado del archivo está autenticado: si alguien lo altera, no se descifra. Hay pruebas con vectores conocidos.</div>
-    <div class="note warn"><b>Lo que no protege.</b> La base dentro del teléfono no está cifrada. Un respaldo sin clave es texto legible. El respaldo automático guarda su contraseña sellada con el Keystore de Android, a diferencia de los manuales, donde Aura no guarda ninguna.</div>
+    <div class="note warn"><b>Lo que no protege.</b> La base dentro del teléfono no está cifrada. Un respaldo sin clave es texto legible. El respaldo automático guarda su contraseña sellada con el Keystore de Android, a diferencia de los manuales, donde Aura no guarda ninguna. El widget lo puede leer cualquiera que mire la pantalla de inicio, salvo en modo discreto.</div>
   </div>
   <p style="margin-top:16px">Android no copia los datos de Aura ni a la nube ni al cambiar de teléfono (<code>allowBackup="false"</code>). La <a href="privacy.html">política de privacidad</a> está publicada.</p>
 </div></section>
@@ -376,11 +390,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <div class="eyebrow">QA</div>
   <h2>Calidad y pruebas</h2>
   <div class="kpis">
-    <div class="kpi"><b>1296</b><span>casos automáticos, todos aprobados</span></div>
-    <div class="kpi"><b>74</b><span>archivos de prueba</span></div>
+    <div class="kpi"><b>1375</b><span>casos automáticos, todos aprobados</span></div>
+    <div class="kpi"><b>80</b><span>archivos de prueba</span></div>
     <div class="kpi"><b>0</b><span>problemas en <code>flutter analyze</code></span></div>
   </div>
-  <p style="color:var(--text-2);font-size:14.5px;margin-top:-8px">Ejecución local del 24 de octubre de 2026 sobre la versión 1.2.0 (build 7).</p>
+  <p style="color:var(--text-2);font-size:14.5px;margin-top:-8px">Cifras sobre el código de <code>main</code> al 28 de octubre de 2026, posterior a la versión 1.2.0 (build 7). El reparto por nivel de la tabla corresponde a los 74 archivos de la versión 1.2.0.</p>
   <div class="tablewrap"><table>
     <thead><tr><th>Nivel</th><th>Archivos</th><th>Qué verifica</th></tr></thead>
     <tbody>
@@ -415,7 +429,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <div class="eyebrow">Registro de decisiones</div>
   <h2>Decisiones que definen el producto</h2>
   <div class="grid3">
-    <div class="card"><span class="tag">Datos</span><h3>Derivar, no almacenar</h3><p>Solo se guardan los días de sangrado. Una fuente de verdad: corregir un día recalcula todo. Costo: no hay historial de predicciones pasadas.</p></div>
+    <div class="card"><span class="tag">Datos</span><h3>Derivar, no almacenar</h3><p>Solo se guardan los días de sangrado y los embarazos indicados. Una fuente de verdad: corregir un día recalcula todo. Costo: no hay historial de predicciones pasadas.</p></div>
     <div class="card"><span class="tag">Datos</span><h3>Fechas como texto, en UTC</h3><p>Un día de calendario no es un instante. En Chile el cambio de hora ocurre a medianoche y a veces esa hora no existe; operar en UTC elimina esa clase de errores.</p></div>
     <div class="card"><span class="tag">Respaldo</span><h3>JSON propio y versionado</h3><p>No es una copia de la base. Se valida completo antes de tocar nada, y un esquema anterior se importa convirtiéndolo.</p></div>
     <div class="card"><span class="tag">Drive</span><h3>Un solo archivo, como WhatsApp</h3><p>Simple para la usuaria: una copia, siempre la última. Costo asumido: sin historial ni verificación posterior. El diseño original de siete archivos se conserva documentado.</p></div>
@@ -434,8 +448,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <tr><td>Publicación</td><td><span class="pill no">Pendiente</span> Necesita completar la prueba cerrada con testers antes de publicar</td></tr>
       <tr><td>Declaraciones de Google Play</td><td><span class="pill no">Abierta</span> Seguridad de datos del respaldo en Drive</td></tr>
       <tr><td>Exportación de criptografía (EE. UU.)</td><td><span class="pill no">En consulta</span> Clasificación aún no determinada</td></tr>
-      <tr><td>Historial de anticonceptivos</td><td>Diseñado en la especificación, sin construir</td></tr>
-      <tr><td>Ideas a futuro</td><td>Salud reproductiva más amplia, incluido un modo embarazo</td></tr>
+      <tr><td>Próxima actualización</td><td><span class="pill ok">En main</span> Inglés, tema oscuro, modo embarazo, recordatorio de anticonceptivo, aviso diario, resumen en PDF, estadísticas renovadas y widget. Llegan en la próxima actualización de Google Play</td></tr>
+      <tr><td>Historial de anticonceptivos</td><td>Diseñado en la especificación, sin construir. Existe solo el recordatorio</td></tr>
+      <tr><td>Ideas a futuro</td><td>Cifrado de la base dentro del teléfono y versión para iOS</td></tr>
     </tbody></table></div>
 </div></section>
 
@@ -447,7 +462,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <thead><tr><th>Área</th><th>Evidencia en el repositorio</th></tr></thead>
     <tbody>
       <tr><td>Análisis funcional</td><td>Especificación con historias de usuario, reglas de negocio con identificadores (D-1, E-1, R-4…), 19 requisitos funcionales y 15 no funcionales, casos de uso y diagramas</td></tr>
-      <tr><td>QA y testing</td><td>1296 pruebas en cuatro niveles, valores límite, tablas de decisión, matriz de trazabilidad requisito a prueba y brechas declaradas</td></tr>
+      <tr><td>QA y testing</td><td>1375 pruebas en cuatro niveles, valores límite, tablas de decisión, matriz de trazabilidad requisito a prueba y brechas declaradas</td></tr>
       <tr><td>Automatización</td><td>Suite determinística con reloj inyectado, dobles de prueba con pruebas de paridad y esquemas de migración generados</td></tr>
       <tr><td>Datos y backend</td><td>Modelo relacional con restricciones <code>CHECK</code>, migraciones transaccionales verificadas, formato de intercambio versionado, cifrado con KDF y AEAD</td></tr>
       <tr><td>Documentación técnica</td><td>Este informe, ocho anexos, registro de decisiones y especificación viva</td></tr>
@@ -483,12 +498,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <li><b>Optional encrypted backup.</b> Argon2id and AES-256-GCM, to a file or to the user's own Google Drive. No accounts, ads or analytics.</li>
       </ul>
       <h3>Status</h3>
-      <p>Version 1.2.0 is in closed testing on Google Play. Known gaps are listed openly: no CI yet, no end-to-end tests on device, and coverage still to be measured.</p>
+      <p>Version 1.2.0 is in closed testing on Google Play. The main branch already adds an English interface, a dark theme, a pregnancy mode, a birth-control reminder, a PDF summary for the doctor, redesigned statistics and a home-screen widget; they arrive in the next Google Play update. Still missing: on-device database encryption and iOS. Known gaps are listed openly: no CI yet, no end-to-end tests on device, and coverage still to be measured.</p>
     </div>
     <div>
       <div class="box">
         <div class="kpis" style="margin:0 0 14px;gap:18px 30px">
-          <div class="kpi"><b>1296</b><span>automated tests, all passing</span></div>
+          <div class="kpi"><b>1375</b><span>automated tests, all passing</span></div>
           <div class="kpi"><b>0</b><span>analyzer issues</span></div>
         </div>
         <table><tbody>
@@ -511,8 +526,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 </div></section>
 
 <div class="wrap"><footer>
-  <a href="Aura_Informe.pdf">Descargar el informe en PDF</a> · <a href="index.html">Inicio</a><br>
-  Aura 1.2.0 (build 7) · Informe del 24 de octubre de 2026 · Autora: Sofia Menzel · Todos los derechos reservados.<br>
+  <a href="Aura_Informe.pdf">Descargar el informe en PDF</a> (versión del 24 de octubre de 2026, sin las novedades) · <a href="index.html">Inicio</a><br>
+  Aura 1.2.0 (build 7) · Informe del 28 de octubre de 2026 · Autora: Sofia Menzel · Todos los derechos reservados.<br>
   Las cifras de pruebas provienen de una ejecución local de <code>flutter test</code> y <code>flutter analyze</code>. Las reglas del ciclo son decisiones de producto, no criterios clínicos.
 </footer></div>
 </body>

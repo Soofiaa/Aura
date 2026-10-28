@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Aura is an Android app for tracking your cycle and getting honest estimates. Your data stays on your phone.">
+<title>Aura — Cycle tracking app</title>
+<link rel="alternate" hreflang="es" href="https://soofiaa.github.io/Aura/">
+<link rel="alternate" hreflang="en" href="https://soofiaa.github.io/Aura/en/">
+<!-- No external resources: system fonts only, same as privacy.html. -->
+<style>
+/* Concepto: el anillo del ciclo (28 días) como firma visual; páginas de lectura limpias sobre la paleta de la app. */
+:root{
+  --bg:#F8FAFB; --surface:#FFFFFF; --surface-2:#EEF5F8; --line:#DCE6EA;
+  --text:#333333; --text-2:#5F6B70;
+  --sky:#A8D8EA; --blush:#FAD4D8; --rose:#EE8CA7; --rose-strong:#E76085; --fertile:#3A8BAA;
+  --on-rose:#FFFFFF; --link:#2C7391;
+  --f-display:ui-serif,Georgia,'Iowan Old Style','Palatino Linotype','Times New Roman',serif;
+  --f-body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --f-mono:ui-monospace,'SF Mono',Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+a{color:var(--link)}
+h1,h2,h3{font-family:var(--f-display);line-height:1.12;text-wrap:balance;margin:0}
+p{margin:0 0 .9em;max-width:68ch}
+.wrap{max-width:1040px;margin:0 auto}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+
+/* Cabecera */
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:18px;font-size:14px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rose-strong);margin-right:8px}
+.nav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.nav a{color:var(--text-2);text-decoration:none}
+.nav a:hover{color:var(--text);text-decoration:underline}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px 48px;align-items:center;padding-block:36px 56px}
+.hero h1{font-size:clamp(56px,10vw,104px);font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.hero h1 span{color:var(--rose-strong)}
+.lead{font-size:clamp(18px,2.4vw,22px);line-height:1.5;color:var(--text);margin-top:18px;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--text-2)}
+.chip b{color:var(--text);font-weight:600}
+.ringbox{min-width:0}
+.ring{width:100%;height:auto;max-width:440px;display:block;margin:0 auto}
+.ring .per{fill:var(--rose-strong)} .ring .fol{fill:var(--sky);opacity:.55} .ring .lut{fill:var(--blush)}
+.ring .fer{fill:var(--fertile);opacity:.62} .ring .ovu{fill:var(--fertile)}
+.ring .rl{font:500 12px var(--f-mono);fill:var(--text-2)}
+.ring .rc1{font:700 22px var(--f-display);fill:var(--text)}
+.ring .rc2{font:500 13px var(--f-mono);fill:var(--text-2);letter-spacing:.08em;text-transform:uppercase}
+.ring .rc3{font:400 11px var(--f-body);fill:var(--text-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:13px;color:var(--text-2);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+
+/* Secciones */
+section{padding-block:44px;border-top:1px solid var(--line)}
+section>.wrap>h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:8px 0 22px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.cols>div{min-width:0}
+.note{background:var(--surface-2);border-left:3px solid var(--fertile);border-radius:6px;padding:14px 18px;max-width:72ch;font-size:15px}
+.note.warn{border-left-color:var(--rose-strong)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:0}
+.card h3{font-size:19px;margin-bottom:6px}
+.card p{font-size:15px;color:var(--text-2);margin:0}
+.card .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose-strong);display:block;margin-bottom:8px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2);font-weight:500;background:var(--surface-2);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:600}
+.pill.ok{background:color-mix(in srgb,var(--fertile) 18%,transparent);color:var(--fertile)}
+.pill.no{background:color-mix(in srgb,var(--rose-strong) 16%,transparent);color:var(--rose-strong)}
+
+/* Flujo de datos */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:8px 0 24px}
+.step{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;position:relative;min-width:0}
+.step small{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.step.keep{border-color:var(--rose-strong)} .step.keep small{color:var(--rose-strong)}
+.step.calc small{color:var(--fertile)}
+.step b{font-family:var(--f-display);font-size:18px}
+.step p{font-size:14px;color:var(--text-2);margin:4px 0 0}
+
+/* Arquitectura */
+.arch{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.layers{display:grid;gap:10px}
+.layer{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 18px;display:grid;grid-template-columns:150px 1fr;gap:4px 16px;min-width:0}
+.layer b{font-family:var(--f-display);font-size:17px}
+.layer span{font-size:14.5px;color:var(--text-2)}
+.layer.core{border-color:var(--fertile);background:color-mix(in srgb,var(--fertile) 8%,var(--surface))}
+.ext{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:14.5px;color:var(--text-2);min-width:0}
+.ext b{display:block;font-family:var(--f-display);color:var(--text);font-size:17px;margin-bottom:6px}
+.ext ul{margin:0;padding-left:18px}
+
+.kpis{display:flex;flex-wrap:wrap;gap:28px 44px;margin:6px 0 26px}
+.kpi b{display:block;font-family:var(--f-display);font-size:40px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13.5px;color:var(--text-2)}
+
+ul.clean{margin:0 0 1em;padding-left:20px}
+ul.clean li{margin-bottom:.4em;max-width:68ch}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.docs a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;text-decoration:none;color:var(--text);font-size:15px}
+.docs a:hover{border-color:var(--fertile)}
+.docs a small{display:block;color:var(--text-2);font-size:13px}
+footer{padding-block:36px 48px;border-top:1px solid var(--line);font-size:14px;color:var(--text-2)}
+
+/* Resumen en inglés */
+#en .sum{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px 40px}
+#en h3{font-size:18px;margin:18px 0 6px}
+#en p,#en li{font-size:15.5px}
+#en .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;padding-block:20px 36px}
+  .cols,.arch,#en .sum{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .layer{grid-template-columns:1fr}
+  section{padding-block:34px}
+}
+@media (max-width:460px){.flow{grid-template-columns:1fr}.kpis{gap:20px 28px}}
+
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{padding:0;font-size:12px;background:#fff}
+  .nav,.top .nav{display:none}
+  section{padding-block:22px;break-inside:auto}
+  .card,.step,.layer,.kpi,tr,.note{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .hero{padding-block:10px 24px;grid-template-columns:1.1fr .9fr}
+  .cols{grid-template-columns:1fr 1fr}
+  #en{break-before:page;border-top:0}
+  .tablewrap{overflow:visible}
+  #en{padding-block:0}
+  #en h2{font-size:26px;margin:4px 0 10px}
+  #en .sum{gap:14px 26px}
+  #en h3{font-size:14.5px;margin:10px 0 3px}
+  #en p,#en li,#en td{font-size:11.5px;line-height:1.45;margin-bottom:.5em}
+  #en .box{padding:10px 14px}
+  #en .kpi b{font-size:28px}
+  #en td{padding:5px 8px}
+  #en ul.clean{margin-bottom:.4em}
+  footer{padding-block:14px 0;font-size:10.5px}
+}
+
+.hero2{padding-block:34px 30px}
+.hero2 h1{font-size:clamp(40px,7vw,68px);letter-spacing:-.03em}
+.hero2 h1 span{color:var(--rose-strong)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:14px;text-decoration:none;color:var(--text)}
+.toc a:hover{border-color:var(--fertile)}
+details{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:0;margin-bottom:10px}
+summary{cursor:pointer;padding:14px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--rose-strong);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details>div{padding:0 18px 14px;color:var(--text-2);font-size:15.5px}
+details>div p{margin-bottom:.6em}
+summary:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.how ol{margin:8px 0 0;padding-left:20px;font-size:15px;color:var(--text-2)}
+.how li{margin-bottom:4px}
+.how h3{font-size:19px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.conf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.conf .card h3{display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.case{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.case input{width:20px;height:20px;margin-top:4px;accent-color:var(--rose-strong)}
+.case h3{font-size:18px}
+.case .meta{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-2)}
+.case ol{margin:6px 0 8px;padding-left:20px;font-size:15px}
+.case .exp{font-size:14.5px;color:var(--text-2);border-top:1px dashed var(--line);padding-top:8px}
+.case .exp b{color:var(--fertile)}
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);font-size:14px;color:var(--text-2);display:flex;gap:12px;align-items:center}
+.progress progress{flex:1;height:8px;accent-color:var(--rose-strong)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.copy{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:3px 10px;cursor:pointer}
+@media (max-width:640px){.conf{grid-template-columns:1fr}}
+
+.sitenav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.sitenav a{color:var(--text-2);text-decoration:none;font-size:14px}
+.sitenav a[aria-current="page"]{color:var(--text);font-weight:600}
+.sitenav a:hover{text-decoration:underline}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-block;border-radius:999px;padding:10px 20px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.btn.primary{background:var(--rose-strong);border-color:var(--rose-strong);color:var(--on-rose)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="brand"><i></i>Aura</div><nav class="sitenav" aria-label="Site"><a href="index.html" aria-current="page">Home</a><a href="guide.html">User guide</a><a href="report.html">Report</a><a href="../testers.html" hreflang="es">Testers (in Spanish)</a><a href="../privacy.html#en">Privacy</a><a href="../index.html" hreflang="es" lang="es">Español</a></nav></header>
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Android app · version 1.2.0</div>
+      <h1 style="margin-top:14px">Aura<span>.</span></h1>
+      <p class="lead">Track your cycle and get honest estimates of what comes next. Your health data stays on your phone.</p>
+      <div class="chips">
+        <span class="chip"><b>No account</b></span><span class="chip"><b>No analytics</b></span><span class="chip"><b>No ads</b></span><span class="chip">Optional <b>encrypted</b> backup</span>
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="guide.html">How to use Aura</a>
+        <a class="btn" href="../privacy.html#en">Privacy policy</a>
+        <a class="btn" href="https://github.com/Soofiaa/Aura">Code on GitHub</a>
+      </div>
+    </div>
+    <div class="ringbox"><svg class="ring" viewBox="0 0 420 420" role="img" aria-label="Example of a 28-day cycle: days 1 to 5 period, days 9 to 13 fertile window, day 14 ovulation.">
+<path class="per" d="M212.2 50.0 A160 160 0 0 1 243.4 53.5 L234.2 96.6 A116 116 0 0 0 211.6 94.0Z"><title>Day 1</title></path><path class="per" d="M247.8 54.5 A160 160 0 0 1 277.4 64.9 L258.9 104.8 A116 116 0 0 0 237.4 97.3Z"><title>Day 2</title></path><path class="per" d="M281.4 66.8 A160 160 0 0 1 308.0 83.5 L281.1 118.3 A116 116 0 0 0 261.8 106.2Z"><title>Day 3</title></path><path class="per" d="M311.5 86.3 A160 160 0 0 1 333.7 108.5 L299.7 136.4 A116 116 0 0 0 283.6 120.3Z"><title>Day 4</title></path><path class="per" d="M336.5 112.0 A160 160 0 0 1 353.2 138.6 L313.8 158.2 A116 116 0 0 0 301.7 138.9Z"><title>Day 5</title></path><path class="fol" d="M355.1 142.6 A160 160 0 0 1 365.5 172.2 L322.7 182.6 A116 116 0 0 0 315.2 161.1Z"><title>Day 6</title></path><path class="fol" d="M366.5 176.6 A160 160 0 0 1 370.0 207.8 L326.0 208.4 A116 116 0 0 0 323.4 185.8Z"><title>Day 7</title></path><path class="fol" d="M370.0 212.2 A160 160 0 0 1 366.5 243.4 L323.4 234.2 A116 116 0 0 0 326.0 211.6Z"><title>Day 8</title></path><path class="fer" d="M365.5 247.8 A160 160 0 0 1 355.1 277.4 L315.2 258.9 A116 116 0 0 0 322.7 237.4Z"><title>Day 9</title></path><path class="fer" d="M353.2 281.4 A160 160 0 0 1 336.5 308.0 L301.7 281.1 A116 116 0 0 0 313.8 261.8Z"><title>Day 10</title></path><path class="fer" d="M333.7 311.5 A160 160 0 0 1 311.5 333.7 L283.6 299.7 A116 116 0 0 0 299.7 283.6Z"><title>Day 11</title></path><path class="fer" d="M308.0 336.5 A160 160 0 0 1 281.4 353.2 L261.8 313.8 A116 116 0 0 0 281.1 301.7Z"><title>Day 12</title></path><path class="fer" d="M277.4 355.1 A160 160 0 0 1 247.8 365.5 L237.4 322.7 A116 116 0 0 0 258.9 315.2Z"><title>Day 13</title></path><path class="ovu" d="M243.4 366.5 A160 160 0 0 1 212.2 370.0 L211.6 326.0 A116 116 0 0 0 234.2 323.4Z"><title>Day 14</title></path><path class="lut" d="M207.8 370.0 A160 160 0 0 1 176.6 366.5 L185.8 323.4 A116 116 0 0 0 208.4 326.0Z"><title>Day 15</title></path><path class="lut" d="M172.2 365.5 A160 160 0 0 1 142.6 355.1 L161.1 315.2 A116 116 0 0 0 182.6 322.7Z"><title>Day 16</title></path><path class="lut" d="M138.6 353.2 A160 160 0 0 1 112.0 336.5 L138.9 301.7 A116 116 0 0 0 158.2 313.8Z"><title>Day 17</title></path><path class="lut" d="M108.5 333.7 A160 160 0 0 1 86.3 311.5 L120.3 283.6 A116 116 0 0 0 136.4 299.7Z"><title>Day 18</title></path><path class="lut" d="M83.5 308.0 A160 160 0 0 1 66.8 281.4 L106.2 261.8 A116 116 0 0 0 118.3 281.1Z"><title>Day 19</title></path><path class="lut" d="M64.9 277.4 A160 160 0 0 1 54.5 247.8 L97.3 237.4 A116 116 0 0 0 104.8 258.9Z"><title>Day 20</title></path><path class="lut" d="M53.5 243.4 A160 160 0 0 1 50.0 212.2 L94.0 211.6 A116 116 0 0 0 96.6 234.2Z"><title>Day 21</title></path><path class="lut" d="M50.0 207.8 A160 160 0 0 1 53.5 176.6 L96.6 185.8 A116 116 0 0 0 94.0 208.4Z"><title>Day 22</title></path><path class="lut" d="M54.5 172.2 A160 160 0 0 1 64.9 142.6 L104.8 161.1 A116 116 0 0 0 97.3 182.6Z"><title>Day 23</title></path><path class="lut" d="M66.8 138.6 A160 160 0 0 1 83.5 112.0 L118.3 138.9 A116 116 0 0 0 106.2 158.2Z"><title>Day 24</title></path><path class="lut" d="M86.3 108.5 A160 160 0 0 1 108.5 86.3 L136.4 120.3 A116 116 0 0 0 120.3 136.4Z"><title>Day 25</title></path><path class="lut" d="M112.0 83.5 A160 160 0 0 1 138.6 66.8 L158.2 106.2 A116 116 0 0 0 138.9 118.3Z"><title>Day 26</title></path><path class="lut" d="M142.6 64.9 A160 160 0 0 1 172.2 54.5 L182.6 97.3 A116 116 0 0 0 161.1 104.8Z"><title>Day 27</title></path><path class="lut" d="M176.6 53.5 A160 160 0 0 1 207.8 50.0 L208.4 94.0 A116 116 0 0 0 185.8 96.6Z"><title>Day 28</title></path>
+<text x="229.7" y="39.1" text-anchor="middle" class="rl">1</text><text x="359.0" y="120.4" text-anchor="middle" class="rl">5</text><text x="376.1" y="272.1" text-anchor="middle" class="rl">9</text><text x="229.7" y="388.9" text-anchor="middle" class="rl">14</text><text x="190.3" y="39.1" text-anchor="middle" class="rl">28</text>
+<circle cx="229.7" cy="384.9" r="0" fill="none"/>
+<text x="210" y="196" text-anchor="middle" class="rc1">28-day cycle</text>
+<text x="210" y="222" text-anchor="middle" class="rc2">example</text>
+<text x="210" y="244" text-anchor="middle" class="rc3">ovulation = next period − 14</text>
+</svg>
+      <div class="legend"><span style="--c:var(--rose-strong)">Period</span><span style="--c:var(--sky)">Follicular phase</span><span style="--c:var(--fertile)">Fertile window and ovulation</span><span style="--c:var(--blush)">Luteal phase</span></div>
+    </div>
+  </div>
+</div>
+<section style="border-top:0"><div class="wrap">
+  <div class="note warn"><b>Health notice.</b> Aura offers informational estimates based on your entries. It is not a method of birth control or a medical device.</div>
+</div></section>
+<section><div class="wrap">
+  <div class="eyebrow">What's new</div><h2>Coming soon</h2>
+  <p>These are already in the code and arrive in the next Google Play update. Version 1.2.0, currently in closed testing, does not include them yet.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag">Pregnancy</span><h3>Pregnancy mode</h3><p>Weeks and days of pregnancy and an estimated due date. Pauses cycle predictions while it is on.</p></div>
+    <div class="card"><span class="tag">Stats</span><h3>PDF summary</h3><p>A summary of your cycles to take to your doctor. It is created on your phone and only leaves it if you share it.</p></div>
+    <div class="card"><span class="tag">Home screen</span><h3>Widget</h3><p>Your next period or your pregnancy weeks at a glance, with a discreet mode that shows no data.</p></div>
+    <div class="card"><span class="tag">Reminders</span><h3>More reminders</h3><p>A birth control reminder (pill, patch, ring or injection) and a daily reminder if you haven't logged anything. Both optional.</p></div>
+    <div class="card"><span class="tag">Stats</span><h3>Redesigned stats</h3><p>Summary cards, a chart of your recent cycles and short explanations of each figure.</p></div>
+    <div class="card"><span class="tag">Interface</span><h3>Dark theme and English</h3><p>System default, light or dark theme. The app appears in English if your phone is set to English.</p></div>
+  </div>
+</div></section>
+<section><div class="wrap">
+  <div class="eyebrow">Explore</div><h2>All about Aura</h2>
+  <div class="grid3">
+    <a class="card" href="guide.html" style="text-decoration:none;color:inherit"><span class="tag">For users</span><h3>User guide</h3><p>Getting started, how to read the prediction, what happens to your data, how to make a backup and how to use the new features.</p></a>
+    <a class="card" href="../privacy.html#en" style="text-decoration:none;color:inherit"><span class="tag">Privacy</span><h3>Privacy policy</h3><p>What Aura stores, what leaves your phone and which permissions it asks for.</p></a>
+    <a class="card" href="report.html" style="text-decoration:none;color:inherit"><span class="tag">About the project</span><h3>Project report</h3><p>Motivation, architecture, quality and decisions. Includes a one-page executive summary and a downloadable PDF (in Spanish).</p></a>
+    <a class="card" href="../testers.html" hreflang="es" style="text-decoration:none;color:inherit"><span class="tag">Closed testing</span><h3>Tester script (in Spanish)</h3><p>14 test cases with steps, expected results and how to report a problem.</p></a>
+  </div>
+  <h3 style="font-size:20px;margin:30px 0 10px">Technical documentation (in Spanish)</h3>
+  <div class="docs">
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/01_requisitos.md">Requirements<small>Functional, non-functional and thresholds</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/02_casos_de_uso.md">Use cases<small>Actors, flows and diagrams</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/03_arquitectura.md">Architecture<small>Layers, startup and concurrency</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/04_modelo_de_datos.md">Data model<small>Tables, migrations and backup</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/05_permisos_y_privacidad.md">Permissions and privacy<small>Threats and compliance</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/06_calidad_y_pruebas.md">Quality and testing<small>Strategy, traceability and results</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/anexos/07_decisiones.md">Decisions<small>What was decided and why</small></a>
+    <a href="https://github.com/Soofiaa/Aura/blob/main/docs/ESPECIFICACION_v1.1.md">Specification<small>User stories and business rules</small></a>
+  </div>
+</div></section>
+<div class="wrap"><footer>Aura 1.2.0 · Author: Sofia Menzel · This site uses no cookies, analytics or external resources.</footer></div>
+</body>
+</html>

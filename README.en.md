@@ -4,15 +4,15 @@ An Android app to log your menstrual cycle and estimate its phases. **Local-firs
 
 [Versión en español](README.md)
 
-**Website:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Project report](https://soofiaa.github.io/Aura/informe.html) (includes an English executive summary)
+**Website:** [soofiaa.github.io/Aura/en](https://soofiaa.github.io/Aura/en/) · [User guide](https://soofiaa.github.io/Aura/en/guide.html) · [Project report](https://soofiaa.github.io/Aura/en/report.html)
 
-> **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use.
+> **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use. The new features already in the code (English UI, pregnancy mode, dark theme, daily reminder, birth-control reminder, PDF summary, redesigned statistics and widget) arrive in the next Google Play update.
 
 ## Screenshots
 
 <table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Home: current phase and next period"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendar with the estimated fertile window"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Log a day"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Statistics"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Settings and data"></td></tr></table>
 
-Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screenshot is from 1.1.0, before the Drive backup.* (The app UI is in Spanish.)
+Order: Home, Calendar, Log a day, Statistics and Settings. *The screenshots are from earlier versions (Settings is from 1.1.0, before the Drive backup) and don't show the features in the next update.* (They show the Spanish UI.)
 
 ## What it does
 
@@ -22,8 +22,15 @@ Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screens
 - Predicts the next period with a **range** and a confidence level (low / medium / high). The estimated ovulation and fertile window are only shown with medium or high confidence and when the period is not late (on Home, not during the menstrual phase either), and can be hidden in Settings.
 - Shows the current phase: menstrual, follicular, ovulatory and luteal (none while the period is late).
 - Calendar showing logged days, the estimated days of the current period (dotted border), the estimated fertile window and ovulation (under Home's confidence, lateness and toggle conditions) and multi-day selection; it rolls over to the next day at midnight and has a "Go to today" button.
-- Statistics with "Your cycles": typical cycle length, shortest and longest cycle, regularity and typical period length.
+- Statistics with summary cards (typical cycle, typical period, regularity and next period), a bar chart of recent cycles with the typical length, short explanations of each figure, and mood shown as bars.
+- **PDF summary for the doctor** (button in Statistics): generated on the phone, with no server, including cycle and period length, regularity, the next-period estimate, a chart and history of the last 12 cycles, top symptoms and mood, flow, pregnancies (current and previous) and the birth-control method if configured. Shared through Android's share sheet (the user chooses where).
 - Optional local reminders, with discreet text by default, plus an optional "Did your period arrive?" notice on the first day of lateness.
+- Daily reminder (optional, off by default): a notification every day at the reminder time if that day has nothing logged yet.
+- Birth-control reminder (optional): pill (every day), patch (weekly, 3 weeks + 1 patch-free week), ring (3 weeks in, 1 out), monthly injection (every 30 days) or 3-month injection (every 13 weeks), with its own time and generic text unless "Show details in notifications" is on.
+- **Pregnancy mode** (Settings → "Pregnancy mode"): from the first day of the last period, Home shows weeks and days of pregnancy and the probable due date (estimated from that date). It pauses predictions, the fertile window and cycle reminders, and hides "My period started today" in the Calendar. It ends by choosing the outcome (birth / loss / not specified) and date, or with "I turned it on by mistake", which deletes it; the last ended pregnancy can be corrected or deleted. No celebratory texts: the same message for any outcome. Predictions resume once a new period is logged after the end, and cycles spanning a pregnancy are left out of predictions, the chart and the PDF.
+- **Home-screen widget** (Android): shows the next period ("In 5 days · Nov 14 – Nov 20"), the day of the period, days late or weeks of pregnancy; tapping it opens Aura.
+- Dark theme: Settings → Theme (system default, light or dark; per phone).
+- Interface in Spanish or English following the phone language; edge-to-edge display and no orientation lock.
 - Lets you mark the end of a period and remove marks.
 - Backup and restore to a JSON file from Settings → "Your data", with an optional password to encrypt the file, "Undo" right after importing, and "Undo last import" in Settings while the pre-import copy exists.
 - Backup reminder: if 30 days pass without one, Home shows a card (no notification); it only keeps the date of the last backup on the phone and sends nothing off it.
@@ -36,10 +43,14 @@ Order: Home, Calendar, Log a day, Statistics and Settings. *The Settings screens
 - `allowBackup="false"`: Android does not copy it to the cloud, and `dataExtractionRules` blocks direct phone-to-phone transfer over cable or Wi-Fi as well: the only way data leaves is through Aura's own backup file.
 - **"Hide Aura from Recents"** (on by default, can be turned off in Settings → Privacy): the app preview in the Recents screen is blank, and screenshots or screen recordings are blocked.
 - After deleting all data, the database is compacted (`VACUUM`) and freed pages overwrite what was deleted (`secure_delete`): no remnants of deleted notes or symptoms remain.
-- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with, or if they turn on the automatic backup to their own Google Drive (optional, see above). The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). For file backups, Aura does not store the password and cannot recover it; for the automatic Drive backup it keeps it sealed in the Android Keystore so it can back up every day without asking. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy. The `INTERNET` permission exists only for the automatic Drive backup; with it off, the app does not use the network.
+- Data only leaves the phone if the user creates a backup and chooses where to save it or who to share it with, or if they turn on the automatic backup to their own Google Drive (optional, see above), or if they share the PDF summary (see below). The file contains health data. It can be protected with a password (optional): it is encrypted on the phone (AES-256-GCM, with the key derived using Argon2id) and cannot be read without the password (a weak password can be guessed). For file backups, Aura does not store the password and cannot recover it; for the automatic Drive backup it keeps it sealed in the Android Keystore so it can back up every day without asking. Without a password, the file is not encrypted and anyone who opens it can read it. The password protects only the file, not the data inside the phone. Aura does not receive or keep a copy. The `INTERNET` permission exists only for the automatic Drive backup; with it off, the app does not use the network.
 - When updating from 1.0 (schema v3), before converting the database the app saves a safety copy in its private storage; it is deleted after saving a backup to the phone, on app start once it is more than 30 days old, or with "Delete all data".
 - When an import is confirmed, the app first saves an unencrypted copy of the current data in its private storage, only for "Undo"; the next import replaces it and "Delete all data" removes it.
 - Notifications use generic text and private lock-screen visibility unless the user opts into details.
+- **Widget:** anyone looking at the home screen can read it. With **"Discreet widget"** (Settings → Privacy) it shows only "Aura · Tap to open", no data, and the widget picker description is just "Aura". So it can change day without opening the app, Aura leaves the widget's texts for the next 60 days in its private storage (SharedPreferences, excluded from Android backup).
+- **PDF summary:** it contains health data and only leaves the phone if the user shares it. The temporary file lives in the app's private cache and "Delete all data" removes it.
+- **Birth-control reminder:** stored only on this phone (device settings file); it is not included in backups and not sent anywhere.
+- **Pregnancies:** stored in the local database (schema v6) and included in backups (format v6).
 - Privacy policy: [`docs/privacy.html`](docs/privacy.html).
 
 ## Documentation
@@ -79,6 +90,7 @@ lib/
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
 │   ├── backup_reminder.dart
+│   ├── contraceptive.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
 │   ├── current_period.dart
@@ -92,11 +104,13 @@ lib/
 │   ├── backup/          # BackupService, file and reminder stores
 │   │                    # + automatic Drive backup (HU-09): drive_api_client,
 │   │                    #   auto_drive_backup_service, drive_backup_gateway, pre_migration_copy
-│   ├── database/        # drift (schema v5)
+│   ├── database/        # drift (schema v6)
 │   ├── models/          # day enums (flow, mood, symptoms)
 │   ├── repositories/    # CycleRepository
 │   ├── notifications/   # reconciler
-│   └── device_settings_store.dart  # per-phone settings (no migration needed)
+│   ├── device_settings_store.dart  # per-phone settings (no migration needed)
+│   ├── doctor_report.dart          # PDF summary for the doctor
+│   └── home_widget_sync.dart       # home-screen widget texts
 ├── screens/       # home, calendar, add entry, stats, settings, backup, onboarding
 ├── widgets/       # password dialogs, period start sheet, symptom selector, backup card
 └── utils/         # DayKey, colors, strings, time zone, Keystore, Android channels
@@ -120,7 +134,7 @@ Aura uses the **calendar method**: it projects from past cycles. It is an estima
 
 ## Quality and testing
 
-More than 1,290 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
+More than 1,370 tests (domain with fixed dates, repository on an in-memory database, planner and reconciler with a fake scheduler, widget tests for the screens, plus manifest and gradle checks run from tests). Later verification (code audits and manual testing on the phone) found bugs the initial tests had missed; each fix came with a regression test.
 
 ## Running it
 
@@ -138,9 +152,7 @@ Signed release build: see [`android/RELEASE.md`](android/RELEASE.md). The signin
 ## Not yet implemented
 
 - Encryption of the data inside the phone (the password protects only the backup file)
-- Dark mode
 - iOS
-- English UI locale
 
 ## Health notice
 

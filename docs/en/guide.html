@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Aura user guide: getting started, everyday use, predictions, data and permissions, backup and frequently asked questions.">
+<title>Aura guide</title>
+<link rel="alternate" hreflang="es" href="https://soofiaa.github.io/Aura/guia.html">
+<link rel="alternate" hreflang="en" href="https://soofiaa.github.io/Aura/en/guide.html">
+<!-- No external resources: system fonts only, same as privacy.html. -->
+<style>
+/* Concepto: el anillo del ciclo (28 días) como firma visual; páginas de lectura limpias sobre la paleta de la app. */
+:root{
+  --bg:#F8FAFB; --surface:#FFFFFF; --surface-2:#EEF5F8; --line:#DCE6EA;
+  --text:#333333; --text-2:#5F6B70;
+  --sky:#A8D8EA; --blush:#FAD4D8; --rose:#EE8CA7; --rose-strong:#E76085; --fertile:#3A8BAA;
+  --on-rose:#FFFFFF; --link:#2C7391;
+  --f-display:ui-serif,Georgia,'Iowan Old Style','Palatino Linotype','Times New Roman',serif;
+  --f-body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --f-mono:ui-monospace,'SF Mono',Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171A; --surface:#1A2125; --surface-2:#202A2F; --line:#2B373D;
+  --text:#E8EEF0; --text-2:#9FAFB5;
+  --sky:#5E93A8; --blush:#4A2F36; --rose:#F29AB2; --rose-strong:#F2799A; --fertile:#6DB8D4;
+  --on-rose:#1A1215; --link:#8CCBE2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+a{color:var(--link)}
+h1,h2,h3{font-family:var(--f-display);line-height:1.12;text-wrap:balance;margin:0}
+p{margin:0 0 .9em;max-width:68ch}
+.wrap{max-width:1040px;margin:0 auto}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+
+/* Cabecera */
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:18px;font-size:14px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rose-strong);margin-right:8px}
+.nav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.nav a{color:var(--text-2);text-decoration:none}
+.nav a:hover{color:var(--text);text-decoration:underline}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px 48px;align-items:center;padding-block:36px 56px}
+.hero h1{font-size:clamp(56px,10vw,104px);font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.hero h1 span{color:var(--rose-strong)}
+.lead{font-size:clamp(18px,2.4vw,22px);line-height:1.5;color:var(--text);margin-top:18px;max-width:34em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--text-2)}
+.chip b{color:var(--text);font-weight:600}
+.ringbox{min-width:0}
+.ring{width:100%;height:auto;max-width:440px;display:block;margin:0 auto}
+.ring .per{fill:var(--rose-strong)} .ring .fol{fill:var(--sky);opacity:.55} .ring .lut{fill:var(--blush)}
+.ring .fer{fill:var(--fertile);opacity:.62} .ring .ovu{fill:var(--fertile)}
+.ring .rl{font:500 12px var(--f-mono);fill:var(--text-2)}
+.ring .rc1{font:700 22px var(--f-display);fill:var(--text)}
+.ring .rc2{font:500 13px var(--f-mono);fill:var(--text-2);letter-spacing:.08em;text-transform:uppercase}
+.ring .rc3{font:400 11px var(--f-body);fill:var(--text-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:13px;color:var(--text-2);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+
+/* Secciones */
+section{padding-block:44px;border-top:1px solid var(--line)}
+section>.wrap>h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:8px 0 22px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
+.cols>div{min-width:0}
+.note{background:var(--surface-2);border-left:3px solid var(--fertile);border-radius:6px;padding:14px 18px;max-width:72ch;font-size:15px}
+.note.warn{border-left-color:var(--rose-strong)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:0}
+.card h3{font-size:19px;margin-bottom:6px}
+.card p{font-size:15px;color:var(--text-2);margin:0}
+.card .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose-strong);display:block;margin-bottom:8px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2);font-weight:500;background:var(--surface-2);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:600}
+.pill.ok{background:color-mix(in srgb,var(--fertile) 18%,transparent);color:var(--fertile)}
+.pill.no{background:color-mix(in srgb,var(--rose-strong) 16%,transparent);color:var(--rose-strong)}
+
+/* Flujo de datos */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:8px 0 24px}
+.step{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;position:relative;min-width:0}
+.step small{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.step.keep{border-color:var(--rose-strong)} .step.keep small{color:var(--rose-strong)}
+.step.calc small{color:var(--fertile)}
+.step b{font-family:var(--f-display);font-size:18px}
+.step p{font-size:14px;color:var(--text-2);margin:4px 0 0}
+
+/* Arquitectura */
+.arch{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.layers{display:grid;gap:10px}
+.layer{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 18px;display:grid;grid-template-columns:150px 1fr;gap:4px 16px;min-width:0}
+.layer b{font-family:var(--f-display);font-size:17px}
+.layer span{font-size:14.5px;color:var(--text-2)}
+.layer.core{border-color:var(--fertile);background:color-mix(in srgb,var(--fertile) 8%,var(--surface))}
+.ext{border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:14.5px;color:var(--text-2);min-width:0}
+.ext b{display:block;font-family:var(--f-display);color:var(--text);font-size:17px;margin-bottom:6px}
+.ext ul{margin:0;padding-left:18px}
+
+.kpis{display:flex;flex-wrap:wrap;gap:28px 44px;margin:6px 0 26px}
+.kpi b{display:block;font-family:var(--f-display);font-size:40px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13.5px;color:var(--text-2)}
+
+ul.clean{margin:0 0 1em;padding-left:20px}
+ul.clean li{margin-bottom:.4em;max-width:68ch}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.docs a{display:block;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;text-decoration:none;color:var(--text);font-size:15px}
+.docs a:hover{border-color:var(--fertile)}
+.docs a small{display:block;color:var(--text-2);font-size:13px}
+footer{padding-block:36px 48px;border-top:1px solid var(--line);font-size:14px;color:var(--text-2)}
+
+/* Resumen en inglés */
+#en .sum{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px 40px}
+#en h3{font-size:18px;margin:18px 0 6px}
+#en p,#en li{font-size:15.5px}
+#en .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;padding-block:20px 36px}
+  .cols,.arch,#en .sum{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .layer{grid-template-columns:1fr}
+  section{padding-block:34px}
+}
+@media (max-width:460px){.flow{grid-template-columns:1fr}.kpis{gap:20px 28px}}
+
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{padding:0;font-size:12px;background:#fff}
+  .nav,.top .nav{display:none}
+  section{padding-block:22px;break-inside:auto}
+  .card,.step,.layer,.kpi,tr,.note{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .hero{padding-block:10px 24px;grid-template-columns:1.1fr .9fr}
+  .cols{grid-template-columns:1fr 1fr}
+  #en{break-before:page;border-top:0}
+  .tablewrap{overflow:visible}
+  #en{padding-block:0}
+  #en h2{font-size:26px;margin:4px 0 10px}
+  #en .sum{gap:14px 26px}
+  #en h3{font-size:14.5px;margin:10px 0 3px}
+  #en p,#en li,#en td{font-size:11.5px;line-height:1.45;margin-bottom:.5em}
+  #en .box{padding:10px 14px}
+  #en .kpi b{font-size:28px}
+  #en td{padding:5px 8px}
+  #en ul.clean{margin-bottom:.4em}
+  footer{padding-block:14px 0;font-size:10.5px}
+}
+
+.hero2{padding-block:34px 30px}
+.hero2 h1{font-size:clamp(40px,7vw,68px);letter-spacing:-.03em}
+.hero2 h1 span{color:var(--rose-strong)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:14px;text-decoration:none;color:var(--text)}
+.toc a:hover{border-color:var(--fertile)}
+details{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:0;margin-bottom:10px}
+summary{cursor:pointer;padding:14px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--rose-strong);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details>div{padding:0 18px 14px;color:var(--text-2);font-size:15.5px}
+details>div p{margin-bottom:.6em}
+summary:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.how ol{margin:8px 0 0;padding-left:20px;font-size:15px;color:var(--text-2)}
+.how li{margin-bottom:4px}
+.how h3{font-size:19px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.conf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.conf .card h3{display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.case{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.case input{width:20px;height:20px;margin-top:4px;accent-color:var(--rose-strong)}
+.case h3{font-size:18px}
+.case .meta{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-2)}
+.case ol{margin:6px 0 8px;padding-left:20px;font-size:15px}
+.case .exp{font-size:14.5px;color:var(--text-2);border-top:1px dashed var(--line);padding-top:8px}
+.case .exp b{color:var(--fertile)}
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);font-size:14px;color:var(--text-2);display:flex;gap:12px;align-items:center}
+.progress progress{flex:1;height:8px;accent-color:var(--rose-strong)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.copy{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:3px 10px;cursor:pointer}
+@media (max-width:640px){.conf{grid-template-columns:1fr}}
+
+.sitenav{display:flex;gap:6px 16px;flex-wrap:wrap}
+.sitenav a{color:var(--text-2);text-decoration:none;font-size:14px}
+.sitenav a[aria-current="page"]{color:var(--text);font-weight:600}
+.sitenav a:hover{text-decoration:underline}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-block;border-radius:999px;padding:10px 20px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.btn.primary{background:var(--rose-strong);border-color:var(--rose-strong);color:var(--on-rose)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible{outline:2px solid var(--fertile);outline-offset:2px}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><i></i>Aura</div>
+    <nav class="sitenav" aria-label="Site"><a href="index.html">Home</a><a href="guide.html" aria-current="page">User guide</a><a href="report.html">Report</a><a href="../testers.html" hreflang="es">Testers (in Spanish)</a><a href="../privacy.html#en">Privacy</a><a href="../guia.html" hreflang="es" lang="es">Español</a></nav>
+  </header>
+  <div class="hero2">
+    <div class="eyebrow">User guide · version 1.2.0</div>
+    <h1 style="margin-top:12px">Aura guide<span>.</span></h1>
+    <p class="lead">How to use the app day to day and what happens to your data, explained without jargon.</p>
+    <div class="note warn" style="margin-top:20px"><b>Important.</b> Aura gives informational estimates based on your entries. It is not a method of birth control or a medical device.</div>
+  </div>
+</div>
+
+<section id="empezar" style="border-top:0"><div class="wrap">
+  <div class="eyebrow">Getting started</div>
+  <h2>Starting with Aura</h2>
+  <p>Aura starts out empty. At first it can only show you what you log, and as you save cycles, its estimates get better.</p>
+  <div class="flow">
+    <div class="step keep"><small>Step 1</small><b>Mark the day it started</b><p>Tap “My period started today” on Home, or pick another day in the Calendar.</p></div>
+    <div class="step calc"><small>Step 2</small><b>Say when it ends</b><p>Choose “Ended today” or “It ended earlier” when it happens.</p></div>
+    <div class="step calc"><small>Step 3</small><b>Repeat for a couple of cycles</b><p>With two cycles, Aura can already estimate the next one.</p></div>
+    <div class="step calc"><small>Step 4</small><b>Create a backup</b><p>Your data lives only on your phone. A backup protects you if you lose it.</p></div>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Screen</th><th>What it's for</th></tr></thead>
+    <tbody>
+      <tr><td><b>Home</b></td><td>Your current phase, the estimate for your next period and shortcuts for logging.</td></tr>
+      <tr><td><b>Calendar</b></td><td>View, mark and unmark days; select several at once; see the estimated days.</td></tr>
+      <tr><td><b>Log day</b></td><td>Record bleeding, flow, mood, symptoms and notes for a day.</td></tr>
+      <tr><td><b>Stats</b></td><td>“Your cycles”: typical length, regularity, most frequent symptoms and moods.</td></tr>
+      <tr><td><b>Settings</b></td><td>Reminders, privacy, backup and deleting all your data.</td></tr>
+    </tbody></table></div>
+</div></section>
+
+<section id="dia"><div class="wrap">
+  <div class="eyebrow">How it's done</div>
+  <h2>Day to day</h2>
+  <div class="how">
+    <div class="card"><h3>Log a day</h3><ol><li>Open the day from Home or the Calendar.</li><li>Say whether there was bleeding and how heavy: light, moderate or heavy.</li><li>Choose your mood and symptoms, and write a note if you like.</li><li>Save. If you leave with unsaved changes, Aura asks you first.</li></ol></div>
+    <div class="card"><h3>“My period started today”</h3><ol><li>Tap the button on Home.</li><li>Choose today, yesterday or another day. Never a future day.</li><li>Aura saves only the first day. The following days appear as <b>estimated</b> (dotted border) and aren't saved until you confirm them.</li></ol></div>
+    <div class="card"><h3>Say it has ended</h3><ol><li>Choose “Still going”, “Ended today” or “It ended earlier”.</li><li>Once the period is closed, it counts toward your typical length.</li><li>Unlogged days in between are filled in, and days you marked as “No” are kept as they are.</li></ol></div>
+    <div class="card"><h3>Mark several days</h3><ol><li>In the Calendar, switch to range selection mode (“Select multiple days”).</li><li>Tap the first and last day.</li><li>If the range is longer than 10 days, Aura asks you to confirm.</li></ol></div>
+    <div class="card"><h3>Fix a mistake</h3><ol><li>Almost every action has “Undo”, visible for about 7 seconds.</li><li>To remove a day, open it and clear the mark.</li><li>A closed period can be reopened within the next 7 days.</li></ol></div>
+    <div class="card"><h3>Reminders</h3><ol><li>Go to Settings and turn on notifications. They're off by default.</li><li>Choose which ones you want: period, fertile window or “Did your period start?”, and at what time.</li><li>On the lock screen the text is discreet, unless you turn on “Show details in notifications”.</li></ol></div>
+  </div>
+</div></section>
+
+<section id="novedades"><div class="wrap">
+  <div class="eyebrow">Next update</div>
+  <h2>New features</h2>
+  <div class="note">These features arrive in the next Google Play update. Version 1.2.0, currently in closed testing, does not include them yet.</div>
+  <div class="how" style="margin-top:18px">
+    <div class="card"><h3>Pregnancy mode</h3><ol><li>Go to Settings, “Pregnancy mode”, and enter the first day of your last period.</li><li>Home shows the weeks and days of pregnancy and the estimated due date, calculated from that date.</li><li>While it's on, predictions, the fertile window and cycle reminders are paused, and the Calendar hides “My period started today”.</li><li>To end it, choose how it ended (“My baby was born”, “Pregnancy loss” or “I'd rather not say”) and the date. If you turned it on by mistake, choose “I turned it on by mistake” and it is deleted.</li><li>“Edit last pregnancy” lets you change the outcome or the end date, or delete it.</li><li>Predictions come back when you log a new period after the end date. Cycles that span a pregnancy don't count toward the prediction, the chart or the PDF.</li></ol></div>
+    <div class="card"><h3>Birth control reminder</h3><ol><li>Go to Settings, Notifications, “Birth control reminder”. It's off by default.</li><li>Choose your method: pill (every day), patch (weekly: 3 weeks on and 1 patch-free week), ring (3 weeks in, 1 out), monthly injection (every 30 days) or 3-month injection (every 13 weeks).</li><li>Choose the time and, for the patch, ring or injection, the start day.</li><li>The text is generic, unless you turn on “Show details in notifications”.</li><li>It's stored only on this phone: it isn't included in backups, so on a new phone you'll have to set it up again.</li></ol></div>
+    <div class="card"><h3>PDF summary for your doctor</h3><ol><li>In Stats, tap the PDF button at the top.</li><li>Aura creates it on your phone, with no server: cycle and period length, regularity, next estimated period, a chart and history of your last 12 cycles, most frequent symptoms and moods, flow, pregnancies and your birth control if you set it up.</li><li>Android shows you where to share it: print, Drive, email or another app. You choose.</li><li>It contains health data: once shared, it is subject to the policies of whoever receives it or the service you choose.</li></ol></div>
+    <div class="card"><h3>Home screen widget</h3><ol><li>Add it from your phone's widget list. It appears as “Aura”.</li><li>It shows your next period (for example, “In 5 days · Nov 14 – Nov 20”), the day of your period, the days late or your weeks of pregnancy. Tapping it opens Aura.</li><li>It updates to the new day without opening the app, though it may take up to 30 minutes after midnight.</li><li>Anyone who looks at your home screen can read it. With “Discreet widget” (Settings, Privacy) it only says “Aura · Tap to open”.</li></ol></div>
+    <div class="card"><h3>Redesigned stats</h3><ol><li>Summary cards: typical cycle, typical period, regularity and next period.</li><li>A bar chart of your recent cycles and your typical length.</li><li>A short explanation of each figure, and your moods shown as bars.</li></ol></div>
+    <div class="card"><h3>Daily reminder, theme and language</h3><ol><li>Daily reminder: optional and off by default. It reminds you every day, at your reminder time, if that day has nothing logged yet.</li><li>Theme: in Settings, “Theme”, choose System default, Light or Dark. It's saved on each phone.</li><li>Language: if your phone is set to English, Aura appears in English; otherwise, in Spanish.</li></ol></div>
+  </div>
+</div></section>
+
+<section id="prediccion"><div class="wrap">
+  <div class="eyebrow">What the estimates mean</div>
+  <h2>How to read the prediction</h2>
+  <p>Aura uses the calendar method: it looks at your previous cycles and projects the next one. It doesn't measure hormones or temperature, so it's an estimate and always comes with a <b>range</b> and a <b>confidence level</b>.</p>
+  <div class="conf">
+    <div class="card"><h3><span class="dot" style="background:var(--rose-strong)"></span>Low confidence</h3><p>You have fewer than two cycles, or your cycles vary a lot. The range will be wide.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--sky)"></span>Medium confidence</h3><p>Two or three cycles of similar length.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--fertile)"></span>High confidence</h3><p>Four or more cycles with a stable length.</p></div>
+  </div>
+  <h3 style="font-size:20px;margin:28px 0 8px">Why don't I sometimes see ovulation or the fertile window?</h3>
+  <ul class="clean">
+    <li>Confidence is still low: Aura prefers not to show something unreliable.</li>
+    <li>Your period is late compared with the estimated range.</li>
+    <li>More than 60 days have passed since your last logged period, so the data is out of date.</li>
+    <li>You turned off “Show ovulation and fertile window” in Settings.</li>
+  </ul>
+  <p style="color:var(--text-2)">The fertile window Aura shows is an estimate and <b>cannot be used to prevent pregnancy</b>.</p>
+</div></section>
+
+<section id="datos"><div class="wrap">
+  <div class="eyebrow">Privacy without the fine print</div>
+  <h2>Your data and permissions, simply put</h2>
+  <div class="three">
+    <div class="card"><span class="tag">Where it is</span><h3>On your phone</h3><p>There is no Aura account or server. Nobody on the project can see what you log.</p></div>
+    <div class="card"><span class="tag">When it leaves</span><h3>Only if you decide</h3><p>It only leaves if you create a backup or turn on automatic backup to your own Google Drive.</p></div>
+    <div class="card"><span class="tag">What there isn't</span><h3>No tracking</h3><p>No ads, no analytics and no crash reports that send data.</p></div>
+  </div>
+  <h3 style="font-size:20px;margin:28px 0 10px">The permissions Aura asks for</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Permission</th><th>What it means for you</th></tr></thead>
+    <tbody>
+      <tr><td><b>Notifications</b></td><td>To show your reminders. Only used if you turn them on. If Android asks and you say no, you can change it with “Open settings”.</td></tr>
+      <tr><td><b>Run at startup</b></td><td>So your reminders stay scheduled after you restart your phone.</td></tr>
+      <tr><td><b>Internet</b></td><td>Only for automatic backup to your Google Drive. With that backup off, Aura sends and receives nothing.</td></tr>
+    </tbody></table></div>
+  <p style="margin-top:12px;color:var(--text-2)">Aura doesn't ask for your location, contacts, camera or microphone.</p>
+  <h3 style="font-size:20px;margin:28px 0 10px">Protections it already has</h3>
+  <ul class="clean">
+    <li><b>Hidden in Recents:</b> when you switch apps, Aura's preview is blank and screenshots can't be taken. It's on by default and you can turn it off in Settings (“Hide Aura in Recents”).</li>
+    <li><b>Discreet notifications:</b> the text on the lock screen doesn't reveal details, unless you ask for them.</li>
+    <li><b>No automatic Android backup:</b> your data doesn't go to Android's cloud and isn't copied automatically when you change phones.</li>
+    <li><b>Discreet widget</b> (next update): the home screen widget shows only “Aura · Tap to open”, with no data. Turn it on in Settings, Privacy.</li>
+  </ul>
+  <div class="note warn"><b>Two things worth knowing.</b> The data inside the app isn't encrypted: it's in Aura's private storage, but anyone who unlocks your phone could open it. And the backup password protects only the backup file, not the data in the app.</div>
+</div></section>
+
+<section id="respaldo"><div class="wrap">
+  <div class="eyebrow">So you don't lose anything</div>
+  <h2>Backup and changing phones</h2>
+  <p>Since your data is only on your phone, if you lose it or wipe it, the data goes with it. A backup is the way to prevent that. Everything is in Settings, under “Your data”.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag">Option 1</span><h3>A file, whenever you want</h3><p>Aura creates a file with your data and you choose where to save it or who to share it with. You can protect it with a password.</p></div>
+    <div class="card"><span class="tag">Option 2</span><h3>Automatic, to your Drive</h3><p>Optional and off by default. Every day Aura uploads an encrypted file to an “Aura” folder in your Google Drive. It's a single file that gets replaced, like WhatsApp's backup.</p></div>
+    <div class="card"><span class="tag">Reminder</span><h3>Aura lets you know</h3><p>If 30 days go by without a backup, a card appears on Home. “Not now” hides it for 7 days.</p></div>
+  </div>
+  <div class="cols" style="margin-top:22px">
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">About the password</h3>
+      <ul class="clean">
+        <li>At least <b>10 characters</b>. A weak password can be guessed.</li>
+        <li><b>File backup:</b> Aura doesn't store your password and can't recover it. If you forget it, that backup can't be opened.</li>
+        <li><b>Automatic backup:</b> you choose it only once and Aura stores it <b>sealed with Android's key system</b> on your phone, so it can back up every day without asking you.</li>
+        <li>Without a password, a file backup is plain text anyone who opens it can read. Aura warns you about this first.</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:20px;margin-bottom:8px">What Google sees</h3>
+      <ul class="clean">
+        <li>Aura only accesses the files it creates itself in your Drive.</li>
+        <li>Google sees that the file exists, its size and when it changed, but not its contents, because it's encrypted.</li>
+        <li>You can view and delete that file from your Drive whenever you want.</li>
+      </ul>
+    </div>
+  </div>
+  <h3 style="font-size:20px;margin:26px 0 10px">Changing phones</h3>
+  <div class="flow">
+    <div class="step keep"><small>On the old phone</small><b>Create a backup</b><p>Settings, “Your data”. If you set a password, write it down.</p></div>
+    <div class="step calc"><small>Move it</small><b>Take it with you</b><p>Share it or save it somewhere you can open from the new phone.</p></div>
+    <div class="step calc"><small>On the new phone</small><b>Import</b><p>Install Aura and choose “Restore a backup”. It replaces whatever is there, after asking you to confirm.</p></div>
+    <div class="step calc"><small>If you change your mind</small><b>Undo</b><p>After importing, you can undo the last import.</p></div>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <div class="eyebrow">Frequently asked questions</div>
+  <h2>Common questions</h2>
+  <details><summary>Do I need internet to use Aura?</summary><div><p>No. Internet is only used if you turn on automatic backup to Drive. Without it, Aura sends and receives nothing.</p></div></details>
+  <details><summary>Who can see my data?</summary><div><p>Nobody on the project: there is no server or account. Your data is on your phone. If you turn on backup to Drive, the file stays in your Google account, encrypted.</p></div></details>
+  <details><summary>What happens if I change or lose my phone?</summary><div><p>Android doesn't copy Aura's data on its own. With a backup you can recover it by importing it on the new phone. Without a backup, it can't be recovered. That's why it's worth making one.</p></div></details>
+  <details><summary>I forgot a backup's password</summary><div><p>Aura doesn't store the password for file backups and can't recover it, so that file can't be opened. Automatic backup to Drive keeps working as long as Aura keeps the sealed password on your phone, but if you need to open that file on another phone, you'll have to remember it.</p></div></details>
+  <details><summary>My cycle is irregular. Is Aura useful for me?</summary><div><p>Yes, for logging and seeing your patterns. But with very variable cycles the estimate will have a wide range and low confidence, and Aura will show it that way. That's to be expected from this method.</p></div></details>
+  <details><summary>Can I use it to prevent pregnancy?</summary><div><p>No. Aura is not a method of birth control. Its estimates, including the fertile window, are informational.</p></div></details>
+  <details><summary>How do I delete all my data?</summary><div><p>In Settings choose “Delete all data”, or uninstall the app. The data is removed from the phone and can't be recovered. If you had backup to Drive on, Aura disconnects it, but <b>files already uploaded are not deleted</b>: remove them yourself from your Drive. The same goes for backups or PDF summaries you saved or shared outside the app.</p></div></details>
+  <details><summary>Does it cost anything?</summary><div><p>No. Aura is free.</p></div></details>
+  <details><summary>Is there an iPhone version, an English version or a dark mode?</summary><div><p>For now it only exists for Android. The next Google Play update brings the interface in English (if your phone is set to English) and the dark theme.</p></div></details>
+</div></section>
+
+<section id="limites"><div class="wrap">
+  <div class="eyebrow">In the open</div>
+  <h2>Current limits</h2>
+  <ul class="clean">
+    <li>It's a statistical estimate, not a diagnosis or medical advice. If you have health concerns, see a professional.</li>
+    <li>The data inside the app isn't encrypted; encryption protects the backups.</li>
+    <li>The Drive backup is a single file: it doesn't keep earlier copies and, for now, it isn't restored from within the app but by importing the file.</li>
+    <li>Pregnancy mode, the birth control reminder, the PDF summary and the widget arrive in the next Google Play update. The due date is an estimate from your last period.</li>
+    <li>The birth control reminder isn't included in backups, and anyone who looks at your home screen can read the widget, unless “Discreet widget” is on.</li>
+    <li>It's in closed testing: there may be bugs. If you find one, let us know.</li>
+  </ul>
+</div></section>
+
+<div class="wrap"><footer>
+  <a href="../privacy.html#en">Privacy policy</a> · <a href="https://github.com/Soofiaa/Aura">Code on GitHub</a><br>
+  Aura 1.2.0 (build 7) · Guide dated October 28, 2026 · Author: Sofia Menzel. Contact: <span id="mail">sofia.menzel.dev@gmail.com</span> <button class="copy" type="button" id="cp">Copy</button>
+</footer></div>
+<script>
+document.getElementById('cp').addEventListener('click',function(){
+  var s=document.getElementById('mail').textContent,b=this;
+  function ok(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1600)}
+  function fb(){var r=document.createRange();r.selectNodeContents(document.getElementById('mail'));var x=getSelection();x.removeAllRanges();x.addRange(r)}
+  try{navigator.clipboard.writeText(s).then(ok,fb)}catch(e){fb()}
+});
+</script>
+</body>
+</html>

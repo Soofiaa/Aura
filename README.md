@@ -6,13 +6,13 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 **Sitio web:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Guía de uso](https://soofiaa.github.io/Aura/guia.html) · [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html)
 
-> **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real.
+> **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real. Las novedades ya publicadas en el código (interfaz en inglés, modo embarazo, tema oscuro, recordatorio diario, recordatorio de anticonceptivo, resumen en PDF, estadísticas rediseñadas y widget) llegan en la próxima actualización de Google Play.
 
 ## Capturas
 
 <table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Inicio: fase actual y próximo período"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendario con la ventana fértil estimada"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Registrar día"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Estadísticas"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Ajustes y datos"></td></tr></table>
 
-Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las capturas de Ajustes corresponden a la 1.1.0, antes del respaldo en Drive.*
+Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las capturas son de versiones anteriores (la de Ajustes, de la 1.1.0, antes del respaldo en Drive); no muestran las novedades de la próxima actualización.*
 
 ## Qué hace
 
@@ -22,8 +22,15 @@ Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las captura
 - Predice el próximo período con un **rango** y un nivel de confianza (baja / media / alta). La ovulación y la ventana fértil estimadas solo se muestran con confianza media o alta y sin período atrasado (en Inicio, tampoco durante la fase menstrual), y se pueden ocultar desde Ajustes.
 - Muestra la fase actual: menstrual, folicular, ovulatoria y lútea (ninguna con el período atrasado).
 - Calendario con los días registrados, los días estimados del período en curso (borde punteado), la ventana fértil y la ovulación estimadas (con las condiciones de confianza, atraso e interruptor de Inicio) y selección de varios días; pasa de día solo a medianoche y tiene "Ir a hoy".
-- Estadísticas con "Tus ciclos": duración típica del ciclo, el más corto y el más largo, regularidad y duración típica del período.
+- Estadísticas con tarjetas de resumen (ciclo típico, período típico, regularidad y próximo período), gráfico de barras de los ciclos recientes con la duración típica, explicaciones breves de cada cifra y el ánimo en barras.
+- **Resumen en PDF para el médico** (botón en Estadísticas): se genera en el teléfono, sin servidor, con duración del ciclo y del período, regularidad, estimación del próximo período, gráfico e historial de los últimos 12 ciclos, síntomas y ánimo más frecuentes, flujo, embarazos (actual y anteriores) y el método anticonceptivo si está configurado. Se comparte con el menú de compartir de Android (la usuaria elige dónde).
 - Recordatorios locales (opcionales) con texto discreto por defecto, y un aviso opcional "¿Te llegó el período?" el primer día de atraso.
+- Recordatorio diario (opcional, apagado por defecto): una notificación cada día a la hora del recordatorio si ese día aún no tiene nada registrado.
+- Recordatorio de anticonceptivo (opcional): píldora (cada día), parche (semanal, 3 semanas + 1 sin parche), anillo (3 semanas puesto, 1 sin él), inyección mensual (cada 30 días) o trimestral (cada 13 semanas), con su propia hora y texto genérico salvo que se active "mostrar detalles".
+- **Modo embarazo** (Ajustes → "Modo embarazo"): con el primer día de la última regla, Inicio muestra semanas y días de embarazo y la fecha probable de parto (estimada desde esa fecha). Pausa las predicciones, la ventana fértil y los recordatorios del ciclo, y oculta "Me llegó hoy" en el Calendario. Se termina eligiendo el desenlace (nacimiento / pérdida / sin especificar) y la fecha, o con "Lo activé por error", que lo borra; el último embarazo terminado se puede corregir o borrar. Sin textos de celebración: el mismo mensaje para cualquier desenlace. Las predicciones vuelven tras registrar un período nuevo después del fin, y los ciclos que abarcan un embarazo no cuentan para predicciones, gráfico ni PDF.
+- **Widget de pantalla de inicio** (Android): muestra el próximo período ("En 5 días · 14–20 nov"), el día del período, los días de atraso o las semanas de embarazo; al tocarlo abre Aura.
+- Tema oscuro: Ajustes → Tema (según el teléfono, claro u oscuro; por teléfono).
+- Interfaz en español o en inglés según el idioma del teléfono; pantalla de borde a borde y sin bloqueo de orientación.
 - Permite marcar el fin del período y quitar marcas.
 - Respaldo y restauración en un archivo JSON desde Ajustes → "Tus datos", con contraseña opcional para cifrar el archivo, "Deshacer" tras importar y "Deshacer la última importación" mientras exista la copia previa.
 - Recordatorio de respaldo: si pasan 30 días sin crear uno, Inicio muestra una tarjeta (sin notificación); solo guarda en el teléfono la fecha del último respaldo y no envía nada fuera de él.
@@ -36,10 +43,14 @@ Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las captura
 - `allowBackup="false"`: Android no los copia a la nube, y `dataExtractionRules` tampoco los copia al cambiar de teléfono por cable o Wi-Fi: la única salida es un respaldo propio de la app.
 - **"Ocultar Aura en Recientes"** (activo por defecto, se apaga desde Ajustes → Privacidad): la vista previa de la app en Recientes sale en blanco y no se pueden hacer capturas ni grabaciones de la pantalla.
 - Al borrar todos los datos, la base se compacta (`VACUUM`) y las páginas sobrescriben lo borrado (`secure_delete`): no quedan restos de notas o síntomas ya eliminados.
-- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo, o si activa el respaldo automático en su propio Google Drive (opcional, ver arriba). El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). En los respaldos en archivo, Aura no guarda la contraseña ni puede recuperarla; en el respaldo automático de Drive la guarda sellada con el Keystore de Android, para poder respaldar cada día sin pedirla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia. El permiso `INTERNET` existe solo para el respaldo automático en Drive; con él apagado, la app no usa la red.
+- Los datos solo salen del teléfono si la usuaria crea un respaldo y elige dónde guardarlo o con quién compartirlo, o si activa el respaldo automático en su propio Google Drive (opcional, ver arriba), o si comparte el resumen en PDF (ver abajo). El archivo contiene datos de salud. Se puede proteger con una contraseña (opcional): se cifra en el teléfono (AES-256-GCM, con la clave derivada con Argon2id) y sin la contraseña no se puede leer (una contraseña débil se puede adivinar). En los respaldos en archivo, Aura no guarda la contraseña ni puede recuperarla; en el respaldo automático de Drive la guarda sellada con el Keystore de Android, para poder respaldar cada día sin pedirla. Sin contraseña, el archivo va sin cifrar y cualquiera que lo abra puede leerlo. La contraseña protege solo el archivo, no los datos dentro del teléfono. Aura no recibe ni guarda una copia. El permiso `INTERNET` existe solo para el respaldo automático en Drive; con él apagado, la app no usa la red.
 - Al actualizar desde la 1.0 (esquema v3), antes de convertir la base la app guarda una copia de seguridad en su almacenamiento privado; se borra al guardar un respaldo en el teléfono, al abrir la app si tiene más de 30 días, o con "Borrar todos los datos".
 - Al confirmar una importación, la app guarda antes una copia sin cifrar de los datos actuales en su almacenamiento privado, solo para "Deshacer"; la siguiente importación la reemplaza y "Borrar todos los datos" la elimina.
 - Notificaciones con texto genérico y visibilidad privada en pantalla de bloqueo, salvo que el usuario active los detalles.
+- **Widget:** cualquiera que mire la pantalla de inicio puede leerlo. Con **"Widget discreto"** (Ajustes → Privacidad) muestra solo "Aura · Toca para abrir", sin datos, y en el selector de widgets la descripción es solo "Aura". Para cambiar de día sin abrir la app, Aura deja los textos del widget de los próximos 60 días en su almacenamiento privado (SharedPreferences, excluido del respaldo de Android).
+- **Resumen en PDF:** contiene datos de salud y solo sale del teléfono si la usuaria lo comparte. El archivo temporal queda en la caché privada de la app y "Borrar todos los datos" lo elimina.
+- **Recordatorio de anticonceptivo:** se guarda solo en este teléfono (archivo de ajustes del dispositivo), no va en los respaldos ni se envía a ningún lado.
+- **Embarazos:** se guardan en la base local (esquema v6) y sí van en los respaldos (formato v6).
 - Política de privacidad: [`docs/privacy.html`](docs/privacy.html).
 
 ## Documentación
@@ -79,6 +90,7 @@ lib/
 │   ├── backup_codec.dart
 │   ├── backup_crypto.dart
 │   ├── backup_reminder.dart
+│   ├── contraceptive.dart
 │   ├── cycle_deriver.dart
 │   ├── cycle_predictor.dart
 │   ├── current_period.dart
@@ -92,11 +104,13 @@ lib/
 │   ├── backup/          # BackupService, almacenes de archivo y recordatorio
 │   │                    # + respaldo automático en Drive (HU-09): drive_api_client,
 │   │                    #   auto_drive_backup_service, drive_backup_gateway, pre_migration_copy
-│   ├── database/        # drift (esquema v5)
+│   ├── database/        # drift (esquema v6)
 │   ├── models/          # enums de día (flujo, ánimo, síntomas)
 │   ├── repositories/    # CycleRepository
 │   ├── notifications/   # reconciler
-│   └── device_settings_store.dart  # ajustes de este teléfono (sin migración)
+│   ├── device_settings_store.dart  # ajustes de este teléfono (sin migración)
+│   ├── doctor_report.dart          # resumen en PDF para el médico
+│   └── home_widget_sync.dart       # textos del widget de inicio
 ├── screens/       # inicio, calendario, registro, estadísticas, ajustes, respaldo, onboarding
 ├── widgets/       # diálogos de contraseña, hojas de inicio de período, selector de síntomas, tarjeta de respaldo
 └── utils/         # DayKey, colores, textos, zona horaria, Keystore, canales de Android
@@ -120,7 +134,7 @@ Aura usa el **método del calendario**: proyecta a partir de ciclos pasados. Es 
 
 ## Calidad y pruebas
 
-Más de 1290 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
+Más de 1370 tests (dominio con fechas fijas, repositorio con base en memoria, planificador y reconciliador con scheduler falso, pantallas con widgets y manifest/gradle verificados desde tests). La verificación posterior (auditorías de código y pruebas manuales en el teléfono) encontró errores que los tests iniciales no detectaban; cada corrección quedó con su test.
 
 ## Cómo ejecutarlo
 
@@ -138,9 +152,7 @@ Build de release firmado: ver [`android/RELEASE.md`](android/RELEASE.md). La cla
 ## Qué no tiene (todavía)
 
 - Cifrado de los datos dentro del teléfono (la contraseña protege solo el archivo del respaldo)
-- Modo oscuro
 - iOS
-- Idioma inglés en la interfaz
 
 ## Aviso de salud
 
