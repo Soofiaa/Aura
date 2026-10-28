@@ -79,13 +79,15 @@ activa el respaldo en Drive.
 
 | Pregunta del formulario | Respuesta sugerida | Por qué |
 |---|---|---|
-| ¿La app recopila o comparte datos de usuario? | Ver "Decisión pendiente" abajo | Todo se procesa en el teléfono |
+| ¿La app recopila o comparte datos de usuario? | **No** | Todo se procesa en el teléfono; el respaldo en Drive va cifrado con una contraseña que solo tiene la usuaria |
+| ¿Se recopilan los datos cifrados / se pide borrado? | (no se muestra al responder "No") | Igual se mantiene el borrado en Ajustes |
 | Política de privacidad | `https://soofiaa.github.io/Aura/privacy.html` | Ya cubre widget, PDF, embarazo y anticonceptivo |
 | Mecanismo para pedir borrar datos | Sí: "Borrar todos los datos" en Ajustes o desinstalar | Documentado en la política |
 | Publicidad / analítica | No | No hay ninguna |
 | Compartir con terceros | No | El PDF y los respaldos solo salen por una acción de la usuaria (excepción "acción iniciada por el usuario") |
 
-**Decisión pendiente (la tomas tú; yo no puedo verificarla por ti).** El único dato que
+**Decisión tomada: declarar "No se recopilan datos" (opción 1).** El razonamiento de abajo
+queda como respaldo por si Play pregunta. El único dato que
 sale del teléfono sin que lo envíes tú a mano es el respaldo opcional en Google Drive.
 Play define "recopilar" como transmitir datos fuera del dispositivo, y exime los datos con
 cifrado de extremo a extremo que nadie más que quien envía y recibe puede leer. El
