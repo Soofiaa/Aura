@@ -148,5 +148,54 @@ void main() {
       expect(await embarazos(tester), isEmpty);
       await db.close();
     });
+
+    group('corregir el ultimo terminado', () {
+      final corregir = find.text('Corregir último embarazo');
+
+      Future<void> abrir(WidgetTester tester) async {
+        final hoy = DayKey.fromDate(DateTime.now());
+        await repo.startPregnancy(DayKey.addDays(hoy, -30));
+        await repo.endPregnancy(
+            DayKey.addDays(hoy, -10), PregnancyOutcome.perdida);
+        await pumpAjustes(tester);
+        await tester.scrollUntilVisible(corregir, 200);
+        await tester.tap(corregir);
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('cambia como termino; la fecha propuesta es la guardada',
+          (tester) async {
+        await abrir(tester);
+        await tester.tap(find.text('Prefiero no decirlo'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        final row = (await embarazos(tester)).single;
+        expect(row.endDate, DayKey.addDays(DayKey.fromDate(DateTime.now()), -10));
+        expect(row.outcome, PregnancyOutcome.sinEspecificar);
+        expect(find.text('Cambio guardado.'), findsOneWidget);
+        await db.close();
+      });
+
+      testWidgets('borrar pide confirmacion', (tester) async {
+        await abrir(tester);
+        await tester.tap(find.text('Borrar este embarazo'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+        expect(await embarazos(tester), hasLength(1));
+
+        await tester.tap(corregir);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Borrar este embarazo'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Borrar'));
+        await tester.pumpAndSettle();
+        expect(await embarazos(tester), isEmpty);
+        expect(corregir, findsNothing);
+        await db.close();
+      });
+    });
   });
 }

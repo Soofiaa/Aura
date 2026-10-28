@@ -68,6 +68,27 @@ void main() {
     );
   });
 
+  test('corregir un embarazo terminado: no uno activo ni pisar el siguiente',
+      () async {
+    await repo.startPregnancy('2025-01-10');
+    expect(
+        () => repo.editEndedPregnancy(
+            '2025-01-10', '2025-09-01', PregnancyOutcome.perdida),
+        throwsStateError);
+    await repo.endPregnancy('2025-10-01', PregnancyOutcome.perdida);
+    await repo.startPregnancy('2026-01-05');
+
+    await repo.editEndedPregnancy(
+        '2025-01-10', '2025-09-20', PregnancyOutcome.sinEspecificar);
+    expect(
+        () => repo.editEndedPregnancy(
+            '2025-01-10', '2026-01-05', PregnancyOutcome.perdida),
+        throwsArgumentError);
+    final first = (await all()).first;
+    expect((first.endDate, first.outcome),
+        ('2025-09-20', PregnancyOutcome.sinEspecificar));
+  });
+
   test('borrar un embarazo', () async {
     await repo.startPregnancy('2025-01-10');
     await repo.deletePregnancy('2025-01-10');

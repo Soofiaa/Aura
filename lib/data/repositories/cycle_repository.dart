@@ -852,6 +852,28 @@ class CycleRepository {
     if (updated == 0) throw StateError('no hay un embarazo activo');
   }
 
+  /// Corrige como y cuando termino el embarazo ya terminado que empezo en
+  /// [startDate]. Lanza [StateError] si no existe o sigue activo, y
+  /// [ArgumentError] si el nuevo fin no queda antes del siguiente embarazo.
+  Future<void> editEndedPregnancy(
+          String startDate, String endDate, PregnancyOutcome outcome) =>
+      _db.transaction(() async {
+        final next = await (_db.select(_db.pregnancies)
+              ..where((t) => t.startDate.isBiggerThanValue(startDate))
+              ..orderBy([(t) => OrderingTerm.asc(t.startDate)])
+              ..limit(1))
+            .getSingleOrNull();
+        if (next != null && next.startDate.compareTo(endDate) <= 0) {
+          throw ArgumentError.value(
+              endDate, 'endDate', 'despues del inicio del siguiente embarazo');
+        }
+        final updated = await (_db.update(_db.pregnancies)
+              ..where((t) => t.startDate.equals(startDate) & t.endDate.isNotNull()))
+            .write(PregnanciesCompanion(
+                endDate: Value(endDate), outcome: Value(outcome)));
+        if (updated == 0) throw StateError('no hay un embarazo terminado ahi');
+      });
+
   Future<void> deletePregnancy(String startDate) =>
       (_db.delete(_db.pregnancies)
             ..where((t) => t.startDate.equals(startDate)))

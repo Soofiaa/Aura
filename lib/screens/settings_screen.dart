@@ -296,6 +296,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     const tamanoMinimo = BoxConstraints(minWidth: 48, minHeight: 48);
     final embarazo =
         _inputs?.isPregnant ?? false ? _inputs!.pregnancies.last : null;
+    final ultimoTerminado = embarazo == null &&
+            (_inputs?.pregnancies.isNotEmpty ?? false)
+        ? _inputs!.pregnancies.last
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,6 +406,20 @@ class _SettingsScreenState extends State<SettingsScreen>
               ? null
               : (on) => on ? _iniciarEmbarazo() : _terminarEmbarazo(embarazo!),
         ),
+        // shortcut: solo se corrige el ultimo terminado; si hace falta
+        // corregir uno anterior, agregar una lista de embarazos.
+        if (ultimoTerminado != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(tr("Corregir último embarazo", "Edit last pregnancy")),
+            subtitle: Text(tr(
+                "Del ${dayMonthLabelWithYear(ultimoTerminado.start, today: _hoy)} "
+                    "al ${dayMonthLabelWithYear(ultimoTerminado.end!, today: _hoy)}.",
+                "From ${dayMonthLabelWithYear(ultimoTerminado.start, today: _hoy)} "
+                    "to ${dayMonthLabelWithYear(ultimoTerminado.end!, today: _hoy)}.")),
+            trailing: const Icon(Icons.edit_outlined),
+            onTap: () => _terminarEmbarazo(ultimoTerminado),
+          ),
       ],
     );
   }
@@ -448,12 +466,16 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   /// Como termino (o "lo active por error", que lo borra) y cuando. Sin
   /// textos de celebracion: el aviso es el mismo para cualquier final.
+  /// Con un embarazo ya terminado, corrige ambas cosas o lo borra.
   Future<void> _terminarEmbarazo(PregnancySpan embarazo) async {
+    final terminado = embarazo.end != null;
     const porError = 'porError';
     final eleccion = await showDialog<Object>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: Text(tr("Terminar modo embarazo", "End pregnancy mode")),
+        title: Text(terminado
+            ? tr("Corregir último embarazo", "Edit last pregnancy")
+            : tr("Terminar modo embarazo", "End pregnancy mode")),
         children: [
           for (final o in PregnancyOutcome.values)
             SimpleDialogOption(
@@ -467,7 +489,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context, porError),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(tr("Lo activé por error", "I turned it on by mistake"),
+              child: Text(
+                  terminado
+                      ? tr("Borrar este embarazo", "Delete this pregnancy")
+                      : tr("Lo activé por error", "I turned it on by mistake"),
                   style: const TextStyle(color: AppColors.textSecondary)),
             ),
           ),
@@ -476,6 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
     if (eleccion == null || !mounted) return;
     if (eleccion == porError) {
+      if (terminado && !await _confirmarBorrarEmbarazo()) return;
       await _guardar(() => _repository.deletePregnancy(embarazo.start));
       return;
     }
@@ -483,19 +509,49 @@ class _SettingsScreenState extends State<SettingsScreen>
     final fin = await showDatePicker(
       context: context,
       helpText: tr("¿Cuándo terminó?", "When did it end?"),
-      initialDate: hoy,
+      initialDate: terminado ? DateTime.parse(embarazo.end!) : hoy,
       firstDate: DateTime.parse(embarazo.start),
       lastDate: hoy,
       currentDate: hoy,
     );
     if (fin == null || !mounted) return;
-    if (await _guardar(() => _repository.endPregnancy(
-            DayKey.fromDate(fin), eleccion as PregnancyOutcome)) &&
-        mounted) {
+    final outcome = eleccion as PregnancyOutcome;
+    final guardado = await _guardar(() => terminado
+        ? _repository.editEndedPregnancy(
+            embarazo.start, DayKey.fromDate(fin), outcome)
+        : _repository.endPregnancy(DayKey.fromDate(fin), outcome));
+    if (guardado && mounted) {
       showAppSnackBar(
-          context, tr("Modo embarazo terminado.", "Pregnancy mode ended."));
+          context,
+          terminado
+              ? tr("Cambio guardado.", "Change saved.")
+              : tr("Modo embarazo terminado.", "Pregnancy mode ended."));
     }
   }
+
+  Future<bool> _confirmarBorrarEmbarazo() async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(tr("¿Borrar este embarazo?", "Delete this pregnancy?")),
+          content: Text(tr(
+              "Los ciclos de esas fechas volverán a contar en tus promedios. "
+                  "No se puede deshacer.",
+              "Cycles from those dates will count toward your averages "
+                  "again. This can't be undone.")),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(tr("Cancelar", "Cancel")),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(tr("Borrar", "Delete")),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
   Future<void> _elegirHora() async {
     final elegido = await showTimePicker(
