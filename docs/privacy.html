@@ -21,7 +21,7 @@
     --accent: #ee8ca7; --accent-strong: #e76085;
     --accent-ink: #a63b5b;        /* rosa profundo derivado: legible sobre claro */
     --line: #e6ecf1; --mark: #fff3c4;
-    --tab-on-a: #a8d8ea; --tab-on-b: #fad4d8; --tab-on-fg: #33283a;
+    --tab-on-a: #a8d8ea; --tab-on-b: #fad4d8; --tab-on-fg: #33283a; --on-accent: #ffffff;
     --shadow: 0 1px 2px rgba(51,51,51,.05), 0 10px 30px rgba(51,51,51,.07);
     --radius: 20px;
     --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
@@ -34,7 +34,7 @@
       --accent: #f2a3bb; --accent-strong: #f4a9be;
       --accent-ink: #f2a3bb;
       --line: #2a3036; --mark: #4a3f12;
-      --tab-on-a: #27414e; --tab-on-b: #4a2e3a; --tab-on-fg: #f6edf1;
+      --tab-on-a: #27414e; --tab-on-b: #4a2e3a; --tab-on-fg: #f6edf1; --on-accent: #1a1215;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
     }
   }
@@ -87,20 +87,26 @@
   }
 
   /* ---------- Pestañas de idioma ---------- */
-  .lang-tabs { position: relative; display: inline-flex; gap: 8px; }
+  /* Interruptor deslizante, como el del resto del sitio. */
+  .lang-tabs { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;
+               padding: 3px; border: 1px solid var(--line); border-radius: 999px;
+               background: var(--card); box-shadow: var(--shadow); }
+  .lang-tabs::before {
+    content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px;
+    width: calc(50% - 3px); border-radius: 999px;
+    background: var(--accent-strong);
+    transition: transform .18s ease;
+  }
+  .lang-tabs:has(#tab-en[aria-selected="true"])::before { transform: translateX(100%); }
   .lang-tabs button {
-    font: inherit; font-size: .95rem; cursor: pointer;
-    padding: .5rem 1.25rem; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--card); color: var(--muted);
-    transition: border-color .18s ease, color .18s ease,
-                background .18s ease, box-shadow .18s ease;
+    position: relative; z-index: 1;
+    font: inherit; font-size: .9rem; font-weight: 600; letter-spacing: .04em; cursor: pointer;
+    padding: .35rem 1.1rem; border: 0; border-radius: 999px;
+    background: transparent; color: var(--muted);
+    transition: color .18s ease;
   }
-  .lang-tabs button:hover { border-color: var(--accent); color: var(--fg); }
-  .lang-tabs button[aria-selected="true"] {
-    background: linear-gradient(135deg, var(--tab-on-a), var(--tab-on-b));
-    border-color: transparent; color: var(--tab-on-fg); font-weight: 600;
-    box-shadow: var(--shadow);
-  }
+  .lang-tabs button:hover { color: var(--fg); }
+  .lang-tabs button[aria-selected="true"] { color: var(--on-accent); }
   button:focus-visible, a:focus-visible {
     outline: 2px solid var(--accent-strong); outline-offset: 2px;
   }
@@ -215,9 +221,9 @@
   <p class="tagline">Política de privacidad · Privacy policy</p>
   <div class="lang-tabs" role="tablist" aria-label="Idioma / Language">
     <button type="button" role="tab" id="tab-es" aria-controls="es"
-            aria-selected="true" data-lang="es">Español</button>
+            aria-selected="true" data-lang="es" lang="es" aria-label="Español">ES</button>
     <button type="button" role="tab" id="tab-en" aria-controls="en"
-            aria-selected="false" data-lang="en">English</button>
+            aria-selected="false" data-lang="en" lang="en" aria-label="English">EN</button>
   </div>
 </header>
 
