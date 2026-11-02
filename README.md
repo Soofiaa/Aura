@@ -10,9 +10,9 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 ## Capturas
 
-<table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Inicio: fase actual y próximo período"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendario con la ventana fértil estimada"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Registrar día"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Estadísticas"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Ajustes y datos"></td></tr></table>
+<table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Inicio: fase actual y próximo período"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendario con la ventana fértil estimada"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Registrar día"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Estadísticas"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Ajustes y datos"></td><td align="center"><img src="docs/screenshots/embarazo.png" width="170" alt="Modo embarazo"></td><td align="center"><img src="docs/screenshots/tema-oscuro.png" width="170" alt="Tema oscuro"></td></tr></table>
 
-Orden: Inicio, Calendario, Registrar día, Estadísticas y Ajustes. *Las capturas son de versiones anteriores (la de Ajustes, de la 1.1.0, antes del respaldo en Drive); no muestran las novedades de la próxima actualización.*
+Orden: Inicio, Calendario, Registrar día, Estadísticas, Ajustes, Modo embarazo y Tema oscuro. *Capturas de la 1.3.0 con datos inventados; esas novedades llegan en la próxima actualización de Google Play.*
 
 ## Qué hace
 

@@ -109,5 +109,4 @@ la ficha refleje que no hay servidor. Referencia: Play Console Help, artículo 1
 - El `.aab` está firmado con la clave de subida correcta (SHA-256 `A9:32:D2:18:…:A8:2C`, el
   mismo de las versiones anteriores).
 - Versión 1.3.0 (build 8). Play ya tiene 1.2.0 (build 7) en prueba interna.
-- Las capturas de la ficha son de la versión anterior: conviene tomar nuevas del tema
-  oscuro, el modo embarazo, el widget y las estadísticas.
+- Capturas nuevas (datos inventados) en `docs/screenshots/play/` (sin marco) y `docs/screenshots/` (con marco).
