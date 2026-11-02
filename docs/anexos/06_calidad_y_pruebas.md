@@ -1,8 +1,8 @@
 # 06 · Calidad y pruebas (QA)
 
 > **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
-> **Fuentes:** carpeta `test/` (74 archivos de prueba), `ESPECIFICACION_v1.1.md`, `CHANGELOG.md`, `README.md`.
-> **Alcance de este documento:** describe la estrategia y el inventario de pruebas. Los **resultados de ejecución** están en la sección 8 (1296 casos aprobados, sin fallos).
+> **Fuentes:** carpeta `test/` (80 archivos de prueba), `ESPECIFICACION_v1.1.md`, `CHANGELOG.md`, `README.md`.
+> **Alcance de este documento:** describe la estrategia y el inventario de pruebas. Los **resultados de ejecución** están en la sección 8 (1375 casos aprobados, sin fallos).
 
 ## 1. Estrategia
 
@@ -28,7 +28,7 @@ La calidad de Aura se apoya en una decisión de arquitectura: **las reglas del c
 
 ## 2. Inventario de pruebas
 
-74 archivos de prueba. Declaraciones `test(` y `testWidgets(` literales: **1014**. Al ejecutar, los bucles y ayudantes generan casos adicionales y la suite corre **1296** (sección 8).
+80 archivos de prueba. Declaraciones `test(` y `testWidgets(` literales: **1072**. Al ejecutar, los bucles y ayudantes generan casos adicionales y la suite corre **1375** (sección 8).
 
 | Capa | Archivos | Qué cubre |
 |---|---|---|
@@ -119,17 +119,16 @@ El guion para las testers está en la capa de usuaria (documento aparte). **Esta
 
 ## 8. Resultados de ejecución
 
-Ejecución local de Sofia el 2026-10-24 sobre la versión 1.2.0+7 (Windows, Flutter estable), con `flutter analyze` y `flutter test --coverage`:
+Ejecución local de Sofia el 2026-11-02 sobre la versión 1.3.0+8 (Windows, Flutter estable), con `flutter analyze` y `flutter test`:
 
 | Medida | Resultado |
 |---|---|
-| Análisis estático (`flutter analyze`) | **Sin problemas** (36,2 s) |
-| Casos ejecutados | **1296** |
-| Aprobados / fallidos | **1296 / 0** («All tests passed») |
-| Duración de la suite | Aprox. 1 min 5 s |
-| Cobertura de líneas | Reporte generado (`coverage/lcov.info`); el porcentaje **no se imprime** en consola y queda por calcular |
+| Análisis estático (`flutter analyze`) | **Sin problemas** (88,4 s) |
+| Casos ejecutados | **1375** |
+| Aprobados / fallidos | **1375 / 0** («All tests passed») |
+| Cobertura de líneas | No medida en esta ejecución; el porcentaje queda por calcular |
 
-La cifra del README («más de 1290 pruebas») queda **confirmada**: 1296 casos en ejecución frente a 1014 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
+La cifra del README («más de 1290 pruebas») queda **confirmada**: 1375 casos en ejecución frente a 1072 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
 
 **Observaciones de la ejecución:**
 
