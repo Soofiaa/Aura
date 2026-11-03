@@ -1,4 +1,4 @@
-# Textos para Google Play: Aura 1.3.0 (build 8)
+# Textos para Google Play: Aura 1.3.0 (build 9)
 
 Borrador para copiar en Play Console. Los límites de caracteres son los de Play:
 título 30, descripción corta 80, descripción completa 4000, "novedades" 500.
@@ -108,5 +108,5 @@ la ficha refleje que no hay servidor. Referencia: Play Console Help, artículo 1
 
 - El `.aab` está firmado con la clave de subida correcta (SHA-256 `A9:32:D2:18:…:A8:2C`, el
   mismo de las versiones anteriores).
-- Versión 1.3.0 (build 8). Play ya tiene 1.2.0 (build 7) en prueba interna.
+- Versión 1.3.0 (build 9). Play ya tiene 1.2.0 (build 7) en prueba interna.
 - Capturas nuevas (datos inventados) en `docs/screenshots/play/` (sin marco) y `docs/screenshots/` (con marco).

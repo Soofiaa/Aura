@@ -15,6 +15,7 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:localeConfig="@xml/locales_config"
         tools:targetApi="31">
 
         <!-- Sin orientacion fija: la app rota libremente, incluido en
