@@ -4,4 +4,4 @@
 /// si se desincronizan. Se evita package_info_plus para no sumar una
 /// dependencia solo por esto.
 const String appVersionName = '1.3.0';
-const int appBuildNumber = 8;
+const int appBuildNumber = 9;
