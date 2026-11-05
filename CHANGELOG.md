@@ -1,5 +1,29 @@
 # Cambios
 
+## 1.3.0 (lista para Google Play; todavía no publicada)
+
+Versión de compilación `1.3.0+9`. En Google Play sigue la 1.2.0 en prueba cerrada.
+
+### Nuevo
+
+- **App en inglés** según el idioma del teléfono (español por defecto). Material y las fechas siguen el idioma de la app, y Android y Play declaran `es` y `en` para elegir el idioma por app.
+- **Modo embarazo** (Ajustes → "Modo embarazo"): con el primer día de la última regla, Inicio muestra semanas de embarazo y fecha probable de parto. Pausa las predicciones, la ventana fértil y los avisos del ciclo, y oculta "Me llegó hoy". Se termina eligiendo cómo y cuándo (o "Lo activé por error", que lo borra), y el último embarazo terminado se puede corregir o borrar. Los ciclos que se cruzan con un embarazo no entran en los promedios. Síntomas nuevos: náuseas, acidez, mareos y sensibilidad en los senos.
+- **Tema oscuro** en Ajustes → Apariencia → Tema: según el teléfono (por defecto), claro u oscuro. Se guarda solo en este teléfono.
+- **Recordatorio diario** (opcional, apagado por defecto): avisa a la hora del recordatorio si ese día aún no tiene nada registrado.
+- **Recordatorio de anticonceptivo** (opcional): píldora, parche, anillo o inyección mensual o trimestral, con su propia hora y texto genérico salvo que se active "mostrar detalles". Se guarda solo en este teléfono y no va en los respaldos.
+- **Resumen en PDF para el médico** (botón en Estadísticas): se genera en el teléfono, sin servidor, y se comparte con el menú de compartir de Android.
+- **Widget de pantalla de inicio**: próximo período, día del período, días de atraso o semanas de embarazo. Con "Widget discreto" (Ajustes → Privacidad) muestra solo "Aura · Toca para abrir".
+
+### Cambiado
+
+- **Estadísticas rediseñadas:** tarjetas de resumen (ciclo típico, período típico, regularidad y próximo período), gráfico de barras de los ciclos recientes, explicaciones breves de cada cifra y el ánimo en barras.
+- Base de datos v6 y respaldo con esquema 6 (tabla de embarazos). Los respaldos v3 a v5 se siguen importando.
+- Edge-to-edge (SDK 35) y sin bloqueo de orientación, para pantallas grandes y Android 16.
+
+### Corregido
+
+- Revisión de calidad de las funciones nuevas antes de la versión: avisos de anticonceptivo sin un id viejo, selectores de fecha dentro de su rango, ciclos con embarazo fuera del gráfico y widget con texto neutro.
+
 ## 1.2.0 (en prueba cerrada)
 
 Incluye también los cambios de 1.1.1, que no se publicó por separado.
