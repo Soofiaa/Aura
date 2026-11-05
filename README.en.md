@@ -6,13 +6,13 @@ An Android app to log your menstrual cycle and estimate its phases. **Local-firs
 
 **Website:** [soofiaa.github.io/Aura/en](https://soofiaa.github.io/Aura/en/) · [User guide](https://soofiaa.github.io/Aura/en/guide.html) · [Project report](https://soofiaa.github.io/Aura/en/report.html)
 
-> **Status:** v1.2.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use. The new features already in the code (English UI, pregnancy mode, dark theme, daily reminder, birth-control reminder, PDF summary, redesigned statistics and widget) arrive in the next Google Play update.
+> **Status:** v1.3.0, in closed testing on Google Play · Android only · personal portfolio project, in real daily use. Includes English UI, pregnancy mode, dark theme, daily reminder, birth-control reminder, PDF summary, redesigned statistics and widget.
 
 ## Screenshots
 
-<table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Home: current phase and next period"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendar with the estimated fertile window"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Log a day"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Statistics"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Settings and data"></td><td align="center"><img src="docs/screenshots/embarazo.png" width="170" alt="Pregnancy mode"></td><td align="center"><img src="docs/screenshots/tema-oscuro.png" width="170" alt="Dark theme"></td></tr></table>
+<table><tr><td align="center"><img src="docs/screenshots/inicio.en.png" width="170" alt="Home: current phase and next period"></td><td align="center"><img src="docs/screenshots/calendario.en.png" width="170" alt="Calendar with the estimated fertile window"></td><td align="center"><img src="docs/screenshots/registrar-dia.en.png" width="170" alt="Log a day"></td><td align="center"><img src="docs/screenshots/estadisticas.en.png" width="170" alt="Statistics"></td><td align="center"><img src="docs/screenshots/ajustes.en.png" width="170" alt="Settings and data"></td><td align="center"><img src="docs/screenshots/embarazo.en.png" width="170" alt="Pregnancy mode"></td><td align="center"><img src="docs/screenshots/tema-oscuro.en.png" width="170" alt="Dark theme"></td></tr></table>
 
-Order: Home, Calendar, Log a day, Statistics, Settings, Pregnancy mode and Dark theme. *1.3.0 screenshots with invented data; those features arrive in the next Google Play update.* (They show the Spanish UI.)
+Order: Home, Calendar, Log a day, Statistics, Settings, Pregnancy mode and Dark theme. *1.3.0 screenshots with invented data; those features are in closed testing on Google Play.*
 
 ## What it does
 

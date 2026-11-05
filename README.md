@@ -6,13 +6,13 @@ Aplicación Android para registrar el ciclo menstrual y estimar sus fases. **Loc
 
 **Sitio web:** [soofiaa.github.io/Aura](https://soofiaa.github.io/Aura/) · [Guía de uso](https://soofiaa.github.io/Aura/guia.html) · [Informe del proyecto](https://soofiaa.github.io/Aura/informe.html)
 
-> **Estado:** v1.2.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real. Las novedades ya publicadas en el código (interfaz en inglés, modo embarazo, tema oscuro, recordatorio diario, recordatorio de anticonceptivo, resumen en PDF, estadísticas rediseñadas y widget) llegan en la próxima actualización de Google Play.
+> **Estado:** v1.3.0, en prueba cerrada en Google Play · solo Android · proyecto personal de portafolio, en uso real. Incluye interfaz en inglés, modo embarazo, tema oscuro, recordatorio diario, recordatorio de anticonceptivo, resumen en PDF, estadísticas rediseñadas y widget.
 
 ## Capturas
 
 <table><tr><td align="center"><img src="docs/screenshots/inicio.png" width="170" alt="Inicio: fase actual y próximo período"></td><td align="center"><img src="docs/screenshots/calendario.png" width="170" alt="Calendario con la ventana fértil estimada"></td><td align="center"><img src="docs/screenshots/registrar-dia.png" width="170" alt="Registrar día"></td><td align="center"><img src="docs/screenshots/estadisticas.png" width="170" alt="Estadísticas"></td><td align="center"><img src="docs/screenshots/ajustes.png" width="170" alt="Ajustes y datos"></td><td align="center"><img src="docs/screenshots/embarazo.png" width="170" alt="Modo embarazo"></td><td align="center"><img src="docs/screenshots/tema-oscuro.png" width="170" alt="Tema oscuro"></td></tr></table>
 
-Orden: Inicio, Calendario, Registrar día, Estadísticas, Ajustes, Modo embarazo y Tema oscuro. *Capturas de la 1.3.0 con datos inventados; esas novedades llegan en la próxima actualización de Google Play.*
+Orden: Inicio, Calendario, Registrar día, Estadísticas, Ajustes, Modo embarazo y Tema oscuro. *Capturas de la 1.3.0 con datos inventados; esas novedades están en prueba cerrada en Google Play.*
 
 ## Qué hace
 

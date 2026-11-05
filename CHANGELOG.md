@@ -1,5 +1,17 @@
 # Cambios
 
+## 1.3.0 (en prueba cerrada)
+
+### Nuevo
+
+- **Modo embarazo**: semanas, días y fecha probable de parto, con las predicciones y los avisos del ciclo en pausa.
+- **Resumen en PDF** para llevar a la consulta médica.
+- **Widget** en la pantalla de inicio, con una opción discreta que no muestra datos.
+- **Tema** claro, oscuro o el del teléfono.
+- **Aura en inglés**, además del español.
+- **Recordatorio diario** para registrar y **recordatorio de anticonceptivo** (opcionales).
+- Estadísticas rediseñadas.
+
 ## 1.2.0 (en prueba cerrada)
 
 Incluye también los cambios de 1.1.1, que no se publicó por separado.

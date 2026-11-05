@@ -109,4 +109,4 @@ la ficha refleje que no hay servidor. Referencia: Play Console Help, artículo 1
 - El `.aab` está firmado con la clave de subida correcta (SHA-256 `A9:32:D2:18:…:A8:2C`, el
   mismo de las versiones anteriores).
 - Versión 1.3.0 (build 9). Play ya tiene 1.2.0 (build 7) en prueba interna.
-- Capturas nuevas (datos inventados) en `docs/screenshots/play/` (sin marco) y `docs/screenshots/` (con marco).
+- Capturas nuevas (datos inventados) en `docs/screenshots/play/` (sin marco) y `docs/screenshots/` (con marco). Las versiones en inglés llevan el sufijo `.en.png` en las mismas carpetas; el gráfico destacado en inglés es `grafico-destacado.en.png`.
