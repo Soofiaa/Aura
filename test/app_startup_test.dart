@@ -39,7 +39,8 @@ void main() {
 
   AppDatabase outOfSpaceDatabase() => AppDatabase.forTesting(LazyDatabase(
         () => throw PreMigrationCopyException(
-          SqliteException(13, 'database or disk is full'),
+          SqliteException(
+              extendedResultCode: 13, message: 'database or disk is full'),
           outOfSpace: true,
         ),
       ));

@@ -169,7 +169,7 @@ void main() {
       expect(dump['daily_logs'], hasLength(8));
       expect(dump['daily_log_symptoms'], hasLength(3));
       expect(dump['app_settings'], hasLength(1));
-      schema.rawDatabase.dispose();
+      schema.rawDatabase.close();
     },
   );
 

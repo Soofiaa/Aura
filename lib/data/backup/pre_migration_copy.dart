@@ -76,7 +76,7 @@ void ensurePreMigrationCopy({
     }
     throw PreMigrationCopyException(e, outOfSpace: isOutOfSpaceError(e));
   } finally {
-    db.dispose();
+    db.close();
   }
 }
 

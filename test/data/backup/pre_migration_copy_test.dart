@@ -28,7 +28,7 @@ void main() {
     await db.close();
     final raw = sqlite3.open(dbFile.path);
     raw.userVersion = userVersion;
-    raw.dispose();
+    raw.close();
   }
 
   T withRaw<T>(File file, T Function(Database db) action) {
@@ -36,7 +36,7 @@ void main() {
     try {
       return action(raw);
     } finally {
-      raw.dispose();
+      raw.close();
     }
   }
 
@@ -142,7 +142,8 @@ void main() {
           backupsDir: backups,
           copyInto: (db, path) {
             File(path).writeAsStringSync('a medias');
-            throw SqliteException(13, 'database or disk is full');
+            throw SqliteException(
+                extendedResultCode: 13, message: 'database or disk is full');
           },
         ),
         throwsA(isA<PreMigrationCopyException>()
@@ -155,14 +156,21 @@ void main() {
 
   group('isOutOfSpaceError', () {
     test('reconoce SQLITE_FULL y ENOSPC; no otros errores', () {
-      expect(isOutOfSpaceError(SqliteException(13, 'full')), isTrue);
-      expect(isOutOfSpaceError(SqliteException(13 | (1 << 8), 'full')), isTrue,
+      expect(
+          isOutOfSpaceError(SqliteException(extendedResultCode: 13, message: 'full')),
+          isTrue);
+      expect(
+          isOutOfSpaceError(SqliteException(
+              extendedResultCode: 13 | (1 << 8), message: 'full')),
+          isTrue,
           reason: 'codigo extendido con resultado SQLITE_FULL');
       expect(
           isOutOfSpaceError(const FileSystemException(
               'x', 'y', OSError('No space left on device', 28))),
           isTrue);
-      expect(isOutOfSpaceError(SqliteException(1, 'error')), isFalse);
+      expect(
+          isOutOfSpaceError(SqliteException(extendedResultCode: 1, message: 'error')),
+          isFalse);
       expect(
           isOutOfSpaceError(const FileSystemException(
               'x', 'y', OSError('Permission denied', 13))),
@@ -232,6 +240,6 @@ Future<void> withRawAsync(File file, String sql) async {
   try {
     raw.execute(sql);
   } finally {
-    raw.dispose();
+    raw.close();
   }
 }

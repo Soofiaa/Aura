@@ -6,7 +6,7 @@ import 'package:aura/data/database/app_database.dart';
 void main() {
   test('la conexion real activa foreign_keys y secure_delete', () {
     final db = sqlite3.openInMemory();
-    addTearDown(db.dispose);
+    addTearDown(db.close);
 
     configureConnection(db);
 
