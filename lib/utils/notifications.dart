@@ -127,13 +127,13 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     // res/raw/keep.xml evita que shrinkResources lo elimine en release.
     const androidSettings = AndroidInitializationSettings('ic_stat_aura');
     const initializationSettings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(settings: initializationSettings);
   }
 
   Future<void> _syncTimeZoneLocation() async {
     String? name;
     try {
-      name = await FlutterTimezone.getLocalTimezone();
+      name = (await FlutterTimezone.getLocalTimezone()).identifier;
     } catch (_) {
       // Sin nombre se usa el desfase actual (ver resolveTimeZoneLocation).
     }
@@ -173,7 +173,7 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     Object? firstError;
     for (final id in toCancel) {
       try {
-        await _plugin.cancel(id);
+        await _plugin.cancel(id: id);
       } catch (e) {
         firstError ??= e;
       }
@@ -200,11 +200,11 @@ class FlutterLocalNotificationsScheduler implements NotificationScheduler {
     );
 
     await _plugin.zonedSchedule(
-      item.id,
-      item.title,
-      item.body,
-      scheduled,
-      _detailsFor(item.kind),
+      id: item.id,
+      title: item.title,
+      body: item.body,
+      scheduledDate: scheduled,
+      notificationDetails: _detailsFor(item.kind),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: item.kind == NotificationKind.dailyLogReminder ||
               item.kind == NotificationKind.pillReminder
