@@ -113,7 +113,7 @@ El guion para las testers está en la capa de usuaria (documento aparte). **Esta
 | El código Kotlin (`MainActivity`: pantalla segura, Keystore, ajustes) no tiene tests propios | Un cambio nativo solo se detecta a mano | Cubrirlo con la prueba manual y, si crece, con pruebas instrumentadas |
 | Verificación de permisos hecha con `aapt` sobre la 1.1.0 | La 1.2.0 agrega `INTERNET` | Repetirla sobre la 1.2.0 y automatizar una lista permitida |
 | Porcentaje de cobertura sin calcular | El reporte `lcov.info` existe pero no se resumió | Resumirlo con `lcov --summary` y registrarlo en la sección 8 |
-| Integración continua sin primera corrida | `.github/workflows/ci.yml` corre `flutter analyze` y `flutter test` en cada push y PR (Flutter 3.44.9, Windows), pero todavía no se ha ejecutado en GitHub | Subir el flujo, confirmar la primera corrida en verde y registrarla en la sección 8 |
+| Conteo de casos del CI sin reconfirmar | `.github/workflows/ci.yml` corre `flutter analyze` y `flutter test` en cada push y PR (Flutter 3.44.9, Windows). Primera corrida ejecutada el 2026-11-11, en verde, sobre el commit `ec40879`: [run 43092512892](https://github.com/Soofiaa/Aura/actions/runs/43092512892), en `windows-latest` con Flutter 3.44.9, job `analyze-and-test` de 5 min 13 s. El número de casos no se leyó del log del CI | Confirmar en el log de una corrida que se ejecutan los 1375 casos |
 | Pruebas con usuarias reales aún en curso | La usabilidad no está validada con muestra suficiente | Cerrar la prueba cerrada y recoger hallazgos |
 
 ## 8. Resultados de ejecución
@@ -129,6 +129,16 @@ Ejecución local del 2026-11-11 sobre la versión 1.3.0+9, commit `f9222cf` (Win
 | Cobertura de líneas | No medida en esta ejecución; el porcentaje queda por calcular |
 
 Ejecución anterior: local de Sofia el 2026-11-02 sobre la versión 1.3.0+8 (Windows, Flutter estable), con `flutter analyze` sin problemas (88,4 s) y 1375 casos, 1375 aprobados y 0 fallidos.
+
+Primera corrida de la integración continua, el 2026-11-11, sobre el commit `ec40879` (GitHub Actions, `windows-latest`, Flutter 3.44.9): [run 43092512892](https://github.com/Soofiaa/Aura/actions/runs/43092512892), en verde. El job `analyze-and-test` tardó 5 min 13 s:
+
+| Paso | Resultado | Duración |
+|---|---|---|
+| `flutter pub get --enforce-lockfile` | Éxito | 44 s |
+| `flutter analyze` | Éxito | 21 s |
+| `flutter test` | Éxito | 2 min 30 s |
+
+El paso de test terminó en éxito. El conteo de 1375 casos aprobados es el de la corrida local sobre `f9222cf`; no se reconfirmó desde el log del CI.
 
 La cifra del README («más de 1290 pruebas») queda **confirmada**: 1375 casos en ejecución frente a 1072 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
 
