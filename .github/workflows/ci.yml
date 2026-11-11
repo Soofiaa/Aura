@@ -1,0 +1,19 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  analyze-and-test:
+    # Windows: el mismo sistema de la corrida local registrada en
+    # docs/anexos/06_calidad_y_pruebas.md (seccion 8).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          # La linea 3.44.x es la que resuelve pubspec.lock sin cambios.
+          flutter-version: '3.44.9'
+          channel: stable
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze
+      - run: flutter test

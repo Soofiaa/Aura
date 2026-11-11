@@ -1,6 +1,6 @@
 # 06 · Calidad y pruebas (QA)
 
-> **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-11
 > **Fuentes:** carpeta `test/` (80 archivos de prueba), `ESPECIFICACION_v1.1.md`, `CHANGELOG.md`, `README.md`.
 > **Alcance de este documento:** describe la estrategia y el inventario de pruebas. Los **resultados de ejecución** están en la sección 8 (1375 casos aprobados, sin fallos).
 
@@ -113,27 +113,30 @@ El guion para las testers está en la capa de usuaria (documento aparte). **Esta
 | El código Kotlin (`MainActivity`: pantalla segura, Keystore, ajustes) no tiene tests propios | Un cambio nativo solo se detecta a mano | Cubrirlo con la prueba manual y, si crece, con pruebas instrumentadas |
 | Verificación de permisos hecha con `aapt` sobre la 1.1.0 | La 1.2.0 agrega `INTERNET` | Repetirla sobre la 1.2.0 y automatizar una lista permitida |
 | Porcentaje de cobertura sin calcular | El reporte `lcov.info` existe pero no se resumió | Resumirlo con `lcov --summary` y registrarlo en la sección 8 |
-| El análisis estático se ejecuta a mano | `flutter analyze` pasó limpio el 2026-10-24, pero nada lo fuerza en cada cambio | Integrarlo a CI |
-| Sin integración continua | Los tests dependen de que se ejecuten a mano | Una acción de GitHub que corra `flutter analyze` y `flutter test` |
+| Integración continua sin primera corrida | `.github/workflows/ci.yml` corre `flutter analyze` y `flutter test` en cada push y PR (Flutter 3.44.9, Windows), pero todavía no se ha ejecutado en GitHub | Subir el flujo, confirmar la primera corrida en verde y registrarla en la sección 8 |
 | Pruebas con usuarias reales aún en curso | La usabilidad no está validada con muestra suficiente | Cerrar la prueba cerrada y recoger hallazgos |
 
 ## 8. Resultados de ejecución
 
-Ejecución local de Sofia el 2026-11-02 sobre la versión 1.3.0+8 (Windows, Flutter estable), con `flutter analyze` y `flutter test`:
+Ejecución local del 2026-11-11 sobre la versión 1.3.0+9, commit `f9222cf` (Windows 11, Flutter 3.44.9 estable, Dart 3.12.2), con `flutter pub get --enforce-lockfile`, `flutter analyze` y `flutter test`:
 
 | Medida | Resultado |
 |---|---|
-| Análisis estático (`flutter analyze`) | **Sin problemas** (88,4 s) |
+| Dependencias (`flutter pub get --enforce-lockfile`) | **Resueltas sin cambiar** `pubspec.lock` |
+| Análisis estático (`flutter analyze`) | **Sin problemas** («No issues found!», 133,2 s) |
 | Casos ejecutados | **1375** |
-| Aprobados / fallidos | **1375 / 0** («All tests passed») |
+| Aprobados / fallidos / omitidos | **1375 / 0 / 0** («All tests passed!», 4 min 11 s) |
 | Cobertura de líneas | No medida en esta ejecución; el porcentaje queda por calcular |
+
+Ejecución anterior: local de Sofia el 2026-11-02 sobre la versión 1.3.0+8 (Windows, Flutter estable), con `flutter analyze` sin problemas (88,4 s) y 1375 casos, 1375 aprobados y 0 fallidos.
 
 La cifra del README («más de 1290 pruebas») queda **confirmada**: 1375 casos en ejecución frente a 1072 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
 
 **Observaciones de la ejecución:**
 
 - Durante la suite aparece la advertencia de drift «*creaste la clase AppDatabase varias veces*». Proviene de los tests, que crean una base en memoria por caso con `AppDatabase.forTesting` sin cerrar la anterior. Solo se emite en compilaciones de depuración y no afecta al resultado. Mejora posible: cerrar la base en `tearDown` o fijar `driftRuntimeOptions.dontWarnAboutMultipleDatabases = true` en los tests, para dejar la salida limpia.
-- Hay 59 paquetes con versiones nuevas incompatibles con las restricciones actuales (entre ellos `drift`, `fl_chart`, `flutter_local_notifications`, `flutter_timezone`, `file_picker` y `sqlite3_flutter_libs`, este último marcado como fin de vida). No es un fallo, pero conviene planear una actualización controlada.
+- `pubspec.lock` solo se resuelve sin cambios con la línea 3.44.x de Flutter: con 3.47.9 `--enforce-lockfile` falla porque el SDK exige versiones más nuevas de `intl`, `matcher`, `meta`, `test_api` y `vector_math`. Por eso la integración continua fija Flutter 3.44.9.
+- Hay 68 paquetes (59 en la ejecución del 2026-11-02) con versiones nuevas incompatibles con las restricciones actuales (entre ellos `drift`, `fl_chart`, `flutter_local_notifications`, `flutter_timezone`, `file_picker` y `sqlite3_flutter_libs`, este último marcado como fin de vida). No es un fallo, pero conviene planear una actualización controlada.
 
 Para calcular el porcentaje de cobertura (opcional):
 
