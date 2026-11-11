@@ -34,6 +34,9 @@ class FertileMarks {
 /// Regla unica de que fertilidad se muestra (HU-05), para Inicio y el
 /// Calendario. Null salvo que se cumplan todas:
 /// - hay una [ActivePrediction] (ni null ni [StaleDataPrediction]);
+/// - no hay un metodo anticonceptivo hormonal activo: el sangrado es de
+///   privacion, no de un ciclo ovulatorio, y la estimacion no es valida
+///   aunque la confianza calculada sea media o alta;
 /// - la usuaria quiere verla ([showFertileWindow], H5-3);
 /// - la confianza no es baja (H5-1 A: la ovulacion se resta del proximo
 ///   periodo, asi que es menos confiable todavia);
@@ -50,6 +53,7 @@ FertileMarks? visibleFertileMarks(
   required bool showFertileWindow,
 }) {
   if (prediction is! ActivePrediction) return null;
+  if (prediction.hormonalContraceptive) return null;
   if (!showFertileWindow) return null;
   if (prediction.confidence == PredictionConfidence.low) return null;
   if (prediction.isPeriodLate) return null;

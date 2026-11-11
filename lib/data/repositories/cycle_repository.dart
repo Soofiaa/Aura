@@ -1,21 +1,27 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/backup_codec.dart';
+import '../../domain/contraceptive.dart';
 import '../../domain/current_period.dart';
 import '../../domain/cycle_deriver.dart';
 import '../../domain/cycle_predictor.dart';
 import '../../domain/notification_planner.dart';
 import '../../utils/day_key.dart';
 import '../database/app_database.dart';
+import '../device_settings_store.dart';
 import '../models/day_enums.dart';
 
 /// Unica capa que toca drift. Pantallas y servicios (incluida la fase 3
 /// de prediccion) dependen de esta clase, nunca de AppDatabase
 /// directamente.
 class CycleRepository {
-  CycleRepository(this._db);
+  /// [deviceSettings]: de ahi sale el metodo anticonceptivo activo de
+  /// [PredictionInputs] (no esta en la base). Sin el, no hay metodo.
+  CycleRepository(this._db, {DeviceSettingsStore? deviceSettings})
+      : _deviceSettings = deviceSettings;
 
   final AppDatabase _db;
+  final DeviceSettingsStore? _deviceSettings;
 
   Future<DailyLogRow?> getDay(String date) {
     return (_db.select(_db.dailyLogs)..where((t) => t.date.equals(date)))
@@ -424,14 +430,33 @@ class CycleRepository {
   /// transaccion. Igual que [watchDerivedCycles], no calcula la
   /// prediccion: "hoy" lo decide quien escucha.
   Stream<PredictionInputs> watchPredictionInputs() {
-    return _db
+    final cambios = _db
         .customSelect('SELECT 1',
             readsFrom: {_db.dailyLogs, _db.appSettings, _db.pregnancies})
-        .watch()
+        .watch();
+    final ajustes = _deviceSettings;
+    if (ajustes == null) return cambios.asyncMap((_) => getPredictionInputs());
+    // Tambien cuando cambia el anticonceptivo, que no esta en la base.
+    return Stream<void>.multi((controller) {
+      final subs = [
+        cambios.listen((_) => controller.add(null),
+            onError: controller.addError),
+        // Sin leer el ajuste: sin metodo (ver getPredictionInputs).
+        ajustes.watch().listen((_) => controller.add(null),
+            onError: (Object _) => controller.add(null)),
+      ];
+      controller.onCancel =
+          () => Future.wait([for (final s in subs) s.cancel()]);
+    }, isBroadcast: true)
         .asyncMap((_) => getPredictionInputs());
   }
 
-  Future<PredictionInputs> getPredictionInputs() {
+  Future<PredictionInputs> getPredictionInputs() async {
+    // Ajuste de este telefono. Si no se puede leer: sin metodo, como antes.
+    ContraceptiveMethod? contraceptive;
+    try {
+      contraceptive = (await _deviceSettings?.read())?.anticonceptivo?.method;
+    } catch (_) {}
     return _db.transaction(() async {
       final rows = await _db.select(_db.dailyLogs).get();
       final settings = await (_db.select(_db.appSettings)
@@ -448,6 +473,7 @@ class CycleRepository {
         pregnancies: [
           for (final p in pregnancies) (start: p.startDate, end: p.endDate),
         ],
+        contraceptive: contraceptive,
       );
     });
   }
@@ -908,8 +934,8 @@ class CycleRepository {
   }
 }
 
-/// Entradas de predictCycle que vienen de la base (ver
-/// [CycleRepository.watchPredictionInputs]).
+/// Entradas de predictCycle: las de la base y el anticonceptivo, que es un
+/// ajuste de este telefono (ver [CycleRepository.watchPredictionInputs]).
 class PredictionInputs {
   final List<CycleSummary> cycles;
   final int typicalPeriodLengthDays;
@@ -921,16 +947,22 @@ class PredictionInputs {
   /// Embarazos ordenados por inicio; el activo, si hay, es el ultimo.
   final List<PregnancySpan> pregnancies;
 
+  /// Metodo del recordatorio de anticonceptivo; null si esta apagado. Ver
+  /// [PredictionConfig.contraceptive].
+  final ContraceptiveMethod? contraceptive;
+
   const PredictionInputs({
     required this.cycles,
     required this.typicalPeriodLengthDays,
     this.showFertileWindow = true,
     this.pregnancies = const [],
+    this.contraceptive,
   });
 
   PredictionConfig get config => PredictionConfig(
       typicalPeriodLengthDays: typicalPeriodLengthDays,
-      pregnancies: pregnancies);
+      pregnancies: pregnancies,
+      contraceptive: contraceptive);
 
   bool get isPregnant => pregnancies.isNotEmpty && pregnancies.last.end == null;
 
@@ -1016,7 +1048,8 @@ set appDatabase(AppDatabase value) => _appDatabaseInstance = value;
 CycleRepository? _cycleRepositoryInstance;
 
 CycleRepository get cycleRepository =>
-    _cycleRepositoryInstance ??= CycleRepository(appDatabase);
+    _cycleRepositoryInstance ??=
+        CycleRepository(appDatabase, deviceSettings: deviceSettingsStore);
 
 /// Solo para tests: reemplaza el repositorio global.
 set cycleRepository(CycleRepository value) => _cycleRepositoryInstance = value;

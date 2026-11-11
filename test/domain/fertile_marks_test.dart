@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
 import 'package:aura/domain/fertile_marks.dart';
@@ -9,6 +10,7 @@ import 'package:aura/utils/day_key.dart';
 ActivePrediction _prediction({
   PredictionConfidence confidence = PredictionConfidence.high,
   bool isPeriodLate = false,
+  bool hormonal = false,
 }) {
   return ActivePrediction(
     lastPeriodStartDate: '2026-03-26',
@@ -29,6 +31,7 @@ ActivePrediction _prediction({
     daysLate: isPeriodLate ? 1 : 0,
     confidence: confidence,
     confidenceReasons: const [],
+    hormonalContraceptive: hormonal,
   );
 }
 
@@ -180,6 +183,63 @@ void main() {
       expect(marks.ovulationDate, DayKey.addDays(start, 6));
       expect(marks.windowStartDate, DayKey.addDays(start, 5));
       expect(marks.windowEndDate, DayKey.addDays(start, 6));
+    });
+  });
+
+  group('visibleFertileMarks - anticonceptivo hormonal', () {
+    test('con metodo hormonal: null aunque la confianza sea media o alta', () {
+      for (final confianza in [
+        PredictionConfidence.medium,
+        PredictionConfidence.high,
+      ]) {
+        for (final mostrar in [true, false]) {
+          expect(
+            visibleFertileMarks(
+              _prediction(confidence: confianza, hormonal: true),
+              showFertileWindow: mostrar,
+            ),
+            isNull,
+            reason: '${confianza.name}, mostrar: $mostrar',
+          );
+        }
+      }
+    });
+
+    test('sin metodo, la misma prediccion sigue mostrando la ventana', () {
+      expect(
+        visibleFertileMarks(_prediction(), showFertileWindow: true),
+        _marks,
+      );
+    });
+
+    test('con una prediccion real de confianza alta, cada metodo hormonal '
+        'la oculta y sin metodo no', () {
+      final cycles = [
+        _cycle('2025-12-04', 28),
+        _cycle('2026-01-01', 28),
+        _cycle('2026-01-29', 28),
+        _cycle('2026-02-26', 28),
+        _cycle('2026-03-26', null),
+      ];
+      ActivePrediction predecir(ContraceptiveMethod? method) =>
+          predictCycle(
+                cycles: cycles,
+                today: '2026-03-28',
+                config: PredictionConfig(contraceptive: method),
+              )
+              as ActivePrediction;
+
+      final sinMetodo = predecir(null);
+      expect(sinMetodo.confidence, PredictionConfidence.high);
+      expect(visibleFertileMarks(sinMetodo, showFertileWindow: true),
+          isNotNull);
+
+      for (final method in ContraceptiveMethod.values) {
+        final p = predecir(method);
+        expect(p.confidence, PredictionConfidence.high, reason: method.name);
+        expect(p.hormonalContraceptive, isTrue);
+        expect(visibleFertileMarks(p, showFertileWindow: true), isNull);
+      }
     });
   });
 }

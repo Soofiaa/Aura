@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aura/data/models/day_enums.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/domain/cycle_deriver.dart';
 import 'package:aura/domain/cycle_predictor.dart';
+import 'package:aura/domain/fertile_marks.dart';
 import 'package:aura/utils/day_key.dart';
 
 /// Verifica las invariantes que deben cumplirse SIEMPRE en una
@@ -1134,6 +1136,32 @@ void main() {
       expect(e.excludedCount, 0);
       expect(
           estimateCycleLength(cycles: cycles).consideredLengthsDays, hasLength(4));
+    });
+
+    test('con metodo hormonal activo no hay ventana fertil, aunque la '
+        'confianza sea media o alta', () {
+      final sinMetodo =
+          predictCycle(cycles: cycles, today: '2025-05-07') as ActivePrediction;
+      expect(sinMetodo.confidence, isNot(PredictionConfidence.low));
+      expect(sinMetodo.hormonalContraceptive, isFalse);
+      expect(visibleFertileMarks(sinMetodo, showFertileWindow: true), isNotNull);
+
+      for (final method in ContraceptiveMethod.values) {
+        expect(method.isHormonal, isTrue, reason: method.name);
+        final p = predictCycle(
+          cycles: cycles,
+          today: '2025-05-07',
+          config: PredictionConfig(contraceptive: method),
+        ) as ActivePrediction;
+        expect(p.hormonalContraceptive, isTrue, reason: method.name);
+        expect(p.confidence, sinMetodo.confidence, reason: method.name);
+        expect(visibleFertileMarks(p, showFertileWindow: true), isNull,
+            reason: method.name);
+        // Las fechas no cambian: solo lo que se muestra.
+        expect(p.estimatedOvulationDate, sinMetodo.estimatedOvulationDate);
+        expect(p.nextPeriodExpectedDate, sinMetodo.nextPeriodExpectedDate);
+        expect(p.currentPhase, sinMetodo.currentPhase);
+      }
     });
 
     test('pausa con uno activo, o terminado sin un periodo despues del fin',

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../utils/aura_localizations.dart';
 import '../utils/day_key.dart';
+import 'contraceptive.dart';
 import 'cycle_deriver.dart';
 
 /// Todas las constantes del motor de prediccion, nombradas y ajustables.
@@ -79,6 +80,12 @@ class PredictionConfig {
   /// uno no entran en los promedios.
   final List<PregnancySpan> pregnancies;
 
+  /// Metodo anticonceptivo activo (el recordatorio de este telefono), o
+  /// null. Si es hormonal, [ActivePrediction.hormonalContraceptive] sale
+  /// true y no se muestran ovulacion ni ventana fertil. No cambia ninguna
+  /// fecha: solo lo que se muestra.
+  final ContraceptiveMethod? contraceptive;
+
   const PredictionConfig({
     this.maxCyclesConsidered = 6,
     this.minValidCycleLengthDays = 15,
@@ -97,6 +104,7 @@ class PredictionConfig {
     this.regularStdDevRelativeRatio = 0.10,
     this.typicalPeriodLengthDays = 5,
     this.pregnancies = const [],
+    this.contraceptive,
   });
 }
 
@@ -218,6 +226,11 @@ final class ActivePrediction extends CyclePrediction {
   /// en la UI y para debuggear tests, no es texto fijo de producto.
   final List<String> confidenceReasons;
 
+  /// Hay un metodo hormonal activo ([PredictionConfig.contraceptive]): la
+  /// ovulacion y la ventana de arriba no aplican y [visibleFertileMarks]
+  /// no las muestra, sea cual sea la confianza.
+  final bool hormonalContraceptive;
+
   const ActivePrediction({
     required super.lastPeriodStartDate,
     required super.daysSinceLastPeriodStart,
@@ -237,6 +250,7 @@ final class ActivePrediction extends CyclePrediction {
     required this.daysLate,
     required this.confidence,
     required this.confidenceReasons,
+    this.hormonalContraceptive = false,
   });
 
   @override
@@ -259,6 +273,7 @@ final class ActivePrediction extends CyclePrediction {
       other.isPeriodLate == isPeriodLate &&
       other.daysLate == daysLate &&
       other.confidence == confidence &&
+      other.hormonalContraceptive == hormonalContraceptive &&
       _listEquals(other.confidenceReasons, confidenceReasons);
 
   @override
@@ -274,7 +289,8 @@ final class ActivePrediction extends CyclePrediction {
         nextPeriodExpectedDate,
         nextPeriodLatestDate,
         Object.hash(estimatedOvulationDate, fertileWindowStartDate,
-            fertileWindowEndDate, currentPhase, isPeriodLate, daysLate, confidence),
+            fertileWindowEndDate, currentPhase, isPeriodLate, daysLate,
+            confidence, hormonalContraceptive),
       );
 
   @override
@@ -666,5 +682,6 @@ CyclePrediction? predictCycle({
     daysLate: daysLate,
     confidence: confidence,
     confidenceReasons: confidenceReasons,
+    hormonalContraceptive: config.contraceptive?.isHormonal ?? false,
   );
 }

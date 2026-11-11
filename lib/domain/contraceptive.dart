@@ -35,6 +35,18 @@ extension ContraceptiveMethodLabel on ContraceptiveMethod {
             "3-month injection (every 13 weeks)"),
       };
 
+  /// Con un metodo hormonal el sangrado es de privacion, no de un ciclo
+  /// ovulatorio: no se estima ovulacion ni ventana fertil. El switch es
+  /// exhaustivo a proposito: un metodo nuevo obliga a decidirlo aqui.
+  bool get isHormonal => switch (this) {
+        ContraceptiveMethod.pill ||
+        ContraceptiveMethod.patch ||
+        ContraceptiveMethod.ring ||
+        ContraceptiveMethod.monthlyInjection ||
+        ContraceptiveMethod.quarterlyInjection =>
+          true,
+      };
+
   /// Dias entre un inicio de ciclo y el siguiente (1 para la pastilla).
   int get cycleDays => switch (this) {
         ContraceptiveMethod.pill => 1,

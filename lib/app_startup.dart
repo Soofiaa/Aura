@@ -1,5 +1,6 @@
 import 'data/backup/pre_migration_copy.dart';
 import 'data/database/app_database.dart';
+import 'data/device_settings_store.dart';
 import 'data/repositories/cycle_repository.dart';
 
 /// Resultado de abrir la base al arrancar la app.
@@ -60,7 +61,8 @@ class AppStartup {
       // StartupFailed y no en una app congelada.
       final db = _createDatabase();
       _database = db;
-      final repository = CycleRepository(db);
+      final repository =
+          CycleRepository(db, deviceSettings: deviceSettingsStore);
       // Primera consulta: dispara la copia previa y la migracion.
       final onboardingSeen = await repository.getOnboardingSeen();
       appDatabase = db;

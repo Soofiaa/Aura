@@ -702,6 +702,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// ovulacion ni la ventana fertil (tambien el dia en que el periodo se
   /// cierra con "Termino hoy", que sigue siendo fase menstrual). La linea
   /// gris de confianza baja no da fechas y se mantiene.
+  /// Con un anticonceptivo hormonal activo, visibleFertileMarks tampoco
+  /// las muestra y la linea gris dice que la estimacion no aplica.
   Widget _buildActiveCard(ActivePrediction p,
       {required bool mostrarFertilidad, required bool enCurso}) {
     final confianzaBaja = p.confidence == PredictionConfidence.low;
@@ -744,7 +746,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: TextStyle(fontSize: 13, color: context.aura.textSecondary),
       ),
       const SizedBox(height: 15),
-      if (mostrarFertilidad && confianzaBaja)
+      if (mostrarFertilidad && p.hormonalContraceptive)
+        Text(
+          tr("Con anticonceptivo hormonal, esta estimación no aplica",
+              "With hormonal birth control, this estimate doesn't apply"),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: context.aura.textSecondary),
+        )
+      else if (mostrarFertilidad && confianzaBaja)
         Text(
           valorPorDefecto
               ? tr(
