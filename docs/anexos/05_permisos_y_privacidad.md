@@ -105,7 +105,7 @@ No hay otro tráfico de red propio: el único código con red es el cliente de D
 | Tema | Estado | Qué falta |
 |---|---|---|
 | **Política de privacidad** | Publicada en `https://soofiaa.github.io/Aura/privacy.html` (`docs/privacy.html`) | Revisar que describa con precisión lo del respaldo automático y la contraseña sellada (sección 6) |
-| **Seguridad de datos de Google Play** | **Abierta** (Decisión 9 de HU-09) | Verificarla contra la documentación vigente de Play antes de publicar la 1.2. La interpretación de que podría no ser «recopilación» está **sin confirmar**. |
+| **Seguridad de datos de Google Play** | **Decidida el 2026-11-12** (Decisión 9 de HU-09): se declara Información de salud, opcional, cifrada en tránsito, con finalidad «Funcionalidad de la app» y borrado posible | Ingresar la declaración a mano en Play Console con los valores de `PLAY_FICHA_1.3.0.md`. La interpretación anterior, de que podría no ser «recopilación», queda superada. |
 | **Declaración de exportación (EE. UU.)** | Clasificación **no determinada** en la especificación | Consulta pendiente a la autoridad correspondiente o asesoría legal; existe un inventario criptográfico que la respalda |
 | **Prueba cerrada de Play** | En curso | Una cuenta personal nueva necesita prueba cerrada con testers antes de publicar |
 | **Condiciones del servicio** | No existen | Decidir si hacen falta (HU-09, decisiones abiertas) |

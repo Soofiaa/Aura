@@ -70,7 +70,7 @@ Formato resumido de registro de decisiones de arquitectura (ADR): **decisión �
 
 | Tema | Estado | Dónde seguir |
 |---|---|---|
-| Seguridad de datos de Google Play y si el respaldo en Drive cuenta como «recopilación» | Interpretación sin confirmar | HU-09, decisión 9; [`05_permisos_y_privacidad.md`](05_permisos_y_privacidad.md) |
+| Seguridad de datos de Google Play y si el respaldo en Drive cuenta como «recopilación» | Decidida el 2026-11-12: se declara Información de salud, opcional y cifrada en tránsito. Falta ingresarla en Play Console | `PLAY_FICHA_1.3.0.md`; HU-09, decisión 9; [`05_permisos_y_privacidad.md`](05_permisos_y_privacidad.md) |
 | Declaración de exportación de criptografía | Clasificación no determinada | Especificación, inventario criptográfico |
 | Condiciones del servicio | Sin decidir si hacen falta | HU-09 |
 | Cifrar la copia previa a importar | Pendiente de mejora | Sección 3 |

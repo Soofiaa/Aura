@@ -77,32 +77,86 @@ agregó el receptor del widget y la dependencia `pdf`, que corre en el teléfono
 SDK de analítica, publicidad ni informes de fallos. Internet se usa solo si la usuaria
 activa el respaldo en Drive.
 
-| Pregunta del formulario | Respuesta sugerida | Por qué |
+**Decisión vigente (2026-11-12): opción 2.** Se declara que la app recopila **Información de
+salud**, de forma **opcional**, **cifrada en tránsito**, con finalidad **"Funcionalidad de la
+app"** y con **borrado posible**. Reemplaza a la opción 1 ("No se recopilan datos"), que
+queda al final de esta sección como nota histórica.
+
+**Estado: pendiente de ingresar.** La declaración se envía a mano en Play Console; este
+documento solo deja los valores listos para copiar.
+
+Por qué la opción 2: Play define "recopilar" como transmitir datos desde la app hacia fuera
+del dispositivo, lleguen a quien lleguen. El respaldo automático en Drive (opcional, apagado
+por defecto) sube un archivo con datos de salud a la cuenta de Google de la usuaria. Va
+cifrado y ni la desarrolladora ni Google pueden leer su contenido, pero Google sí ve la
+cuenta, el nombre del archivo (`aura_respaldo_automatico.json`, en la carpeta "Aura"), su
+fecha y su tamaño. Declararlo nunca deja la ficha como inexacta. No declararlo dependía de
+una exención que la propia ayuda de Play condiciona: "It depends on the particular
+implementation". Referencia: Play Console Help, artículo 10787469, revisado el 2026-11-12.
+
+### Valores a ingresar en Play Console
+
+Los nombres de pantallas y opciones son los de la ayuda de Play en español (artículo
+10787469). En la consola pueden variar un poco.
+
+| Paso | Pantalla o pregunta | Valor |
 |---|---|---|
-| ¿La app recopila o comparte datos de usuario? | **No** | Todo se procesa en el teléfono; el respaldo en Drive va cifrado con una contraseña que solo tiene la usuaria |
-| ¿Se recopilan los datos cifrados / se pide borrado? | (no se muestra al responder "No") | Igual se mantiene el borrado en Ajustes |
-| Política de privacidad | `https://soofiaa.github.io/Aura/privacy.html` | Ya cubre widget, PDF, embarazo y anticonceptivo |
-| Mecanismo para pedir borrar datos | Sí: "Borrar todos los datos" en Ajustes o desinstalar | Documentado en la política |
-| Publicidad / analítica | No | No hay ninguna |
-| Compartir con terceros | No | El PDF y los respaldos solo salen por una acción de la usuaria (excepción "acción iniciada por el usuario") |
+| 1 | Play Console → Aura → **Contenido de la app** → **Seguridad de los datos** | **Iniciar** (o editar la declaración que ya exista) |
+| 2 | Seguridad y recopilación de datos: ¿la app recopila o comparte alguno de los tipos de datos del usuario requeridos? | **Sí** |
+| 3 | ¿Todos los datos del usuario que recopila la app se encriptan en tránsito? | **Sí** (HTTPS hacia `www.googleapis.com`; además el archivo ya sale cifrado del teléfono) |
+| 4 | ¿Ofreces un método para que los usuarios soliciten que se borren sus datos? | **Sí** |
+| 5 | Si pregunta si la app permite crear una cuenta | **No** (Aura no tiene cuentas propias; el inicio de sesión de Google solo autoriza el acceso a Drive) |
+| 6 | Tipos de datos | Solo **Salud y fitness → Información de salud**. Ningún otro |
+| 7 | Uso y manejo de datos (Información de salud): ¿se recopilan, se comparten o ambas cosas? | Solo **Recopilados** |
+| 8 | ¿Estos datos se procesan de forma efímera? | **No** |
+| 9 | ¿Los datos son necesarios para la app o los usuarios pueden decidir si se recopilan? | **Los usuarios pueden decidir si los datos se recopilan o no** |
+| 10 | ¿Por qué se recopilan estos datos del usuario? | Solo **Funcionalidad de la app** |
+| 11 | Política de privacidad | `https://soofiaa.github.io/Aura/privacy.html` |
+| 12 | Vista previa de la ficha de Play Store | Revisar que coincida con lo de arriba y **Enviar** |
 
-**Decisión tomada: declarar "No se recopilan datos" (opción 1).** El razonamiento de abajo
-queda como respaldo por si Play pregunta. El único dato que
-sale del teléfono sin que lo envíes tú a mano es el respaldo opcional en Google Drive.
-Play define "recopilar" como transmitir datos fuera del dispositivo, y exime los datos con
-cifrado de extremo a extremo que nadie más que quien envía y recibe puede leer. El
-respaldo va cifrado con la contraseña de la usuaria y la desarrolladora no tiene la clave,
-lo que encaja con la exención; pero la propia ayuda de Play dice que depende de la
-implementación. Opciones:
+Notas para completar el formulario:
 
-1. **Declarar "no se recopilan datos"**, apoyándote en la exención. Es lo que describe mejor
-   la app, pero si Play opina distinto, la ficha puede considerarse inexacta.
-2. **Declarar Información de salud (Health info), opcional, cifrada en tránsito, finalidad
-   "funcionalidad de la app", con borrado posible.** Más conservadora: nunca queda como
-   inexacta, a costa de que la ficha muestre que la app recopila datos de salud.
+- **No se marca "Compartidos".** No hay publicidad ni analítica. El PDF y los respaldos
+  manuales solo salen por una acción de la usuaria (excepción "acción iniciada por el
+  usuario"), y el respaldo en Drive va a su propia cuenta porque ella lo activa.
+- **Borrado (paso 4).** "Borrar todos los datos" en Ajustes borra lo del teléfono y
+  desconecta Drive, pero **no** borra el archivo ya subido: la usuaria lo elimina desde su
+  propio Drive. La desarrolladora no tiene copia ni acceso. Así lo dice la política.
+- **Cuenta (paso 5).** El texto exacto de las preguntas de eliminación de cuenta no se pudo
+  ver desde aquí. La respuesta se apoya en la definición de Play: una "cuenta de la app" es
+  una identidad que entrega el desarrollador, y Aura no tiene ninguna.
+- **Punto a confirmar.** El respaldo también lleva las notas de texto libre de cada día. Play
+  lista "notas" bajo **Actividad en apps → Otro contenido generado por usuarios**. Aquí se
+  declaran dentro de Información de salud; si se quiere la lectura más conservadora, se marca
+  también ese tipo con las mismas respuestas de los pasos 7 a 10.
 
-Mi recomendación: la opción 2 si quieres cero riesgo de rechazo; la 1 si prefieres que
-la ficha refleje que no hay servidor. Referencia: Play Console Help, artículo 10787469.
+### Nota histórica: opción 1 (superada el 2026-11-12)
+
+Hasta el 2026-11-12 este documento registraba la decisión contraria. Se conserva tal como
+estaba, solo como historia; **ya no es la decisión vigente**.
+
+> **Decisión tomada: declarar "No se recopilan datos" (opción 1).** El razonamiento de abajo
+> queda como respaldo por si Play pregunta. El único dato que
+> sale del teléfono sin que lo envíes tú a mano es el respaldo opcional en Google Drive.
+> Play define "recopilar" como transmitir datos fuera del dispositivo, y exime los datos con
+> cifrado de extremo a extremo que nadie más que quien envía y recibe puede leer. El
+> respaldo va cifrado con la contraseña de la usuaria y la desarrolladora no tiene la clave,
+> lo que encaja con la exención; pero la propia ayuda de Play dice que depende de la
+> implementación. Opciones:
+>
+> 1. **Declarar "no se recopilan datos"**, apoyándote en la exención. Es lo que describe mejor
+>    la app, pero si Play opina distinto, la ficha puede considerarse inexacta.
+> 2. **Declarar Información de salud (Health info), opcional, cifrada en tránsito, finalidad
+>    "funcionalidad de la app", con borrado posible.** Más conservadora: nunca queda como
+>    inexacta, a costa de que la ficha muestre que la app recopila datos de salud.
+>
+> Mi recomendación: la opción 2 si quieres cero riesgo de rechazo; la 1 si prefieres que
+> la ficha refleje que no hay servidor. Referencia: Play Console Help, artículo 10787469.
+
+Con la opción 1 la respuesta a "¿La app recopila o comparte datos de usuario?" era **No**, y
+el formulario no mostraba las preguntas de cifrado ni de borrado. Se superó porque el mismo
+texto ya recomendaba la opción 2 para no arriesgar un rechazo (hallazgo A5 de la auditoría
+del 2026-11-07).
 
 ## Antes de subir a Play
 
