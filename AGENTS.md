@@ -1,6 +1,6 @@
 # AGENTS.md — Aura
 
-App de registro de ciclos para Android. Flutter + Drift/SQLite esquema v6.
+App de registro de ciclos para Android. Flutter + Drift/SQLite esquema v7.
 Versión en prueba cerrada en Google Play: 1.3.0+9. Repo: Soofiaa/Aura.
 
 ## SDK — obligatorio
@@ -51,6 +51,8 @@ Nunca regeneres pubspec.lock.
   teléfono, y Deshacer los revierte. widgetDiscreto=true por defecto.
   Tests locales 1414 (1396 + 14 nuevos + 4 casos drift generados hacia
   v7); el conteo no se reconfirmó desde el log del CI.
+- Limpieza de docs tras v7: commit "docs: guía y AGENTS.md al día con el
+  respaldo v7" (guías ES/EN y AU-1 de la especificación).
 - Siguiente: ampliar la prueba cerrada.
 
 ## Límites por defecto
