@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/domain/range_selection.dart';
 
 /// Dias 'yyyy-MM-dd' de julio de 2026 (fechas inventadas).
@@ -186,6 +187,28 @@ void main() {
 
     test('rango vacio: solo se marca (nada)', () {
       expect(action(const [], const []), RangeEndAction.markOnly);
+    });
+
+    test(
+        'manchado: un rango que termina en un ligero aislado solo se marca, '
+        'no se cierra', () {
+      expect(
+          rangeEndAction(
+            rangeDays: [_jul(12)],
+            existingPeriodDays: [_jul(12)],
+            today: today,
+            periodFlows: {_jul(12): FlowIntensity.ligero},
+          ),
+          RangeEndAction.markOnly);
+      // Dos dias con el ligero al final ya son periodo: se cierra.
+      expect(
+          rangeEndAction(
+            rangeDays: [_jul(11), _jul(12)],
+            existingPeriodDays: [_jul(12)],
+            today: today,
+            periodFlows: {_jul(12): FlowIntensity.ligero},
+          ),
+          RangeEndAction.close);
     });
   });
 }

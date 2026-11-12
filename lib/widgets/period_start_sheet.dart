@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/repositories/cycle_repository.dart';
+import '../data/models/day_enums.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_predictor.dart';
 import '../utils/app_snackbar.dart';
@@ -83,6 +84,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final inputs = await widget.repository.getPredictionInputs();
     return _SheetData(
       periodDays: await widget.repository.getPeriodDayDates(),
+      periodFlows: await widget.repository.getPeriodFlows(),
       estimate:
           estimatePeriodLength(cycles: inputs.cycles, config: inputs.config),
     );
@@ -102,10 +104,15 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
 
   /// Aviso de la decision 7, hacia atras y hacia adelante: el dia elegido
   /// se sumaria a un periodo anterior, a uno posterior o los uniria.
-  static String? _joinWarning(String day, List<String> periodDays) {
-    final before = periodThatDayWouldJoin(day: day, periodDays: periodDays);
-    final after =
-        laterPeriodThatDayWouldJoin(day: day, periodDays: periodDays);
+  static String? _joinWarning(String day, _SheetData data) {
+    final before = periodThatDayWouldJoin(
+        day: day,
+        periodDays: data.periodDays,
+        periodFlows: data.periodFlows);
+    final after = laterPeriodThatDayWouldJoin(
+        day: day,
+        periodDays: data.periodDays,
+        periodFlows: data.periodFlows);
     if (before != null && after != null) {
       return tr(
           'Ese día está muy cerca de tu período anterior (último día '
@@ -174,7 +181,7 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
     final day = _chosenDay;
     final alreadyMarked = data.periodDays.contains(day);
     final joinWarning =
-        alreadyMarked ? null : _joinWarning(day, data.periodDays);
+        alreadyMarked ? null : _joinWarning(day, data);
     final n = data.estimate.days;
     final days = n == 1 ? tr('1 día', '1 day') : tr('$n días', '$n days');
     // La misma duracion estimada que Inicio y el Calendario (P-1).
@@ -289,8 +296,13 @@ class _PeriodStartSheetState extends State<PeriodStartSheet> {
 }
 
 class _SheetData {
-  const _SheetData({required this.periodDays, required this.estimate});
+  const _SheetData({
+    required this.periodDays,
+    required this.periodFlows,
+    required this.estimate,
+  });
 
   final List<String> periodDays;
+  final Map<String, FlowIntensity> periodFlows;
   final PeriodLengthEstimate estimate;
 }

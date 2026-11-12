@@ -224,7 +224,9 @@ void main() {
       expect(await dias.first,
           ['2026-08-28', '2026-08-29', '2026-08-30', '2026-08-31', '2026-09-25']);
       final derivados = await ciclos.first;
-      expect(derivados.map((c) => c.startDate), ['2026-08-28', '2026-09-25']);
+      // El 2026-09-25 es un manchado aislado de flujo ligero: sigue
+      // registrado, pero bajo la regla de manchado no abre ciclo.
+      expect(derivados.map((c) => c.startDate), ['2026-08-28']);
     });
   });
 

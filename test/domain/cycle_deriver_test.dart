@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/domain/cycle_deriver.dart';
+import 'package:aura/domain/cycle_predictor.dart';
 
 void main() {
   group('deriveCycles', () {
@@ -323,6 +324,88 @@ void main() {
           periodEnd: PeriodEndSource.inferred,
         ),
       );
+    });
+  });
+
+  group('manchado (un solo dia ligero aislado no ancla un ciclo)', () {
+    String mar(int day) => '2026-03-${day.toString().padLeft(2, '0')}';
+    final periodo = [for (var d = 1; d <= 5; d++) mar(d)];
+
+    test('periodo 1-5 y ligero el 17: un solo ciclo, ninguno empieza el 17',
+        () {
+      final result = deriveCycles([...periodo, mar(17)],
+          periodFlows: {mar(17): FlowIntensity.ligero});
+      expect(result, hasLength(1));
+      expect(result.single.startDate, mar(1));
+      expect(result.map((c) => c.startDate), isNot(contains(mar(17))));
+    });
+
+    test('con el periodo real del 29 el ciclo dura 28 dias', () {
+      final result = deriveCycles([...periodo, mar(17), mar(29), mar(30)],
+          periodFlows: {mar(17): FlowIntensity.ligero});
+      expect(result.map((c) => c.startDate), [mar(1), mar(29)]);
+      expect(result.first.cycleLengthDays, 28);
+    });
+
+    test('moderado el 17: si empieza un ciclo nuevo', () {
+      final result = deriveCycles([...periodo, mar(17)],
+          periodFlows: {mar(17): FlowIntensity.moderado});
+      expect(result.map((c) => c.startDate), [mar(1), mar(17)]);
+    });
+
+    test('dos dias ligeros (17 y 18): ciclo nuevo el 17', () {
+      final result = deriveCycles([...periodo, mar(17), mar(18)],
+          periodFlows: {
+            mar(17): FlowIntensity.ligero,
+            mar(18): FlowIntensity.ligero,
+          });
+      expect(result.map((c) => c.startDate), [mar(1), mar(17)]);
+    });
+
+    test('ligero el 17 y moderado 18-19: el ciclo empieza el 17', () {
+      final result = deriveCycles([...periodo, mar(17), mar(18), mar(19)],
+          periodFlows: {
+            mar(17): FlowIntensity.ligero,
+            mar(18): FlowIntensity.moderado,
+            mar(19): FlowIntensity.moderado,
+          });
+      expect(result.map((c) => c.startDate), [mar(1), mar(17)]);
+      expect(result.last.periodLengthDays, 3);
+    });
+
+    test('un dia aislado sin flujo informado sigue contando como periodo',
+        () {
+      final result = deriveCycles([...periodo, mar(17)]);
+      expect(result.map((c) => c.startDate), [mar(1), mar(17)]);
+    });
+
+    test('el proximo periodo predicho no cambia por el manchado', () {
+      String day(DateTime d) => '${d.year}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+      final historia = [
+        for (var c = 0; c < 3; c++)
+          for (var d = 0; d < 5; d++)
+            day(DateTime(2026, 1, 1).add(Duration(days: c * 28 + d))),
+      ];
+      // Ultimo periodo empieza el 26/02; manchado el 10/03; hoy 12/03.
+      const today = '2026-03-12';
+      final sin = predictCycle(cycles: deriveCycles(historia), today: today)
+          as ActivePrediction;
+      final con = predictCycle(
+        cycles: deriveCycles([...historia, mar(10)],
+            periodFlows: {mar(10): FlowIntensity.ligero}),
+        today: today,
+      ) as ActivePrediction;
+      expect(con.nextPeriodExpectedDate, sin.nextPeriodExpectedDate);
+      expect(con.nextPeriodEarliestDate, sin.nextPeriodEarliestDate);
+      expect(con.nextPeriodLatestDate, sin.nextPeriodLatestDate);
+      // Sin el flujo, el mismo dia si movia la prediccion.
+      final comoPeriodo = predictCycle(
+          cycles: deriveCycles([...historia, mar(10)]),
+          today: today) as ActivePrediction;
+      expect(comoPeriodo.nextPeriodExpectedDate,
+          isNot(sin.nextPeriodExpectedDate));
     });
   });
 }

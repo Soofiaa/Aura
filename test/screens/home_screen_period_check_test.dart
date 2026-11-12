@@ -86,6 +86,19 @@ void main() {
   }
 
   group('visibilidad de la tarjeta', () {
+    testHome('manchado: un ligero aislado no es periodo actual, sin tarjeta',
+        (tester) async {
+      await seedHistory();
+      await repo.upsertDay(
+          date: '2026-02-26',
+          isPeriodDaySwitch: true,
+          flow: FlowIntensity.ligero);
+      await pumpHome(tester);
+
+      expect(find.text(card), findsNothing);
+      expect(find.text('Terminó hoy'), findsNothing);
+    });
+
     testHome('visible en fase menstrual, periodo abierto y sin respuesta '
         'de hoy, con la linea de contexto', (tester) async {
       await seedHistory();

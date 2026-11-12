@@ -270,8 +270,11 @@ class CycleRepository {
   }) {
     final now = today ?? DayKey.today();
     return _db.transaction(() async {
-      final days = _splitRows(await _db.select(_db.dailyLogs).get());
-      final isStart = groupPeriodRuns(days.periodDays)
+      final rows = await _db.select(_db.dailyLogs).get();
+      final days = _splitRows(rows);
+      final flows = _periodFlows(rows);
+      final isStart = groupPeriodRunsForCycles(days.periodDays,
+              periodFlows: flows)
           .any((run) => run.first == periodStart);
       if (!isStart) {
         throw ArgumentError.value(
@@ -283,6 +286,7 @@ class CycleRepository {
         today: now,
         periodDays: days.periodDays,
         explicitNonPeriodDays: days.explicitNonPeriodDays,
+        periodFlows: flows,
       );
       if (!check.isValid) throw PeriodEndException(check);
 
@@ -342,19 +346,26 @@ class CycleRepository {
 
       var closed = false;
       if (closeAtEnd) {
-        final days = _splitRows(await _db.select(_db.dailyLogs).get());
-        final run = groupPeriodRuns(days.periodDays)
-            .firstWhere((r) => r.contains(end));
-        final check = checkPeriodEnd(
-          periodStart: run.first,
-          endDate: end,
-          today: now,
-          periodDays: days.periodDays,
-          explicitNonPeriodDays: days.explicitNonPeriodDays,
-        );
-        if (check.isValid) {
-          await _writeDeclaredEnd(end);
-          closed = true;
+        final rows = await _db.select(_db.dailyLogs).get();
+        final days = _splitRows(rows);
+        final flows = _periodFlows(rows);
+        final run = groupPeriodRunsForCycles(days.periodDays,
+                periodFlows: flows)
+            .where((r) => r.contains(end))
+            .firstOrNull;
+        if (run != null) {
+          final check = checkPeriodEnd(
+            periodStart: run.first,
+            endDate: end,
+            today: now,
+            periodDays: days.periodDays,
+            explicitNonPeriodDays: days.explicitNonPeriodDays,
+            periodFlows: flows,
+          );
+          if (check.isValid) {
+            await _writeDeclaredEnd(end);
+            closed = true;
+          }
         }
       }
       return MarkDaysResult(
@@ -375,6 +386,16 @@ class CycleRepository {
     return query.watch().map((rows) => rows.map((r) => r.date).toList());
   }
 
+  /// Flujo de cada dia de sangrado que lo tiene (para el manchado, ver
+  /// [groupPeriodRunsForCycles]). Emite cada vez que cambia daily_logs,
+  /// igual que [watchPeriodDayDates]. Sin cambios en el esquema.
+  Stream<Map<String, FlowIntensity>> watchPeriodFlows() {
+    return _db.select(_db.dailyLogs).watch().map(_periodFlows);
+  }
+
+  Future<Map<String, FlowIntensity>> getPeriodFlows() async =>
+      _periodFlows(await _db.select(_db.dailyLogs).get());
+
   /// Separa las filas de daily_logs en dias de sangrado y dias
   /// confirmados explicitamente como "sin sangrado" (nunca los default
   /// del formulario general), para pasarselos a deriveCycles. Ambas
@@ -388,8 +409,15 @@ class CycleRepository {
     };
     return deriveCycles(days.periodDays,
         explicitNonPeriodDays: days.explicitNonPeriodDays,
-        periodEnds: periodEnds);
+        periodEnds: periodEnds,
+        periodFlows: _periodFlows(rows));
   }
+
+  /// Flujo de cada dia de sangrado que lo tiene (para el manchado).
+  Map<String, FlowIntensity> _periodFlows(List<DailyLogRow> rows) => {
+        for (final r in rows)
+          if (r.isPeriodDay && r.flow != null) r.date: r.flow!,
+      };
 
   ({List<String> periodDays, List<String> explicitNonPeriodDays}) _splitRows(
           List<DailyLogRow> rows) =>

@@ -1,3 +1,4 @@
+import '../data/models/day_enums.dart';
 import '../utils/day_key.dart';
 import 'cycle_deriver.dart';
 
@@ -94,6 +95,7 @@ RangeEndAction rangeEndAction({
   required List<String> rangeDays,
   required List<String> existingPeriodDays,
   required String today,
+  Map<String, FlowIntensity> periodFlows = const {},
   int maxGap = maxGapWithinPeriod,
 }) {
   if (rangeDays.isEmpty) return RangeEndAction.markOnly;
@@ -101,10 +103,12 @@ RangeEndAction rangeEndAction({
   final daysAgo = DayKey.diffInDays(rangeEnd, today);
   if (daysAgo < 0) return RangeEndAction.markOnly;
 
-  final run = groupPeriodRuns([...existingPeriodDays, ...rangeDays],
-          maxGap: maxGap)
-      .firstWhere((r) => r.contains(rangeEnd));
-  if (run.last != rangeEnd) return RangeEndAction.markOnly;
+  final runs = groupPeriodRunsForCycles(
+      [...existingPeriodDays, ...rangeDays],
+      periodFlows: periodFlows,
+      maxGap: maxGap);
+  final run = runs.where((r) => r.contains(rangeEnd)).firstOrNull;
+  if (run == null || run.last != rangeEnd) return RangeEndAction.markOnly;
 
   return daysAgo >= 2 ? RangeEndAction.close : RangeEndAction.ask;
 }

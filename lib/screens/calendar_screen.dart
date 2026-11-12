@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import '../data/models/day_enums.dart';
 import '../data/repositories/cycle_repository.dart';
 import '../domain/current_period.dart';
 import '../domain/cycle_deriver.dart';
@@ -49,6 +50,11 @@ class _CalendarScreenState extends State<CalendarScreen>
   // Claves 'yyyy-MM-dd' de los dias marcados como dia de sangrado.
   List<String> _periodDayKeys = [];
 
+  // Flujo de cada dia de sangrado (para el manchado, ver
+  // groupPeriodRunsForCycles). Se suscribe igual que las fechas.
+  Map<String, FlowIntensity> _periodFlows = const {};
+  StreamSubscription<Map<String, FlowIntensity>>? _periodFlowsSub;
+
   // Suscripcion en vez de cargar una vez: la pantalla vive dentro de un
   // IndexedStack y nunca se reconstruye desde cero, asi que sin esto no
   // se enteraria de cambios hechos en otra pestana (importar un
@@ -67,6 +73,10 @@ class _CalendarScreenState extends State<CalendarScreen>
       if (!mounted) return;
       setState(() => _periodDayKeys = keys);
     });
+    _periodFlowsSub = _repository.watchPeriodFlows().listen((flows) {
+      if (!mounted) return;
+      setState(() => _periodFlows = flows);
+    });
     _inputsSub = _repository.watchPredictionInputs().listen((inputs) {
       if (!mounted) return;
       setState(() => _inputs = inputs);
@@ -80,6 +90,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     WidgetsBinding.instance.removeObserver(this);
     _midnightTimer?.cancel();
     _periodDaysSub?.cancel();
+    _periodFlowsSub?.cancel();
     _inputsSub?.cancel();
     super.dispose();
   }
@@ -389,7 +400,10 @@ class _CalendarScreenState extends State<CalendarScreen>
 
     final bool cerrar;
     switch (rangeEndAction(
-        rangeDays: dias, existingPeriodDays: _periodDayKeys, today: _today)) {
+        rangeDays: dias,
+        existingPeriodDays: _periodDayKeys,
+        today: _today,
+        periodFlows: _periodFlows)) {
       case RangeEndAction.close:
         cerrar = true;
       case RangeEndAction.markOnly:
@@ -401,7 +415,9 @@ class _CalendarScreenState extends State<CalendarScreen>
     }
 
     if (cerrar) {
-      final periodo = groupPeriodRuns([..._periodDayKeys, ...dias])
+      final periodo = groupPeriodRunsForCycles(
+              [..._periodDayKeys, ...dias],
+              periodFlows: _periodFlows)
           .firstWhere((r) => r.contains(fin));
       if (needsSingleDayConfirmation(
           periodStart: periodo.first, endDate: fin)) {
@@ -816,6 +832,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     final periodo = periodThatCanEndOn(
       cycles: _cycles,
       periodDays: _periodDayKeys,
+      periodFlows: _periodFlows,
       day: clave,
       today: _today,
     );

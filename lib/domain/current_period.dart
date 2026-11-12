@@ -1,3 +1,4 @@
+import '../data/models/day_enums.dart';
 import '../utils/day_key.dart';
 import 'cycle_deriver.dart';
 
@@ -130,6 +131,7 @@ PeriodEndCheck checkPeriodEnd({
   required String today,
   required List<String> periodDays,
   required List<String> explicitNonPeriodDays,
+  Map<String, FlowIntensity> periodFlows = const {},
   int maxGap = maxGapWithinPeriod,
 }) {
   if (DayKey.isBefore(endDate, periodStart)) {
@@ -141,7 +143,9 @@ PeriodEndCheck checkPeriodEnd({
   if (explicitNonPeriodDays.contains(endDate)) {
     return const PeriodEndCheck(problem: PeriodEndProblem.noBleedingThatDay);
   }
-  final run = groupPeriodRuns(periodDays, maxGap: maxGap).firstWhere(
+  final run = groupPeriodRunsForCycles(periodDays,
+          periodFlows: periodFlows, maxGap: maxGap)
+      .firstWhere(
     (r) => r.contains(periodStart),
     orElse: () => const [],
   );
@@ -173,9 +177,16 @@ CycleSummary? periodThatCanEndOn({
   required List<String> periodDays,
   required String day,
   required String today,
+  Map<String, FlowIntensity> periodFlows = const {},
   int maxGap = maxGapWithinPeriod,
 }) {
   if (DayKey.isBefore(today, day)) return null;
+  // Un manchado aislado no es un periodo que se pueda cerrar: si el dia no
+  // cae en ningun periodo de la regla unica, no se ofrece.
+  final enPeriodo = groupPeriodRunsForCycles(periodDays,
+          periodFlows: periodFlows, maxGap: maxGap)
+      .any((run) => run.contains(day));
+  if (!enPeriodo && periodDays.contains(day)) return null;
   for (final c in cycles) {
     final lastMarked = DayKey.addDays(c.startDate, c.periodLengthDays - 1);
     if (DayKey.isBefore(day, c.startDate)) continue;
@@ -186,6 +197,14 @@ CycleSummary? periodThatCanEndOn({
     if (cycleLength != null) {
       final nextStart = DayKey.addDays(c.startDate, cycleLength);
       if (DayKey.diffInDays(day, nextStart) <= maxGap) return null;
+    }
+    // R-4 tambien con un manchado posterior: no es periodo, pero sigue
+    // marcado y completar hasta [day] lo sumaria a este periodo.
+    if (periodDays.any((d) =>
+        DayKey.isBefore(lastMarked, d) &&
+        DayKey.isBefore(day, d) &&
+        DayKey.diffInDays(day, d) <= maxGap)) {
+      return null;
     }
     return c;
   }
@@ -228,11 +247,18 @@ bool needsSingleDayConfirmation({
 String? periodThatDayWouldJoin({
   required String day,
   required List<String> periodDays,
+  Map<String, FlowIntensity> periodFlows = const {},
   int maxGap = maxGapWithinPeriod,
 }) {
   if (periodDays.contains(day)) return null;
+  // Solo se suma a periodos reales, no a un manchado aislado.
+  final reales = [
+    for (final run in groupPeriodRunsForCycles(periodDays,
+        periodFlows: periodFlows, maxGap: maxGap))
+      ...run,
+  ];
   String? lastBefore;
-  for (final marked in periodDays) {
+  for (final marked in reales) {
     if (DayKey.isBefore(marked, day) &&
         (lastBefore == null || DayKey.isBefore(lastBefore, marked))) {
       lastBefore = marked;
@@ -252,10 +278,12 @@ String? periodThatDayWouldJoin({
 String? laterPeriodThatDayWouldJoin({
   required String day,
   required List<String> periodDays,
+  Map<String, FlowIntensity> periodFlows = const {},
   int maxGap = maxGapWithinPeriod,
 }) {
   if (periodDays.contains(day)) return null;
-  for (final run in groupPeriodRuns(periodDays, maxGap: maxGap)) {
+  for (final run in groupPeriodRunsForCycles(periodDays,
+      periodFlows: periodFlows, maxGap: maxGap)) {
     final start = run.first;
     if (DayKey.isBefore(day, start)) {
       final gap = DayKey.diffInDays(day, start);

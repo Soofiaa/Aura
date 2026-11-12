@@ -214,6 +214,36 @@ void main() {
     });
   });
 
+  group('manchado (un solo dia ligero aislado)', () {
+    Future<void> markLight(int day) => repo.upsertDay(
+        date: jul(day), isPeriodDaySwitch: true, flow: FlowIntensity.ligero);
+
+    testCalendar('no ofrece "$termino" en el manchado ni despues',
+        (tester) async {
+      await markLight(14);
+      await pumpCalendar(tester, 16);
+      await tapDay(tester, 14);
+      expect(find.text(termino), findsNothing);
+      await tapDay(tester, 15);
+      expect(find.text(termino), findsNothing);
+    });
+
+    testCalendar(
+        'rango de un dia que termina en el manchado: solo se marca, sin '
+        'pregunta de 1 dia ni cierre', (tester) async {
+      await markLight(14);
+      await pumpCalendar(tester, 20);
+      await tapText(tester, 'Elegir varios días');
+      await tapDay(tester, 14);
+      await tapText(tester, 'Marcar período');
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('¿Tu período duró solo 1 día?'), findsNothing);
+      expect(find.text('Ese día ya está registrado.'), findsOneWidget);
+      expect((await repo.getDay(jul(14)))!.periodEnd, isNull);
+    });
+  });
+
   group('cuando no se ofrece', () {
     testCalendar('a mas de 7 dias del ultimo marcado', (tester) async {
       await mark([1, 2]);

@@ -39,7 +39,12 @@ Nunca regeneres pubspec.lock.
   el conteo no se reconfirmó desde el log del CI.
 - Data Safety: documentación en opción 2, commit b7976ad. La declaración
   en Play Console es manual de Sofia y queda pendiente.
-- Siguiente: corrección de manchado, luego respaldo v7.
+- Manchado completo: commit "fix: un día aislado de flujo ligero no inicia
+  un ciclo (manchado)". Regla única en groupPeriodRunsForCycles
+  (derivación, período actual, cierre, rango, avisos, Calendario, hoja).
+  Tests locales 1396 (1379 + 17 nuevos); el conteo no se reconfirmó desde
+  el log del CI.
+- Siguiente: respaldo v7.
 - No ampliar la prueba cerrada hasta completar el top 5.
 
 ## Límites por defecto

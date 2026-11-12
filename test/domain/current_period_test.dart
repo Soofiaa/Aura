@@ -497,4 +497,95 @@ void main() {
       expect(start(marked, _jul(13)), _jul(10));
     });
   });
+
+  group('manchado (un solo dia ligero aislado no es periodo)', () {
+    const ligero = FlowIntensity.ligero;
+
+    test('findCurrentPeriod: un ligero aislado no es periodo actual', () {
+      final flows = {_jul(14): ligero};
+      final cycles = deriveCycles([_jul(14)], periodFlows: flows);
+      expect(findCurrentPeriod(cycles: cycles, today: _today), isNull);
+      // Sin flujo informado, el mismo dia si es el periodo actual.
+      expect(findCurrentPeriod(cycles: _cycles([_jul(14)]), today: _today),
+          isNotNull);
+    });
+
+    test('periodThatCanEndOn: no ofrece cerrar un manchado aislado', () {
+      final flows = {_jul(14): ligero};
+      final days = [_jul(14)];
+      final cycles = deriveCycles(days, periodFlows: flows);
+      for (final day in [_jul(14), _jul(15)]) {
+        expect(
+            periodThatCanEndOn(
+                cycles: cycles,
+                periodDays: days,
+                day: day,
+                today: _today,
+                periodFlows: flows),
+            isNull);
+      }
+    });
+
+    test(
+        'periodThatCanEndOn: un manchado 3 dias despues sigue impidiendo '
+        'cerrar ahi (completar lo sumaria, R-4)', () {
+      // Periodo real 1-3 abierto, ligero el 12; "hoy" el 15.
+      final flows = {_jul(12): ligero};
+      final days = [..._julRange(1, 3), _jul(12)];
+      final cycles = deriveCycles(days, periodFlows: flows);
+      CycleSummary? on(int day) => periodThatCanEndOn(
+          cycles: cycles,
+          periodDays: days,
+          day: _jul(day),
+          today: _today,
+          periodFlows: flows);
+      expect(on(9), isNull);
+      expect(on(4)!.startDate, _jul(1));
+    });
+
+    test('checkPeriodEnd: un manchado no bloquea cerrar un periodo real', () {
+      // Periodo real 1-3, ligero el 12: cerrar el 3 es valido.
+      final check = checkPeriodEnd(
+        periodStart: _jul(1),
+        endDate: _jul(3),
+        today: _today,
+        periodDays: [..._julRange(1, 3), _jul(12)],
+        explicitNonPeriodDays: const [],
+        periodFlows: {_jul(12): ligero},
+      );
+      expect(check.isValid, isTrue);
+    });
+
+    test('checkPeriodEnd: con inicio en un manchado no hay dias que bloqueen',
+        () {
+      final check = checkPeriodEnd(
+        periodStart: _jul(12),
+        endDate: _jul(12),
+        today: _today,
+        periodDays: [_jul(12)],
+        explicitNonPeriodDays: const [],
+        periodFlows: {_jul(12): ligero},
+      );
+      expect(check.isValid, isTrue);
+    });
+
+    test('periodThatDayWouldJoin y laterPeriodThatDayWouldJoin: no avisan '
+        'de sumarse a un manchado', () {
+      final flows = {_jul(10): ligero};
+      final days = [_jul(10)];
+      expect(
+          periodThatDayWouldJoin(
+              day: _jul(12), periodDays: days, periodFlows: flows),
+          isNull);
+      expect(
+          laterPeriodThatDayWouldJoin(
+              day: _jul(8), periodDays: days, periodFlows: flows),
+          isNull);
+      // Sin flujo, el mismo dia si es un periodo al que sumarse.
+      expect(periodThatDayWouldJoin(day: _jul(12), periodDays: days),
+          _jul(10));
+      expect(laterPeriodThatDayWouldJoin(day: _jul(8), periodDays: days),
+          _jul(10));
+    });
+  });
 }

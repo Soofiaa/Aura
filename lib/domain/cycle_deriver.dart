@@ -85,15 +85,22 @@ class CycleSummary {
 ///
 /// [periodEnds] son las fechas con period_end (D-1); solo cuenta la del
 /// ultimo dia de cada periodo.
+///
+/// [periodFlows] es el flujo de cada dia de sangrado. Una corrida de un
+/// solo dia con flujo ligero es manchado: no inicia un ciclo ni entra en
+/// la derivacion (el dia sigue registrado, solo no cuenta como periodo).
+/// Un dia sin flujo informado cuenta como dia de periodo, como siempre.
 List<CycleSummary> deriveCycles(
   List<String> periodDays, {
   int maxGap = maxGapWithinPeriod,
   List<String> explicitNonPeriodDays = const [],
   Map<String, PeriodEndSource> periodEnds = const {},
+  Map<String, FlowIntensity> periodFlows = const {},
 }) {
   if (periodDays.isEmpty) return [];
 
-  final runs = groupPeriodRuns(periodDays, maxGap: maxGap);
+  final runs = groupPeriodRunsForCycles(periodDays,
+      periodFlows: periodFlows, maxGap: maxGap);
   final nonPeriodSorted = explicitNonPeriodDays.toSet().toList()
     ..sort(DayKey.compare);
 
@@ -145,6 +152,30 @@ List<List<String>> groupPeriodRuns(
   runs.add(currentRun);
   return runs;
 }
+
+/// Periodos para los ciclos y para toda la logica de "periodo actual" y
+/// cierre. Es la UNICA definicion de periodo de la app fuera de
+/// [groupPeriodRuns] (que no cambia: la usan la migracion v4 y la
+/// conversion de respaldos v3, y sus cierres ya guardados no deben
+/// moverse).
+///
+/// Una corrida de un solo dia con flujo ligero es manchado: no ancla un
+/// periodo ni un ciclo. El filtro va DESPUES de agrupar: quitar el dia
+/// antes podria unir dos periodos reales a traves del hueco. Una corrida
+/// ancla solo con al menos 2 dias de sangrado o con un dia de flujo
+/// moderado o abundante. Un dia sin flujo informado cuenta como periodo.
+List<List<String>> groupPeriodRunsForCycles(
+  List<String> periodDays, {
+  Map<String, FlowIntensity> periodFlows = const {},
+  int maxGap = maxGapWithinPeriod,
+}) =>
+    groupPeriodRuns(periodDays, maxGap: maxGap)
+        .where((run) => !_isSpotting(run, periodFlows))
+        .toList();
+
+/// Manchado: un solo dia de sangrado y con flujo ligero.
+bool _isSpotting(List<String> run, Map<String, FlowIntensity> flows) =>
+    run.length == 1 && flows[run.single] == FlowIntensity.ligero;
 
 /// Regla del "no" explicito: hay un dia confirmado como "sin sangrado"
 /// entre 1 y [maxGap] dias despues de [lastPeriodDay].
