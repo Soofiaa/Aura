@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -14,6 +15,7 @@ import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/utils/app_version.dart';
 
 /// Almacen del recordatorio que no puede borrar su archivo.
@@ -580,12 +582,144 @@ void main() {
         'activado',
         'recordatorio',
       ]) {
-        expect(json.contains(clave), isFalse, reason: clave);
+        // Clave exacta: desde v7 viaja "recordatorioDiario" (ajuste del
+        // dispositivo), que no es del recordatorio de respaldo.
+        expect(json.contains('"$clave":'), isFalse, reason: clave);
       }
       final data =
           (decodeBackup(utf8.encode(json)) as BackupParseSuccess).data;
-      expect(data.schemaVersion, 6);
-      expect(currentBackupSchemaVersion, 6);
+      expect(data.schemaVersion, 7);
+      expect(currentBackupSchemaVersion, 7);
+    });
+  });
+
+  group('respaldo v7: ajustes del dispositivo', () {
+    late DeviceSettingsStore ajustes;
+    // Los del telefono antes de importar: todos distintos del defecto.
+    const actuales = DeviceSettings(
+      ocultarEnRecientes: false,
+      avisoAtraso: true,
+      tema: ThemeMode.dark,
+      recordatorioDiario: true,
+      anticonceptivo: ContraceptiveReminder(
+          method: ContraceptiveMethod.pill, hour: 22, minute: 0),
+      widgetDiscreto: false,
+    );
+    const delRespaldo = DeviceSettings(
+      tema: ThemeMode.light,
+      anticonceptivo: ContraceptiveReminder(
+          method: ContraceptiveMethod.monthlyInjection,
+          startDate: '2026-09-15',
+          hour: 9,
+          minute: 5),
+    );
+
+    File archivoAjustes() =>
+        File(p.join(support.path, DeviceSettingsStore.fileName));
+
+    setUp(() async {
+      ajustes = DeviceSettingsStore(supportDirectory: () async => support);
+      // La misma instancia que el servicio, como en la app.
+      service = BackupService(
+        repo,
+        supportDirectory: () async => support,
+        temporaryDirectory: () async => temp,
+        clock: () => now,
+        deviceSettings: ajustes,
+      );
+      await ajustes.replace(actuales);
+    });
+
+    /// Un respaldo v7 exportado con [delRespaldo]. Con [replaceSection], la
+    /// seccion pasa a ser [section]; con [remove], se quita la clave.
+    Future<BackupData> v7Backup({
+      bool replaceSection = false,
+      Object? section,
+      bool remove = false,
+    }) async {
+      await ajustes.replace(delRespaldo);
+      await repo.markPeriodDays(['2026-09-01', '2026-09-02']);
+      final map = jsonDecode(await service.buildExportJson())
+          as Map<String, dynamic>;
+      final data = map['data'] as Map<String, dynamic>;
+      if (remove) data.remove('deviceSettings');
+      if (replaceSection) data['deviceSettings'] = section;
+      await repo.deleteAllData();
+      await ajustes.replace(actuales);
+      return (decodeBackup(utf8.encode(jsonEncode(map))) as BackupParseSuccess)
+          .data;
+    }
+
+    test('exportar incluye los ajustes actuales del telefono', () async {
+      final json = await service.buildExportJson();
+      final data = (decodeBackup(utf8.encode(json)) as BackupParseSuccess).data;
+      expect(data.schemaVersion, 7);
+      expect(DeviceSettings.fromJson(data.deviceSettings), actuales);
+    });
+
+    test('restaurar un v6: dias, ajustes de la app y embarazos se aplican; '
+        'los ajustes del dispositivo quedan como estaban', () async {
+      await seedCurrentData();
+      final antes = archivoAjustes().readAsBytesSync();
+      final v6 = (decodeBackup(utf8.encode(
+                  File('test/fixtures/backup_v6.json').readAsStringSync()))
+              as BackupParseSuccess)
+          .data;
+      expect(v6.schemaVersion, 6);
+
+      await service.importBackup(v6);
+
+      final hoy = await repo.readBackupData(appVersion: 'x', exportedAt: 'x');
+      expect(hoy.days, v6.days);
+      expect(hoy.pregnancies, v6.pregnancies);
+      expect(hoy.settings.typicalPeriodLength, v6.settings.typicalPeriodLength);
+      expect(hoy.settings.showFertileWindow, v6.settings.showFertileWindow);
+      expect(hoy.settings.reminderHour, v6.settings.reminderHour);
+      expect(await ajustes.read(), actuales);
+      expect(archivoAjustes().readAsBytesSync(), antes);
+    });
+
+    test('v7 sin la seccion o con la seccion invalida: se importan los dias '
+        'y se conservan los ajustes actuales', () async {
+      final casos = <String, Future<BackupData> Function()>{
+        'sin la clave': () => v7Backup(remove: true),
+        'null': () => v7Backup(replaceSection: true),
+        'no es objeto': () => v7Backup(replaceSection: true, section: 'x'),
+        'version desconocida': () => v7Backup(
+            replaceSection: true,
+            section: {...delRespaldo.toJson(), 'version': 99}),
+        'campo con tipo invalido': () => v7Backup(
+            replaceSection: true,
+            section: {...delRespaldo.toJson(), 'avisoAtraso': 'si'}),
+      };
+      for (final caso in casos.entries) {
+        final data = await caso.value();
+        await service.importBackup(data);
+        expect(await repo.getPeriodDayDates(), hasLength(2), reason: caso.key);
+        expect(await ajustes.read(), actuales, reason: caso.key);
+      }
+    });
+
+    test('v7 valido: importar aplica sus ajustes y Deshacer vuelve a los de '
+        'antes de importar', () async {
+      final data = await v7Backup();
+      await seedCurrentData();
+      final emitidos = <DeviceSettings>[];
+      final sub = ajustes.watch().listen(emitidos.add);
+      await pumpEventQueue();
+
+      await service.importBackup(data);
+      expect(await ajustes.read(), delRespaldo);
+      // Los que escuchan (notificaciones, widget, tema) se enteran.
+      await pumpEventQueue();
+      expect(emitidos.last, delRespaldo);
+
+      await service.undoLastImport();
+      expect(await ajustes.read(), actuales);
+      await pumpEventQueue();
+      expect(emitidos.last, actuales);
+      expect(await repo.countDays(), 3);
+      await sub.cancel();
     });
   });
 

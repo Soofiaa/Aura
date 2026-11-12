@@ -175,7 +175,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<void> Function(MigrationTestPoint point)? _migrationTestHook;
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -197,7 +197,10 @@ class AppDatabase extends _$AppDatabase {
             from: math.max(from, 3),
             to: to,
             steps: migrationSteps(
-                from3To4: _from3To4, from4To5: _from4To5, from5To6: _from5To6),
+                from3To4: _from3To4,
+                from4To5: _from4To5,
+                from5To6: _from5To6,
+                from6To7: _from6To7),
           );
         }),
         // PRAGMA foreign_keys se activaba solo via el `setup` del
@@ -344,6 +347,13 @@ class AppDatabase extends _$AppDatabase {
       }
     }
     // runMigrationSteps escribe user_version = 6 al volver.
+  }
+
+  /// Migracion 6 -> 7: la base no cambia. v7 es el schema del respaldo con
+  /// los ajustes del dispositivo (backup_codec.dart), y el schema del
+  /// respaldo y el de la base se mueven juntos. No toca ninguna tabla.
+  Future<void> _from6To7(Migrator m, Schema7 schema) async {
+    // runMigrationSteps escribe user_version = 7 al volver.
   }
 
   static const _allTables = ['daily_logs', 'daily_log_symptoms', 'app_settings'];

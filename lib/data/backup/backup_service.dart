@@ -332,8 +332,9 @@ class BackupService {
   /// Recordatorio de respaldo: "Borrar todos los datos" tambien lo borra.
   final BackupReminderStore _reminderStore;
 
-  /// Ajustes de este telefono: "Borrar todos los datos" los devuelve a
-  /// los valores por defecto.
+  /// Ajustes de este telefono: viajan en el respaldo (v7), importar y
+  /// "Deshacer" los aplican, y "Borrar todos los datos" los devuelve a los
+  /// valores por defecto.
   final DeviceSettingsStore _deviceSettings;
 
   // Cifrado (HU-06b). La contrasena nunca se guarda en un campo: vive
@@ -392,6 +393,7 @@ class BackupService {
     final data = await _repository.readBackupData(
       appVersion: appVersionName,
       exportedAt: formatExportedAt(_clock()),
+      deviceSettings: (await _deviceSettings.read()).toJson(),
     );
     final json = encodeBackup(data);
     final check = decodeBackup(utf8.encode(json),
@@ -616,11 +618,27 @@ class BackupService {
   /// los datos actuales; si esa copia no se puede escribir, no se importa
   /// nada. Un respaldo de un schema anterior se convierte antes (regla
   /// D-2, con "hoy" = el dia de la importacion). El reemplazo es una unica
-  /// transaccion.
+  /// transaccion. Los ajustes del dispositivo (v7) se aplican despues, y la
+  /// copia previa tambien los guarda.
   Future<void> importBackup(BackupData data) async {
     final current = _upgrade(data);
     await _writePreImportCopy();
     await _repository.replaceAllWithBackup(current);
+    await _applyDeviceSettings(current.deviceSettings);
+  }
+
+  /// Sin seccion (respaldo anterior a v7) o invalida: se conservan los
+  /// ajustes actuales del telefono.
+  Future<void> _applyDeviceSettings(Map<String, Object?>? raw) async {
+    final settings = DeviceSettings.fromJson(raw);
+    if (settings == null) return;
+    try {
+      await _deviceSettings.replace(settings);
+    } on FileSystemException {
+      // Los datos ya se reemplazaron: fallar ahora diria que la importacion
+      // no se hizo. Quedan los ajustes actuales, como con una seccion
+      // invalida.
+    }
   }
 
   BackupData _upgrade(BackupData data) =>
@@ -655,6 +673,7 @@ class BackupService {
         // La copia la escribe esta version (schema actual); una copia v3
         // de antes de actualizar se convierte igual que un respaldo.
         await _repository.replaceAllWithBackup(_upgrade(data));
+        await _applyDeviceSettings(data.deviceSettings);
         try {
           await file.delete();
         } on FileSystemException {

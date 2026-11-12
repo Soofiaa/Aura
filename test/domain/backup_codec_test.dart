@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/domain/backup_codec.dart';
+import 'package:aura/domain/contraceptive.dart';
 
 /// test/fixtures/backup_v3.json es un respaldo v3 escrito a mano. NUNCA
 /// se modifica: toda version futura de Aura debe seguir importandolo.
@@ -268,7 +271,9 @@ void main() {
 
     test('un respaldo del schema actual se devuelve sin cambios', () {
       final v6 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
-      expect(identical(upgradeBackupData(v6, today: '2026-10-07'), v6),
+      final actual = upgradeBackupData(v6, today: '2026-10-07');
+      expect(actual.schemaVersion, currentBackupSchemaVersion);
+      expect(identical(upgradeBackupData(actual, today: '2026-10-07'), actual),
           isTrue);
     });
   });
@@ -680,9 +685,9 @@ void main() {
       }
     });
 
-    test('un schema posterior al actual (7) se rechaza como version mas '
+    test('un schema posterior al actual (8) se rechaza como version mas '
         'nueva, igual que la v4 rechaza un v5', () {
-      final map = _fixtureV6Map()..['schemaVersion'] = 7;
+      final map = _fixtureV6Map()..['schemaVersion'] = 8;
       _expectFailure(_decodeMap(map), BackupError.newerVersion);
     });
   });
@@ -713,16 +718,22 @@ void main() {
           text.replaceAll('\r\n', '\n'));
     });
 
-    test('un v6 se devuelve sin cambios al convertir', () {
+    test('un v6 pasa a v7 con sus dias, ajustes y embarazos, sin ajustes '
+        'del dispositivo', () {
       final v6 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
-      expect(identical(upgradeBackupData(v6, today: '2026-10-07'), v6),
-          isTrue);
+      final up = upgradeBackupData(v6, today: '2026-10-07');
+      expect(up.schemaVersion, 7);
+      expect(up.days, v6.days);
+      expect(up.settings, v6.settings);
+      expect(up.pregnancies, v6.pregnancies);
+      expect(up.deviceSettings, isNull);
     });
 
-    test('un v5 pasa a v6 sin embarazos y se escribe con la lista vacia', () {
+    test('un v5 pasa al schema actual sin embarazos y se escribe con la '
+        'lista vacia', () {
       final v5 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV5Text())));
       final up = upgradeBackupData(v5, today: '2026-10-07');
-      expect(up.schemaVersion, 6);
+      expect(up.schemaVersion, currentBackupSchemaVersion);
       expect(up.days, v5.days);
       expect(up.settings, v5.settings);
       expect(up.pregnancies, isEmpty);
@@ -783,6 +794,88 @@ void main() {
           ['symptoms'] = ['nauseas'];
       (map['counts'] as Map<String, dynamic>)['symptoms'] = 4;
       expect(_expectSuccess(_decodeMap(map)).symptomCount, 4);
+    });
+  });
+
+  group('respaldo v7 - ajustes del dispositivo', () {
+    // Todos los campos distintos del valor por defecto.
+    const ajustes = DeviceSettings(
+      ocultarEnRecientes: false,
+      avisoAtraso: true,
+      tema: ThemeMode.dark,
+      recordatorioDiario: true,
+      anticonceptivo: ContraceptiveReminder(
+          method: ContraceptiveMethod.ring,
+          startDate: '2026-09-01',
+          hour: 21,
+          minute: 45),
+      widgetDiscreto: false,
+    );
+
+    BackupData v7(Object? deviceSettings) {
+      final v6 = _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text())));
+      final up = upgradeBackupData(v6, today: '2026-10-07');
+      return BackupData(
+        schemaVersion: up.schemaVersion,
+        appVersion: up.appVersion,
+        exportedAt: up.exportedAt,
+        days: up.days,
+        settings: up.settings,
+        pregnancies: up.pregnancies,
+        deviceSettings: deviceSettings as Map<String, Object?>?,
+      );
+    }
+
+    Map<String, dynamic> v7Map(Object? section) =>
+        jsonDecode(encodeBackup(v7(null))) as Map<String, dynamic>
+          ..['data']['deviceSettings'] = section;
+
+    test('ida y vuelta: conserva todos los campos, anticonceptivo completo',
+        () {
+      final data = v7(ajustes.toJson());
+      final again =
+          _expectSuccess(decodeBackup(utf8.encode(encodeBackup(data))));
+      expect(again.schemaVersion, 7);
+      expect(DeviceSettings.fromJson(again.deviceSettings), ajustes);
+      expect(again.days, data.days);
+      expect(again.settings, data.settings);
+      expect(again.pregnancies, data.pregnancies);
+    });
+
+    test('un v6 se sigue escribiendo como v6 (sin deviceSettings)', () {
+      final text = encodeBackup(
+          _expectSuccess(decodeBackup(utf8.encode(_fixtureV6Text()))));
+      expect(text, isNot(contains('deviceSettings')));
+    });
+
+    test('un v6 que trae la clave la ignora', () {
+      final map = _fixtureV6Map();
+      (map['data'] as Map<String, dynamic>)['deviceSettings'] =
+          ajustes.toJson();
+      expect(_expectSuccess(_decodeMap(map)).deviceSettings, isNull);
+    });
+
+    test('seccion ausente o que no es objeto: se acepta sin ajustes', () {
+      final sinClave = v7Map(null)..['data'].remove('deviceSettings');
+      expect(_expectSuccess(_decodeMap(sinClave)).deviceSettings, isNull);
+      for (final bad in [null, 'x', 5, true, <Object?>[]]) {
+        expect(_expectSuccess(_decodeMap(v7Map(bad))).deviceSettings, isNull,
+            reason: '$bad');
+      }
+    });
+
+    test('seccion con contenido invalido: se acepta, y DeviceSettings la '
+        'descarta', () {
+      for (final bad in [
+        <String, Object?>{},
+        {...ajustes.toJson(), 'version': 99},
+        {...ajustes.toJson(), 'ocultarEnRecientes': 'si'},
+      ]) {
+        final data = _expectSuccess(_decodeMap(v7Map(bad)));
+        expect(data.deviceSettings, isNotNull);
+        expect(DeviceSettings.fromJson(data.deviceSettings), isNull,
+            reason: '$bad');
+      }
     });
   });
 }

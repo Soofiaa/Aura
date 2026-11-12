@@ -82,7 +82,8 @@ void main() {
   test('sync: envia al tener datos y ajustes, y con cada cambio', () async {
     final enviados = <String>[];
     final datos = StreamController<PredictionInputs>();
-    final ajustes = FakeDeviceSettingsStore();
+    final ajustes =
+        FakeDeviceSettingsStore(const DeviceSettings(widgetDiscreto: false));
     startHomeWidgetSync(
       inputs: datos.stream,
       settings: ajustes.watch(),
@@ -104,8 +105,12 @@ void main() {
   test('ajuste guardado y leido', () {
     const s = DeviceSettings(widgetDiscreto: true);
     expect(DeviceSettings.fromJson(s.toJson()), s);
+    // Sin el campo (archivos anteriores): discreto, el valor por defecto.
     final viejo = Map.of(s.toJson())..remove('widgetDiscreto');
-    expect(DeviceSettings.fromJson(viejo)!.widgetDiscreto, isFalse);
+    expect(DeviceSettings.fromJson(viejo)!.widgetDiscreto, isTrue);
+    // Un false guardado se respeta.
+    const conDatos = DeviceSettings(widgetDiscreto: false);
+    expect(DeviceSettings.fromJson(conDatos.toJson())!.widgetDiscreto, isFalse);
   });
 }
 

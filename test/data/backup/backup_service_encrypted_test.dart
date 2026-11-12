@@ -4,15 +4,18 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:aura/data/backup/backup_service.dart';
 import 'package:aura/data/database/app_database.dart';
+import 'package:aura/data/device_settings_store.dart';
 import 'package:aura/data/models/day_enums.dart';
 import 'package:aura/data/repositories/cycle_repository.dart';
 import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/domain/backup_crypto.dart';
+import 'package:aura/domain/contraceptive.dart';
 import 'package:aura/utils/app_version.dart';
 
 /// HU-06b CP2: exportar e importar cifrado en BackupService. Datos
@@ -154,6 +157,8 @@ void main() {
           await repo.readBackupData(
             appVersion: appVersionName,
             exportedAt: formatExportedAt(now),
+            // v7: sin archivo de ajustes, los valores por defecto.
+            deviceSettings: const DeviceSettings().toJson(),
           ),
         );
         expect(file.readAsBytesSync(), utf8.encode(expected));
@@ -303,6 +308,41 @@ void main() {
       final copia = decodeBackup(preImportFile().readAsBytesSync());
       expect(copia, isA<BackupParseSuccess>());
       expect((copia as BackupParseSuccess).data.days.single.notes, 'otro dato');
+    });
+
+    test('v7: los ajustes del dispositivo viajan cifrados y se recuperan '
+        'iguales', () async {
+      final ajustes =
+          DeviceSettingsStore(supportDirectory: () async => support);
+      const elegidos = DeviceSettings(
+        ocultarEnRecientes: false,
+        avisoAtraso: true,
+        tema: ThemeMode.dark,
+        recordatorioDiario: true,
+        anticonceptivo: ContraceptiveReminder(
+            method: ContraceptiveMethod.patch,
+            startDate: '2026-09-20',
+            hour: 7,
+            minute: 30),
+        widgetDiscreto: false,
+      );
+      await ajustes.replace(elegidos);
+      await seedData();
+      final s = service();
+      final file = await s.writeExportFile(password: _password);
+      expect(file.readAsStringSync(), isNot(contains('anticonceptivo')));
+      final keep = File(p.join(root.path, 'respaldo.json'))
+        ..writeAsBytesSync(file.readAsBytesSync());
+
+      await ajustes.replace(const DeviceSettings());
+      final pending = await readPending(s, keep);
+      final data =
+          ((await s.unlockBackup(pending, _password)) as BackupUnlocked).data;
+      expect(data.schemaVersion, 7);
+      expect(DeviceSettings.fromJson(data.deviceSettings), elegidos);
+
+      await s.importBackup(data);
+      expect(await ajustes.read(), elegidos);
     });
 
     test('contrasena incorrecta: nada cambia y no se crea la copia previa; '

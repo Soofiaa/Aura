@@ -11,6 +11,8 @@ import 'package:aura/domain/backup_codec.dart';
 import 'package:aura/domain/backup_reminder.dart';
 import 'package:aura/utils/day_key.dart';
 
+import 'fake_device_settings.dart';
+
 /// Gateway falso: no toca canales de plataforma, solo registra que se le
 /// pidio y devuelve lo configurado.
 class FakeBackupFileGateway implements BackupFileGateway {
@@ -157,6 +159,8 @@ class FakeBackupService extends BackupService {
           supportDirectory: () => throw UnimplementedError(),
           temporaryDirectory: () => throw UnimplementedError(),
           clock: () => DateTime(2026, 10, 4, 10, 15),
+          // El respaldo v7 lee los ajustes del dispositivo: en memoria.
+          deviceSettings: FakeDeviceSettingsStore(),
         );
 
   final CycleRepository _repo;

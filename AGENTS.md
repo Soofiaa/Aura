@@ -44,8 +44,14 @@ Nunca regeneres pubspec.lock.
   (derivación, período actual, cierre, rango, avisos, Calendario, hoja).
   Tests locales 1396 (1379 + 17 nuevos); el conteo no se reconfirmó desde
   el log del CI.
-- Siguiente: respaldo v7.
-- No ampliar la prueba cerrada hasta completar el top 5.
+- Respaldo v7 completo: commit "feat: respaldo v7 incluye ajustes del
+  dispositivo". La base y el respaldo pasan a v7; la migración 6 -> 7 no
+  toca tablas. Todos los DeviceSettings viajan en el respaldo; un respaldo
+  anterior o uno con la sección inválida conserva los ajustes del
+  teléfono, y Deshacer los revierte. widgetDiscreto=true por defecto.
+  Tests locales 1414 (1396 + 14 nuevos + 4 casos drift generados hacia
+  v7); el conteo no se reconfirmó desde el log del CI.
+- Siguiente: ampliar la prueba cerrada.
 
 ## Límites por defecto
 

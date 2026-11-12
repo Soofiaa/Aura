@@ -57,6 +57,10 @@ class FakeDeviceSettingsStore extends DeviceSettingsStore {
       _cambiar(_state.copyWith(widgetDiscreto: value));
 
   @override
+  Future<DeviceSettings> replace(DeviceSettings value) async =>
+      _cambiar(value);
+
+  @override
   Future<void> delete() async => _cambiar(const DeviceSettings());
 
   DeviceSettings _cambiar(DeviceSettings nuevo) {

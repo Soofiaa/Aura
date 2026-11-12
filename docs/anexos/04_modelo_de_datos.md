@@ -111,7 +111,7 @@ Estos archivos viven en el almacenamiento privado de la app y **no** forman part
 
 | Archivo | Contenido | Por qué fuera de la base |
 |---|---|---|
-| `ajustes_telefono.json` | `ocultarEnRecientes`, `avisoAtraso` | Son ajustes de **este teléfono**: importar un respaldo no debe pisarlos. Sin migración. |
+| `ajustes_telefono.json` | `ocultarEnRecientes`, `avisoAtraso`, `tema`, `recordatorioDiario`, `anticonceptivo`, `widgetDiscreto` (discreto por defecto) | Son ajustes de **este teléfono**, sin migración. Desde el respaldo v7 **sí** viajan en el respaldo (sección `deviceSettings`, sección 7). |
 | `recordatorio_respaldo.json` | `primerUso`, `ultimoRespaldo`, `pospuestoHasta`, `activado` | Estado del recordatorio de respaldo. |
 | `respaldo_drive.json` | Si está habilitado, cuenta, contraseña **sellada** por el Keystore, último respaldo y último fallo | Estado del respaldo en Drive; nunca debe viajar en un respaldo. |
 | `respaldos/antes_de_importar.json` | Copia **sin cifrar** de los datos previos a una importación | Solo para «Deshacer». |
@@ -127,11 +127,12 @@ El respaldo es un **JSON propio y versionado**, no una copia de la base: se pued
 |---|---|
 | `format` | Siempre `aura-backup` |
 | `formatVersion` | **1**: documento sin cifrar. **2**: documento cifrado (envoltorio). |
-| `schemaVersion` | Versión del esquema de datos. La actual es **5**. Una app rechaza respaldos de un esquema posterior. |
+| `schemaVersion` | Versión del esquema de datos. La actual es **7**. Una app rechaza respaldos de un esquema posterior. |
 | `appVersion`, `exportedAt` | Versión de la app y fecha de exportación |
-| Datos | Días, síntomas y ajustes (sin el interruptor general de avisos, que depende del permiso de cada teléfono) |
+| Datos | Días, síntomas, ajustes (sin el interruptor general de avisos, que depende del permiso de cada teléfono) y embarazos (v6) |
+| `data.deviceSettings` (v7) | Ajustes del dispositivo con la forma de `ajustes_telefono.json`. Al importar se aplican; «Deshacer» vuelve a los anteriores. |
 
-**Compatibilidad:** los respaldos v3 y v4 se importan con la regla D-2 y el interruptor de ventana fértil activado. La importación valida fechas con un tope razonable y el tamaño máximo (5 MiB sin cifrar; el cifrado en base64 se agranda y el tope lo considera).
+**Compatibilidad:** los respaldos v3 y v4 se importan con la regla D-2 y el interruptor de ventana fértil activado. Un respaldo anterior a v7, o uno con `deviceSettings` ausente o inválido, se importa igual y conserva los ajustes del teléfono. La importación valida fechas con un tope razonable y el tamaño máximo (5 MiB sin cifrar; el cifrado en base64 se agranda y el tope lo considera).
 
 **Respaldo cifrado (`formatVersion` 2):**
 

@@ -22,6 +22,11 @@ import 'legacy_period_ends.dart';
 ///   sigue en 1.
 /// - v6: `pregnancies` en los datos y en `counts` (modo embarazo), y
 ///   sintomas nuevos. `formatVersion` sigue en 1.
+/// - v7: ajustes del dispositivo: `deviceSettings` en los datos, con la
+///   forma de DeviceSettings.toJson (device_settings_store.dart), o null.
+///   Una seccion que no se puede leer no rechaza el respaldo: al importar
+///   se conservan los ajustes del telefono. La base no cambia (la
+///   migracion 6 -> 7 no toca tablas). `formatVersion` sigue en 1.
 ///
 /// Respaldo cifrado (HU-06b): `formatVersion` 2, con el documento de
 /// `formatVersion` 1 cifrado adentro (ver backup_crypto.dart).
@@ -36,7 +41,7 @@ const int encryptedBackupFormatVersion = 2;
 
 /// Schema drift actual (AppDatabase.schemaVersion). Duplicado aca para
 /// que el dominio no importe drift; un test compara ambos valores.
-const int currentBackupSchemaVersion = 6;
+const int currentBackupSchemaVersion = 7;
 
 /// Primer schema que pudo exportar respaldos (la funcion nace en v3):
 /// un `schemaVersion` menor no puede venir de Aura.
@@ -218,6 +223,7 @@ class BackupData {
     required this.days,
     required this.settings,
     this.pregnancies = const [],
+    this.deviceSettings,
   });
 
   final int schemaVersion;
@@ -233,6 +239,11 @@ class BackupData {
   /// Ordenados por inicio; sin solaparse y a lo sumo uno activo (el
   /// ultimo). Vacio en un respaldo anterior a v6.
   final List<BackupPregnancy> pregnancies;
+
+  /// Ajustes del dispositivo (v7) tal como los escribe DeviceSettings.toJson.
+  /// Se guardan sin interpretar: el dominio no importa Flutter, y los valida
+  /// DeviceSettings.fromJson al importar. Null en un respaldo anterior a v7.
+  final Map<String, Object?>? deviceSettings;
 
   int get symptomCount =>
       days.fold(0, (total, day) => total + day.symptoms.length);
@@ -353,6 +364,7 @@ String encodeBackup(BackupData data) {
               'outcome': pr.outcome?.name,
             },
         ],
+      if (data.schemaVersion >= 7) 'deviceSettings': data.deviceSettings,
     },
     'counts': {
       'dailyLogs': days.length,
@@ -529,6 +541,9 @@ BackupData _parseRoot(
       ? _parsePregnancies(_list(data, 'pregnancies'), maxDate)
       : const <BackupPregnancy>[];
 
+  // Ausente o que no es objeto: null, sin rechazar el respaldo.
+  final rawDevice = schemaVersion >= 7 ? data['deviceSettings'] : null;
+
   final result = BackupData(
     schemaVersion: schemaVersion,
     appVersion: appVersion,
@@ -536,6 +551,8 @@ BackupData _parseRoot(
     days: List.unmodifiable(days),
     settings: settings,
     pregnancies: pregnancies,
+    deviceSettings:
+        rawDevice is Map<String, dynamic> ? Map.unmodifiable(rawDevice) : null,
   );
 
   // counts detecta un archivo truncado o editado a mano que, aun siendo
@@ -692,13 +709,14 @@ BackupSettings _parseSettings(Map<String, dynamic> raw, int schemaVersion) {
 /// convierte con la MISMA regla D-2 que la migracion de la base
 /// ([inferLegacyPeriodEnds]), con [today] = el dia de la importacion: asi
 /// importar un respaldo v3 da el mismo resultado que haber tenido esos
-/// datos en el telefono al actualizar. Uno v4 o v5 ya trae sus cierres:
-/// solo cambia el numero de schema (el ajuste de v5 ya vino del parseo con
-/// su valor por defecto, y no hay embarazos). Uno del schema actual se
-/// devuelve tal cual. Funcion pura.
+/// datos en el telefono al actualizar. Uno v4, v5 o v6 ya trae sus
+/// cierres: solo cambia el numero de schema (el ajuste de v5 ya vino del
+/// parseo con su valor por defecto, y los embarazos de v6 pasan tal cual;
+/// sin ajustes del dispositivo). Uno del schema actual se devuelve tal
+/// cual. Funcion pura.
 BackupData upgradeBackupData(BackupData data, {required String today}) {
   if (data.schemaVersion == currentBackupSchemaVersion) return data;
-  if (data.schemaVersion == 4 || data.schemaVersion == 5) {
+  if (data.schemaVersion >= 4 && data.schemaVersion <= 6) {
     return BackupData(
       schemaVersion: currentBackupSchemaVersion,
       appVersion: data.appVersion,

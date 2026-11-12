@@ -8,9 +8,10 @@ import 'package:path_provider/path_provider.dart';
 
 import '../domain/contraceptive.dart';
 
-/// Ajustes de ESTE telefono que no son datos del ciclo: como el estado del
-/// recordatorio de respaldo, no van en la base (sin migracion) ni en el
-/// respaldo exportado, y ni importar ni "Deshacer" los tocan.
+/// Ajustes de ESTE telefono que no son datos del ciclo: no van en la base
+/// (sin migracion). Desde el respaldo v7 viajan en el respaldo exportado
+/// con la forma de [toJson]; importar los aplica si son validos, y
+/// "Deshacer" vuelve a los de antes de importar.
 class DeviceSettings {
   const DeviceSettings({
     this.ocultarEnRecientes = true,
@@ -18,7 +19,7 @@ class DeviceSettings {
     this.tema = ThemeMode.system,
     this.recordatorioDiario = false,
     this.anticonceptivo,
-    this.widgetDiscreto = false,
+    this.widgetDiscreto = true,
   });
 
   /// "Ocultar Aura en Recientes" (FLAG_SECURE): la miniatura de la app en
@@ -41,6 +42,7 @@ class DeviceSettings {
   final ContraceptiveReminder? anticonceptivo;
 
   /// El widget de la pantalla de inicio no muestra datos, solo "Aura".
+  /// Activado por defecto.
   final bool widgetDiscreto;
 
   DeviceSettings copyWith(
@@ -92,8 +94,8 @@ class DeviceSettings {
         recordatorioDiario: raw['recordatorioDiario'] == true,
         // Sin el campo o invalido: apagado.
         anticonceptivo: ContraceptiveReminder.fromJson(raw['anticonceptivo']),
-        // Sin el campo (archivos anteriores): con datos.
-        widgetDiscreto: raw['widgetDiscreto'] == true);
+        // Solo un false guardado lo apaga; sin el campo: discreto.
+        widgetDiscreto: raw['widgetDiscreto'] != false);
   }
 
   @override
@@ -165,6 +167,10 @@ class DeviceSettingsStore {
 
   Future<DeviceSettings> setWidgetDiscreto(bool value) =>
       _actualizar((s) => s.copyWith(widgetDiscreto: value));
+
+  /// Reemplaza todos los ajustes (importar un respaldo y "Deshacer").
+  Future<DeviceSettings> replace(DeviceSettings value) =>
+      _actualizar((_) => value);
 
   /// "Borrar todos los datos": vuelve a los valores por defecto.
   Future<void> delete() => _enFila(() async {

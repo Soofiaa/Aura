@@ -102,7 +102,8 @@ void main() {
             as BackupParseSuccess)
         .data;
     await repo.startPregnancy('2020-01-01');
-    await repo.replaceAllWithBackup(v6);
+    await repo
+        .replaceAllWithBackup(upgradeBackupData(v6, today: '2026-10-07'));
 
     final out = await repo.readBackupData(
         appVersion: v6.appVersion, exportedAt: v6.exportedAt);

@@ -728,9 +728,11 @@ class CycleRepository {
 
   /// Lee todas las tablas para exportarlas. Los dias salen ordenados por
   /// fecha y los sintomas por nombre (exportacion determinista).
+  /// [deviceSettings] (v7) no esta en la base: lo pone quien exporta.
   Future<BackupData> readBackupData({
     required String appVersion,
     required String exportedAt,
+    Map<String, Object?>? deviceSettings,
   }) async {
     return _db.transaction(() async {
       final logs = await (_db.select(_db.dailyLogs)
@@ -782,6 +784,7 @@ class CycleRepository {
             BackupPregnancy(
                 startDate: p.startDate, endDate: p.endDate, outcome: p.outcome),
         ],
+        deviceSettings: deviceSettings,
       );
     });
   }

@@ -40,7 +40,7 @@ void main() {
     expect(await CycleRepository(db).watchPregnancies().first, isEmpty);
     await db.close();
 
-    expect(schema.rawDatabase.userVersion, 6);
+    expect(schema.rawDatabase.userVersion, 7);
     expect(dump(schema), before);
   });
 
@@ -54,6 +54,6 @@ void main() {
     db = AppDatabase.forTesting(schema.newConnection());
     expect(await CycleRepository(db).watchPregnancies().first, hasLength(1));
     await db.close();
-    expect(schema.rawDatabase.userVersion, 6);
+    expect(schema.rawDatabase.userVersion, 7);
   });
 }

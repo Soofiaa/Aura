@@ -28,6 +28,26 @@ void main() {
     expect(archivo().existsSync(), isFalse);
   });
 
+  group('widget discreto por defecto', () {
+    test('sin archivo: discreto', () async {
+      expect((await store.read()).widgetDiscreto, isTrue);
+    });
+
+    test('archivo anterior sin el campo: discreto', () async {
+      archivo().writeAsStringSync(
+          '{"version":1,"ocultarEnRecientes":true,"avisoAtraso":true}');
+      final leido = await store.read();
+      expect(leido.avisoAtraso, isTrue);
+      expect(leido.widgetDiscreto, isTrue);
+    });
+
+    test('un false guardado se respeta', () async {
+      await store.setWidgetDiscreto(false);
+      final otra = DeviceSettingsStore(supportDirectory: () async => support);
+      expect((await otra.read()).widgetDiscreto, isFalse);
+    });
+  });
+
   test('guarda y vuelve a leer desde otra instancia', () async {
     await store.setOcultarEnRecientes(false);
     await store.setAvisoAtraso(true);
