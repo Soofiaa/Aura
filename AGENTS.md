@@ -53,6 +53,10 @@ Nunca regeneres pubspec.lock.
   v7); el conteo no se reconfirmó desde el log del CI.
 - Limpieza de docs tras v7: commit "docs: guía y AGENTS.md al día con el
   respaldo v7" (guías ES/EN y AU-1 de la especificación).
+- Aviso a testers: BORRADOR en docs/aviso_testers_ampliacion.md, commit
+  "docs: borrador de aviso a testers para ampliar la prueba cerrada"
+  (ES/EN, sin publicar en Pages). Pendiente de aprobación; no se envía
+  hasta verificar Data Safety en Play Console.
 - Siguiente: ampliar la prueba cerrada.
 
 ## Límites por defecto
