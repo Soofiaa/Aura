@@ -57,6 +57,7 @@ Nunca regeneres pubspec.lock.
   "docs: borrador de aviso a testers para ampliar la prueba cerrada"
   (ES/EN, sin publicar en Pages). Pendiente de aprobación; no se envía
   hasta verificar Data Safety en Play Console.
+- Limpieza de docs: actualización de encabezados de anexos, informe y anexo 06 a 1.3.0 (build 9), esquema v7 y 1414 tests.
 - Siguiente: ampliar la prueba cerrada.
 
 ## Límites por defecto

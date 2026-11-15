@@ -1,6 +1,6 @@
 # 03 · Arquitectura
 
-> **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-15
 > **Fuentes:** `lib/` (en particular `main.dart`, `app_startup.dart`, `data/` y `domain/`), `pubspec.yaml`, `README.md` y la especificación.
 
 ## 1. Visión general

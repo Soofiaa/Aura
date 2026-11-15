@@ -1,6 +1,6 @@
 # 01 · Requisitos
 
-> **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-15
 > **Fuentes:** `ESPECIFICACION_v1.1.md`, `HU-09_respaldo_drive_v1.2.md` (Parte A), `CHANGELOG.md` y el código en `lib/`.
 > Este documento **consolida** los requisitos que hoy están repartidos en esas fuentes. No agrega funciones nuevas.
 

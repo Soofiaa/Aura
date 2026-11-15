@@ -1,6 +1,6 @@
 # 05 · Permisos y privacidad
 
-> **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-15
 > **Fuentes:** `android/app/src/main/AndroidManifest.xml`, `data_extraction_rules.xml`, `test/android_manifest_test.dart`, el inventario criptográfico de `ESPECIFICACION_v1.1.md`, `HU-09_respaldo_drive_v1.2.md` (Parte A) y el código de `lib/data/backup/`.
 > **Importante:** esto es documentación técnica del proyecto, **no una opinión legal**. Los puntos de cumplimiento (sección 7) requieren verificación con las fuentes oficiales o asesoría profesional.
 

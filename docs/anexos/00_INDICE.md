@@ -1,6 +1,6 @@
 # Documentación de Aura
 
-> **Versión de la app documentada:** 1.2.0 (build 7) · **Revisión:** 2026-10-24 · **Autora:** Sofia Menzel
+> **Versión de la app documentada:** 1.3.0 (build 9) · **Revisión:** 2026-11-15 · **Autora:** Sofia Menzel
 >
 > Aura es una app Android, hecha con Flutter, que registra el ciclo menstrual y estima sus fases. Es **local primero**: sin cuenta, sin servidor propio y sin analítica. Los datos viven en el teléfono y solo salen en un respaldo que decide la usuaria.
 

@@ -1,6 +1,6 @@
 # 07 · Registro de decisiones
 
-> **App:** Aura 1.2.0 (build 7) · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-15
 > **Fuentes:** `ESPECIFICACION_v1.1.md` (decisiones D-1, D-2, P-1, E-1, R-1…R-8, M-1…M-4, U-1, T-01…T-03, HU6-1…HU6-6, HU6b-1, RR-6), `HU-09_respaldo_drive_v1.2.md`, `DRIVE_SETUP.md`.
 > Este documento es un **resumen** para leer rápido: el razonamiento completo y las alternativas descartadas están en la especificación. Cada fila indica dónde profundizar.
 

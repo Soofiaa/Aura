@@ -1,8 +1,8 @@
 # 06 · Calidad y pruebas (QA)
 
-> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-11
-> **Fuentes:** carpeta `test/` (80 archivos de prueba), `ESPECIFICACION_v1.1.md`, `CHANGELOG.md`, `README.md`.
-> **Alcance de este documento:** describe la estrategia y el inventario de pruebas. Los **resultados de ejecución** están en la sección 8 (1375 casos aprobados, sin fallos).
+> **App:** Aura 1.3.0 (build 9) · **Revisión:** 2026-11-15
+> **Fuentes:** carpeta `test/` (81 archivos de prueba), `ESPECIFICACION_v1.1.md`, `CHANGELOG.md`, `README.md`.
+> **Alcance de este documento:** describe la estrategia y el inventario de pruebas. Los **resultados de ejecución** están en la sección 8 (1414 casos aprobados, sin fallos).
 
 ## 1. Estrategia
 
@@ -28,18 +28,18 @@ La calidad de Aura se apoya en una decisión de arquitectura: **las reglas del c
 
 ## 2. Inventario de pruebas
 
-80 archivos de prueba. Declaraciones `test(` y `testWidgets(` literales: **1072**. Al ejecutar, los bucles y ayudantes generan casos adicionales y la suite corre **1375** (sección 8).
+81 archivos de prueba. Declaraciones `test(` y `testWidgets(` literales: **1105**. Al ejecutar, los bucles y ayudantes generan casos adicionales y la suite corre **1414** (sección 8).
 
 | Capa | Archivos | Qué cubre |
 |---|---|---|
-| Dominio | 12 | Derivador de ciclos, predictor (el más extenso), período en curso, marcas fértiles, planificador de avisos, formato y cifrado de respaldo, recordatorio, fortaleza de contraseña, selección de rango, ranking de síntomas, migración de períodos antiguos |
-| Datos | 19 | Repositorio (acciones de período, respaldo, lecturas), migraciones v3→v4 y v4→v5, copia previa a la migración, servicio de respaldo (plano y cifrado), cliente de Drive, respaldo automático, almacenes de estado, reconciliador de avisos |
+| Dominio | 13 | Derivador de ciclos, predictor (el más extenso), período en curso, marcas fértiles, planificador de avisos, formato y cifrado de respaldo, recordatorio, fortaleza de contraseña, selección de rango, ranking de síntomas, migración de períodos antiguos |
+| Datos | 24 | Repositorio (acciones de período, respaldo, lecturas), migraciones v3→v4 y v4→v5, copia previa a la migración, servicio de respaldo (plano y cifrado), cliente de Drive, respaldo automático, almacenes de estado, reconciliador de avisos |
 | Esquemas drift | 1 (+ 4 esquemas generados) | Migraciones verificadas contra volcados de cada versión del esquema |
-| Pantallas | 25 | Inicio, calendario (rango, estimados, ventana fértil, cierre de período, cambio de día), registrar día, estadísticas, ajustes, respaldo (crear, proteger, desbloquear, recordatorio), Drive, presentación inicial, navegación |
+| Pantallas | 26 | Inicio, calendario (rango, estimados, ventana fértil, cierre de período, cambio de día), registrar día, estadísticas, ajustes, respaldo (crear, proteger, desbloquear, recordatorio), Drive, presentación inicial, navegación |
 | Widgets | 5 | Hoja de inicio de período, selector de síntomas, diálogos de proteger y desbloquear respaldo |
 | Utilidades | 9 | Fechas (`DayKey`), zona horaria, colores y contraste, localización, snackbar, versión, Keystore con doble, textos |
 | Raíz | 3 | Manifest, arranque (`AppStartup`), prueba de humo del widget raíz |
-| **Total** | **74** | |
+| **Total** | **81** | |
 
 **Datos de prueba (`test/fixtures/`):** respaldos reales de esquema v3, v4, v5 y v5 cifrado, para comprobar que lo exportado antes se sigue importando. **Dobles (`test/support/`):** planificador de avisos, respaldo, Drive, ajustes del teléfono, lanzador de URL; con tests de paridad para que el doble no se aleje del comportamiento real (`fake_reminder_parity_test.dart`).
 
@@ -113,19 +113,29 @@ El guion para las testers está en la capa de usuaria (documento aparte). **Esta
 | El código Kotlin (`MainActivity`: pantalla segura, Keystore, ajustes) no tiene tests propios | Un cambio nativo solo se detecta a mano | Cubrirlo con la prueba manual y, si crece, con pruebas instrumentadas |
 | Verificación de permisos hecha con `aapt` sobre la 1.1.0 | La 1.2.0 agrega `INTERNET` | Repetirla sobre la 1.2.0 y automatizar una lista permitida |
 | Porcentaje de cobertura sin calcular | El reporte `lcov.info` existe pero no se resumió | Resumirlo con `lcov --summary` y registrarlo en la sección 8 |
-| Conteo de casos del CI sin reconfirmar | `.github/workflows/ci.yml` corre `flutter analyze` y `flutter test` en cada push y PR (Flutter 3.44.9, Windows). Primera corrida ejecutada el 2026-11-11, en verde, sobre el commit `ec40879`: [run 43092512892](https://github.com/Soofiaa/Aura/actions/runs/43092512892), en `windows-latest` con Flutter 3.44.9, job `analyze-and-test` de 5 min 13 s. El número de casos no se leyó del log del CI | Confirmar en el log de una corrida que se ejecutan los 1375 casos |
+| Conteo de casos del CI sin reconfirmar | `.github/workflows/ci.yml` corre `flutter analyze` y `flutter test` en cada push y PR (Flutter 3.44.9, Windows). Primera corrida ejecutada el 2026-11-11, en verde, sobre el commit `ec40879`: [run 43092512892](https://github.com/Soofiaa/Aura/actions/runs/43092512892), en `windows-latest` con Flutter 3.44.9, job `analyze-and-test` de 5 min 13 s. El número de casos no se leyó del log del CI | Confirmar en el log de una corrida que se ejecutan los 1414 casos |
 | Pruebas con usuarias reales aún en curso | La usabilidad no está validada con muestra suficiente | Cerrar la prueba cerrada y recoger hallazgos |
 
 ## 8. Resultados de ejecución
 
-Ejecución local del 2026-11-11 sobre la versión 1.3.0+9, commit `f9222cf` (Windows 11, Flutter 3.44.9 estable, Dart 3.12.2), con `flutter pub get --enforce-lockfile`, `flutter analyze` y `flutter test`:
+Ejecución local del 2026-11-15 sobre la versión 1.3.0+9, commit `9696c13` (Windows 11, Flutter 3.44.9 estable, Dart 3.12.2), con `flutter pub get --enforce-lockfile`, `flutter analyze` y `flutter test`:
 
 | Medida | Resultado |
 |---|---|
 | Dependencias (`flutter pub get --enforce-lockfile`) | **Resueltas sin cambiar** `pubspec.lock` |
-| Análisis estático (`flutter analyze`) | **Sin problemas** («No issues found!», 133,2 s) |
+| Análisis estático (`flutter analyze`) | **Sin problemas** («No issues found!», 111,4 s) |
+| Casos ejecutados | **1414** |
+| Aprobados / fallidos / omitidos | **1414 / 0 / 0** («All tests passed!», 3 min 49 s) |
+| Cobertura de líneas | No medida en esta ejecución; el porcentaje queda por calcular |
+
+Ejecución local anterior del 2026-11-11 sobre la versión 1.3.0+9, commit `f9222cf` (Windows 11, Flutter 3.44.9 estable, Dart 3.12.2), con `flutter pub get --enforce-lockfile`, `flutter analyze` y `flutter test`:
+
+| Medida | Resultado |
+|---|---|
+| Dependencias (`flutter pub get --enforce-lockfile`) | **Resueltas sin cambiar** `pubspec.lock` |
+| Análisis estático (`flutter analyze`) | **Sin problemas** («No issues found!`, 133,2 s) |
 | Casos ejecutados | **1375** |
-| Aprobados / fallidos / omitidos | **1375 / 0 / 0** («All tests passed!», 4 min 11 s) |
+| Aprobados / fallidos / omitidos | **1375 / 0 / 0** («All tests passed!`, 4 min 11 s) |
 | Cobertura de líneas | No medida en esta ejecución; el porcentaje queda por calcular |
 
 Ejecución anterior: local de Sofia el 2026-11-02 sobre la versión 1.3.0+8 (Windows, Flutter estable), con `flutter analyze` sin problemas (88,4 s) y 1375 casos, 1375 aprobados y 0 fallidos.
@@ -138,9 +148,9 @@ Primera corrida de la integración continua, el 2026-11-11, sobre el commit `ec4
 | `flutter analyze` | Éxito | 21 s |
 | `flutter test` | Éxito | 2 min 30 s |
 
-El paso de test terminó en éxito. El conteo de 1375 casos aprobados es el de la corrida local sobre `f9222cf`; no se reconfirmó desde el log del CI.
+El paso de test terminó en éxito. El conteo de 1375 casos aprobados es el de la corrida local sobre `f9222cf`; no se reconfirmó desde el log del CI. El conteo actual es de 1414 casos aprobados (corrida local sobre `9696c13`; no reconfirmado desde el log del CI).
 
-La cifra del README («más de 1290 pruebas») queda **confirmada**: 1375 casos en ejecución frente a 1072 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
+La cifra del README («más de 1290 pruebas») queda **confirmada**: 1414 casos en ejecución frente a 1105 declaraciones literales, porque los bucles y ayudantes generan casos adicionales.
 
 **Observaciones de la ejecución:**
 

@@ -1,6 +1,6 @@
 # 04 · Modelo de datos
 
-> **App:** Aura 1.2.0 (build 7) · **Esquema de la base:** v5 · **Revisión:** 2026-10-24
+> **App:** Aura 1.3.0 (build 9) · **Esquema de la base:** v7 · **Revisión:** 2026-11-15
 > **Fuentes:** `lib/data/database/app_database.dart`, `lib/data/models/day_enums.dart`, `lib/domain/backup_codec.dart`, los almacenes JSON de `lib/data/` y las decisiones D-1, D-2, M-1 a M-4 de la especificación.
 
 ## 1. Idea central
